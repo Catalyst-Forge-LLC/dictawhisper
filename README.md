@@ -71,6 +71,7 @@ The UI proxies `/socket.io` and API paths to the server, so open **7777** only.
 | `VOICE_BROWSER_SETTLE_MS` | browser-drop settle; default 0 |
 | `OLLANET_MACHINE` | ollanet host name |
 | `OLLANET_CLEAN_MODEL` | model on that host |
+| `OLLAMA_PROMPT_TIMEOUT_MS` | ollanet abort timeout; default 900000 (15m) |
 
 `config.json` is local and gitignored. See `config.example.json`.
 

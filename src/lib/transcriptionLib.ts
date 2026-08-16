@@ -8,7 +8,7 @@ import { audioFileRegex } from './audioLib.ts';
 import { isTransientSyncFile, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { parseJSON } from './jsonLib.ts';
-import { cleanWithOllanet } from './ollanetLib.ts';
+import { cleanWithOllanet, describeCleanError } from './ollanetLib.ts';
 import { buildCleanTranscriptionPrompt } from '../prompts/cleanTranscription.ts';
 import { config } from '../config.ts';
 
@@ -108,12 +108,27 @@ export async function cleanTranscription(file: string, callback: (err: Error | n
     transcriptionJson.tags = jsonCompletion.tags || [];
     if (thinking) transcriptionJson.thinking = thinking;
     if (meta) transcriptionJson.meta = meta;
+    delete transcriptionJson.cleanupError;
     fs.writeFileSync(transcriptionFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
     console.log(`[clean-transcription] Cleaned transcription file: ${transcriptionFile}`);
     callback(null, transcriptionJson.cleanedTranscription);
   } catch (error: any) {
-    console.error(`[clean-transcription-error] Error cleaning transcription file ${transcriptionFile}:`, error);
+    const detail = describeCleanError(error);
+    console.error(`[clean-transcription-error] ${transcriptionFile}: ${detail}`);
+    recordCleanupFailure(transcriptionFile, error);
     callback(error);
+  }
+}
+
+function recordCleanupFailure(transcriptionFile: string, error: unknown) {
+  try {
+    if (!fs.existsSync(transcriptionFile)) return;
+    const json = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
+    json.cleanupError = describeCleanError(error);
+    json.cleanupAttempts = (Number(json.cleanupAttempts) || 0) + 1;
+    fs.writeFileSync(transcriptionFile, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
+  } catch {
+    // sidecar write is best-effort
   }
 }
 
