@@ -1,0 +1,33 @@
+{
+  "name": "dictawhisper",
+  "version": "0.1.0",
+  "description": "Watch folders, transcribe voice notes with faster-whisper, and clean them via ollanet",
+  "type": "module",
+  "main": "src/server.ts",
+  "license": "MIT",
+  "scripts": {
+    "start": "node --experimental-strip-types src/server.ts",
+    "dev": "node --experimental-strip-types src/server.ts",
+    "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
+    "ui": "pnpm --dir client dev"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@8.14.1",
+  "dependencies": {
+    "async": "^3.2.6",
+    "chokidar": "^4.0.3",
+    "express": "^4.21.2",
+    "ollanet": "^0.6.5",
+    "socket.io": "^4.8.1",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@types/async": "^3.2.25",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.2",
+    "typescript": "^5.9.3"
+  }
+}

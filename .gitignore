@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/audio-files/*
+!data/audio-files/.gitkeep
+*.log
+.DS_Store
+client/node_modules/
+client/.svelte-kit/
+client/dist/

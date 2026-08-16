@@ -1,0 +1,30 @@
+{
+  "http": {
+    "port": 8008,
+    "corsOrigins": ["http://localhost:5173", "https://example.com"]
+  },
+  "watch": {
+    "roots": ["C:\\Users\\YOU\\VoiceNotes"],
+    "browserDropFolder": "./data/audio-files",
+    "settleMinutes": 30,
+    "recursiveYears": true
+  },
+  "whisper": {
+    "python": "python",
+    "model": "large-v3",
+    "device": "cuda",
+    "computeType": "float16"
+  },
+  "audio": {
+    "preprocess": true
+  },
+  "queues": {
+    "transcription": { "active": true, "concurrency": 1 },
+    "processing": { "active": true, "concurrency": 1 }
+  },
+  "ollanet": {
+    "machine": "YOUR-OLLANET-HOST",
+    "cleanModel": "YOUR-CLEAN-MODEL",
+    "saveChats": false
+  }
+}
