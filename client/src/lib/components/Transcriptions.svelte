@@ -21,6 +21,9 @@
   let showRaw = {};
   let openGroups = {};
   let selectedTags = [];
+  let showSingletons = false;
+  let showAllFrequent = false;
+  const TAG_CLOUD_CAP = 40;
 
   function folderOf(jsonFile) {
     const norm = String(jsonFile || '').replace(/\\/g, '/');
@@ -148,6 +151,16 @@
   $: visible = transcriptions.filter(matchesTags);
   $: groups = groupTranscriptions(visible);
   $: tagCloud = buildTagCloud(transcriptions);
+  $: frequentTags = tagCloud.filter((item) => item.count > 1);
+  $: singletonTags = tagCloud.filter((item) => item.count === 1);
+  $: visibleTags = (() => {
+    const pool = showSingletons ? tagCloud : frequentTags;
+    const capped = showAllFrequent ? pool : pool.slice(0, TAG_CLOUD_CAP);
+    const extraSelected = tagCloud.filter(
+      (item) => selectedTags.includes(item.tag) && !capped.some((shown) => shown.tag === item.tag)
+    );
+    return [...capped, ...extraSelected];
+  })();
   $: newestKey = groups[0]?.key;
 
   function isOpen(key) {
@@ -193,15 +206,26 @@
 
 <section class="transcriptions">
   {#if tagCloud.length}
-    <div class="tag-cloud">
-      <div class="tag-cloud-head">
+    <details class="tag-cloud" open>
+      <summary>
         <span>Tags</span>
-        {#if selectedTags.length}
-          <button type="button" class="clear" on:click={() => (selectedTags = [])}>Clear</button>
-        {/if}
-      </div>
+        <span class="folder-count">
+          {visibleTags.length} shown
+          {#if !showSingletons && singletonTags.length}
+            · {singletonTags.length} single-use hidden
+          {/if}
+          {#if !showAllFrequent && (showSingletons ? tagCloud : frequentTags).length > TAG_CLOUD_CAP}
+            · {(showSingletons ? tagCloud : frequentTags).length - TAG_CLOUD_CAP} more
+          {/if}
+        </span>
+      </summary>
+      {#if selectedTags.length}
+        <div class="tag-cloud-head">
+          <button type="button" class="clear" on:click={() => (selectedTags = [])}>Clear filter</button>
+        </div>
+      {/if}
       <div class="tag-cloud-body">
-        {#each tagCloud as item}
+        {#each visibleTags as item}
           <button
             type="button"
             class="tag"
@@ -214,7 +238,19 @@
           </button>
         {/each}
       </div>
-    </div>
+      <div class="tag-cloud-more">
+        {#if !showAllFrequent && (showSingletons ? tagCloud : frequentTags).length > TAG_CLOUD_CAP}
+          <button type="button" class="clear" on:click={() => (showAllFrequent = true)}>
+            Show all {(showSingletons ? tagCloud : frequentTags).length} listed tags
+          </button>
+        {/if}
+        {#if singletonTags.length}
+          <button type="button" class="clear" on:click={() => (showSingletons = !showSingletons)}>
+            {showSingletons ? 'Hide single-use tags' : `Show ${singletonTags.length} single-use tags`}
+          </button>
+        {/if}
+      </div>
+    </details>
   {/if}
 
   {#if selectedTags.length && !visible.length}
@@ -345,6 +381,13 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem 0.5rem;
+  }
+
+  .tag-cloud-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
   }
 
   .tag {
