@@ -6,7 +6,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import { q } from './queueLib.ts';
 import { audioFileRegex } from './audioLib.ts';
 import { ensurePlaybackCues } from './alignLib.ts';
-import { isTransientSyncFile, requestWhenSettled } from './fileSettleLib.ts';
+import { isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { parseJSON } from './jsonLib.ts';
 import { cleanWithOllanet, describeCleanError } from './ollanetLib.ts';
@@ -213,7 +213,7 @@ export function initTranscriptionWatcher(
     watchDepth,
     ignoreCheck: (filePath) => {
       return (
-        isTransientSyncFile(filePath) ||
+        isSkippedWatchPath(filePath) ||
         filePath.includes('archive') ||
         filePath.includes('original') ||
         filePath.includes('_clean')
@@ -236,12 +236,12 @@ export function loadExistingTranscriptions(roots: string[]) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (isTransientSyncFile(full)) continue;
+        if (isSkippedWatchPath(full)) continue;
         walk(full);
         continue;
       }
       if (!entry.name.toLowerCase().endsWith('.json')) continue;
-      if (isTransientSyncFile(full) || full.includes('_original') || full.includes('_clean')) continue;
+      if (isSkippedWatchPath(full) || full.includes('_original') || full.includes('_clean')) continue;
       try {
         const json = JSON.parse(fs.readFileSync(full, 'utf-8'));
         if (!json?.text && !json?.cleanedTranscription && !Array.isArray(json?.segments)) continue;
@@ -275,7 +275,7 @@ export function countStatus(roots: string[]) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (isTransientSyncFile(full)) continue;
+        if (isSkippedWatchPath(full)) continue;
         walk(full);
         continue;
       }

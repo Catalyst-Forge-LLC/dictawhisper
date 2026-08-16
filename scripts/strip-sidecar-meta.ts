@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../src/config.ts';
 import { slimOllamaMeta } from '../src/lib/ollanetLib.ts';
+import { isSkippedWatchPath } from '../src/lib/fileSettleLib.ts';
 
 type Sidecar = {
   meta?: unknown;
@@ -13,6 +14,7 @@ function walkJsonFiles(dir: string, out: string[]) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (isSkippedWatchPath(full)) continue;
       walkJsonFiles(full, out);
       continue;
     }

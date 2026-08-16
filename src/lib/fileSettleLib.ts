@@ -31,6 +31,8 @@ export function formatDuration(ms: number): string {
   return `${hours}h`;
 }
 
+const SKIP_FOLDERS = new Set(['__inbox']);
+
 /** Syncthing / incomplete-transfer names we should never organize or transcribe. */
 export function isTransientSyncFile(filePath: string): boolean {
   const name = path.basename(filePath);
@@ -46,6 +48,18 @@ export function isTransientSyncFile(filePath: string): boolean {
   );
 }
 
+/** Staging folders that stay on disk but are out of the pipeline for now. */
+export function isSkippedWatchFolder(filePath: string): boolean {
+  return filePath
+    .replace(/\\/g, '/')
+    .split('/')
+    .some((part) => SKIP_FOLDERS.has(part.toLowerCase()));
+}
+
+export function isSkippedWatchPath(filePath: string): boolean {
+  return isTransientSyncFile(filePath) || isSkippedWatchFolder(filePath);
+}
+
 export type FileReadiness = {
   ready: boolean;
   reason: string;
@@ -56,10 +70,10 @@ export type FileReadiness = {
 };
 
 export function inspectFileReadiness(filePath: string, settleMs: number = getSettleMs()): FileReadiness {
-  if (isTransientSyncFile(filePath)) {
+  if (isSkippedWatchPath(filePath)) {
     return {
       ready: false,
-      reason: 'syncthing/temp artifact',
+      reason: 'skipped folder',
       ageMs: 0,
       waitMs: 0,
       size: 0,

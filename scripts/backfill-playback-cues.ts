@@ -2,12 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../src/config.ts';
 import { ensurePlaybackCues } from '../src/lib/alignLib.ts';
+import { isSkippedWatchPath } from '../src/lib/fileSettleLib.ts';
 
 function walkJsonFiles(dir: string, out: string[]) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (isSkippedWatchPath(full)) continue;
       walkJsonFiles(full, out);
       continue;
     }

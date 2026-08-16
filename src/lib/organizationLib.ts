@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { audioFileRegex } from './audioLib.ts';
-import { isTransientSyncFile, requestWhenSettled } from './fileSettleLib.ts';
+import { isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { confirmFolder, moveFile } from './fsLib.ts';
 
@@ -43,7 +43,7 @@ export function watchAndOrganizeAudioFiles(sourceFolders: string[] = []) {
       watchFolder: folder,
       watchDepth: 0,
       ignoreCheck: (filePath, stats) => {
-        if (isTransientSyncFile(filePath)) return true;
+        if (isSkippedWatchPath(filePath)) return true;
         if (stats && stats.isFile()) {
           return filePath.includes('_original') || !audioFileRegex.test(filePath);
         } else {

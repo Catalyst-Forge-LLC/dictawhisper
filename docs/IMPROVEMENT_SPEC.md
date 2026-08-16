@@ -93,6 +93,7 @@ These are the places a user hits resistance. Each one should become invisible or
 | Filename must be `YYYY-MM-DD*` | Other phone formats never organize; they sit in the root | Broader date parsers; unmatched files go to `_unfiled` with a reason, not silence |
 | Organize vs transcribe race | Root watcher (depth 2) can start whisper on the pre-move path while organize moves it | One pipeline: settle → organize → transcribe on the **final** path |
 | Collision → `_holding/` | `_holding` is treated as transient, so those files **never transcribe** | Inbox for holding: rename / overwrite / skip; then process |
+| `__inbox/` | Staging folder; leave it out of watch/load/organize for now | Same skip list as `_holding` until an inbox flow exists |
 | Multi-root dest bug | Every organizer writes into `watch.roots[0]` | Dest = the root that fired the event |
 
 **Blocker:** Syncthing latency is inherent. Do not shorten the default for phone roots. Make the wait visible and skippable.
