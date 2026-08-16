@@ -9,6 +9,7 @@ import {
   cleanTranscription,
   initTranscriptionForSourceFolders,
   initTranscriptionWatcher,
+  loadExistingTranscriptions,
   setTranscriptionIo,
   transcriptions,
 } from './lib/transcriptionLib.ts';
@@ -81,6 +82,7 @@ async function main() {
   );
 
   fs.mkdirSync(config.watch.browserDropFolder, { recursive: true });
+  loadExistingTranscriptions([...config.watch.roots, config.watch.browserDropFolder]);
 
   initTranscriptionWatcher(config.watch.browserDropFolder, {
     watchDepth: 2,

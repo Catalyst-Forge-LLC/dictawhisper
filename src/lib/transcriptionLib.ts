@@ -184,6 +184,7 @@ function enqueueTranscription(file: string, options: ProcessOptions = {}) {
 
   if (transcriptionExists && !options.retry) {
     if (!isProcessed) enqueueProcessing(file);
+    else emitTranscription(null, transcriptionFile);
     return;
   }
 
@@ -225,6 +226,34 @@ export function initTranscriptionWatcher(
       void process(filePath, { settleMs: options.settleMs });
     },
   });
+}
+
+export function loadExistingTranscriptions(roots: string[]) {
+  let loaded = 0;
+  const walk = (dir: string) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (isTransientSyncFile(full)) continue;
+        walk(full);
+        continue;
+      }
+      if (!entry.name.toLowerCase().endsWith('.json')) continue;
+      if (isTransientSyncFile(full) || full.includes('_original') || full.includes('_clean')) continue;
+      try {
+        const json = JSON.parse(fs.readFileSync(full, 'utf-8'));
+        if (!json?.text && !json?.cleanedTranscription && !Array.isArray(json?.segments)) continue;
+        emitTranscription(null, full);
+        loaded += 1;
+      } catch {
+        // skip unreadable sidecars
+      }
+    }
+  };
+
+  for (const root of roots) walk(root);
+  console.log(`[load-transcriptions] loaded ${loaded} sidecar notes from disk`);
 }
 
 export function initTranscriptionForSourceFolders(sourceFolders: string[] = []) {
