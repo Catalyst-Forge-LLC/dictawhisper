@@ -3,14 +3,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const defaultConfigPath = path.resolve(__dirname, '../config.json');
+export const defaultConfigPath = path.resolve(__dirname, '../config.json');
 
 export type DictaConfig = {
-  http: { port: number; corsOrigins: string[] };
+  http: { host: string; port: number; corsOrigins: string[] };
   watch: {
     roots: string[];
     browserDropFolder: string;
     settleMinutes: number;
+    browserSettleMs: number;
     recursiveYears: boolean;
   };
   whisper: {
@@ -36,24 +37,30 @@ function readJson(filePath: string): Partial<DictaConfig> {
   return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Partial<DictaConfig>;
 }
 
+function resolveExistingOrPlain(filePath: string): string {
+  return path.resolve(filePath);
+}
+
 export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim() || defaultConfigPath): DictaConfig {
   const file = readJson(configPath);
   const config: DictaConfig = {
     http: {
+      host: process.env.HOST?.trim() || file.http?.host || '127.0.0.1',
       port: Number(process.env.PORT) || file.http?.port || 8008,
-      corsOrigins: file.http?.corsOrigins ?? ['http://localhost:5173'],
+      corsOrigins: file.http?.corsOrigins ?? ['http://localhost:7777', 'http://127.0.0.1:7777'],
     },
     watch: {
-      roots: file.watch?.roots ?? [],
-      browserDropFolder: file.watch?.browserDropFolder ?? './data/audio-files',
+      roots: (file.watch?.roots ?? []).map((root) => resolveExistingOrPlain(root)),
+      browserDropFolder: resolveExistingOrPlain(file.watch?.browserDropFolder ?? './data/audio-files'),
       settleMinutes: Number(process.env.VOICE_SETTLE_MINUTES) || file.watch?.settleMinutes || 30,
+      browserSettleMs:
+        process.env.VOICE_BROWSER_SETTLE_MS !== undefined
+          ? Number(process.env.VOICE_BROWSER_SETTLE_MS)
+          : (file.watch?.browserSettleMs ?? 0),
       recursiveYears: file.watch?.recursiveYears ?? true,
     },
     whisper: {
-      python:
-        process.env.WHISPER_PYTHON?.trim() ||
-        file.whisper?.python ||
-        'python',
+      python: process.env.WHISPER_PYTHON?.trim() || file.whisper?.python || 'python',
       model: process.env.WHISPER_MODEL?.trim() || file.whisper?.model || 'large-v3',
       device: process.env.WHISPER_DEVICE?.trim() || file.whisper?.device || 'cuda',
       computeType: process.env.WHISPER_COMPUTE_TYPE?.trim() || file.whisper?.computeType || 'float16',
@@ -72,8 +79,8 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
       },
     },
     ollanet: {
-      machine: process.env.OLLANET_MACHINE?.trim() || file.ollanet?.machine || 'YOUR-OLLANET-HOST',
-      cleanModel: process.env.OLLANET_CLEAN_MODEL?.trim() || file.ollanet?.cleanModel || 'YOUR-CLEAN-MODEL',
+      machine: process.env.OLLANET_MACHINE?.trim() || file.ollanet?.machine || '',
+      cleanModel: process.env.OLLANET_CLEAN_MODEL?.trim() || file.ollanet?.cleanModel || '',
       saveChats: file.ollanet?.saveChats ?? false,
     },
   };
@@ -87,4 +94,5 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
   return config;
 }
 
-export const config = loadConfig();
+export const configPath = process.env.DICTA_CONFIG?.trim() || defaultConfigPath;
+export const config = loadConfig(configPath);

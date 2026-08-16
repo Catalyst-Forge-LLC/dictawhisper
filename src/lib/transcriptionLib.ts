@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { Socket } from 'socket.io';
+import type { Server as SocketIOServer, Socket } from 'socket.io';
 import z from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { q } from './queueLib.ts';
@@ -14,17 +14,17 @@ import { config } from '../config.ts';
 
 export const transcriptions: Record<string, any> = {};
 
-let liveSocket: Socket | null = null;
+let liveIo: SocketIOServer | null = null;
 
-export function setTranscriptionSocket(socket: Socket | null) {
-  liveSocket = socket;
+export function setTranscriptionIo(io: SocketIOServer | null) {
+  liveIo = io;
 }
 
-function socketOf(ioSocket: null | Socket) {
-  return ioSocket ?? liveSocket;
+export function forgetTranscription(jsonFile: string) {
+  delete transcriptions[jsonFile];
 }
 
-export function emitTranscription(ioSocket: null | Socket = null, jsonFile: string, elapsed: string | null = null) {
+export function emitTranscription(target: Socket | SocketIOServer | null = null, jsonFile: string, elapsed: string | null = null) {
   if (!fs.existsSync(jsonFile)) {
     console.error(`[emit-transcription-error] JSON file does not exist (yet): ${jsonFile}`);
     return;
@@ -35,13 +35,13 @@ export function emitTranscription(ioSocket: null | Socket = null, jsonFile: stri
     fs.writeFileSync(jsonFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
   }
   transcriptions[jsonFile] = transcriptionJson;
-  if (ioSocket) {
-    ioSocket.emit('transcription', { jsonFile, transcriptionJson });
-  }
+  const dest = target ?? liveIo;
+  dest?.emit('transcription', { jsonFile, transcriptionJson });
 }
 
 export function getTranscriptionFilename(file: string): string {
-  return file.replace(/\.(mp3|webm|m4a)/i, '.json').replace(/\\/g, '/');
+  const parsed = path.parse(file);
+  return path.join(parsed.dir, `${parsed.name}.json`);
 }
 
 export function checkTranscription(file: string): {
@@ -117,35 +117,43 @@ export async function cleanTranscription(file: string, callback: (err: Error | n
   }
 }
 
-export async function process(file: string, ioSocket: null | Socket = null, options: { force?: boolean } = {}) {
-  requestWhenSettled(file, () => enqueueTranscription(file, socketOf(ioSocket)), {
+export type ProcessOptions = {
+  force?: boolean;
+  retry?: boolean;
+  settleMs?: number;
+};
+
+export async function process(file: string, options: ProcessOptions = {}) {
+  requestWhenSettled(file, () => enqueueTranscription(file, options), {
     force: options.force,
+    retry: options.retry,
+    settleMs: options.settleMs,
     label: 'voice-transcribe',
   });
 }
 
-function enqueueProcessing(file: string, ioSocket: null | Socket, elapsed?: string) {
+function enqueueProcessing(file: string, elapsed?: string) {
   const { transcriptionFile } = checkTranscription(file);
   if (!q['processing']) {
-    if (ioSocket) emitTranscription(ioSocket, transcriptionFile, elapsed ?? null);
+    emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
   }
   console.log(`[process] Adding file to processing queue: ${file}`);
   q['processing'].push({ file }, () => {
-    if (ioSocket) emitTranscription(ioSocket, transcriptionFile, elapsed ?? null);
+    emitTranscription(null, transcriptionFile, elapsed ?? null);
   });
-  if (ioSocket) emitTranscription(ioSocket, transcriptionFile, elapsed ?? null);
+  emitTranscription(null, transcriptionFile, elapsed ?? null);
 }
 
-function enqueueTranscription(file: string, ioSocket: null | Socket = null) {
+function enqueueTranscription(file: string, options: ProcessOptions = {}) {
   const { isProcessed, transcriptionFile, transcriptionExists } = checkTranscription(file);
   if (!fs.existsSync(file)) {
     console.error(`[process-error] File does not exist: ${file}`);
     return;
   }
 
-  if (transcriptionExists) {
-    if (!isProcessed) enqueueProcessing(file, ioSocket);
+  if (transcriptionExists && !options.retry) {
+    if (!isProcessed) enqueueProcessing(file);
     return;
   }
 
@@ -154,16 +162,20 @@ function enqueueTranscription(file: string, ioSocket: null | Socket = null) {
     { file, transcriptionFile, transcriptionFolder: path.dirname(transcriptionFile) },
     (_err: any, result?: any) => {
       const elapsed = result?.elapsed ?? result?.result?.elapsed;
-      enqueueProcessing(file, ioSocket, elapsed);
+      enqueueProcessing(file, elapsed);
     }
   );
 }
 
-export function initTranscriptionWatcher(watchFolder: null | string = null, ioSocket: null | Socket = null, watchDepth = 2) {
+export function initTranscriptionWatcher(
+  watchFolder: null | string = null,
+  options: { watchDepth?: number; settleMs?: number } = {}
+) {
   if (!watchFolder) {
     console.error('[watcher-error] No watch folder specified');
     return;
   }
+  const watchDepth = options.watchDepth ?? 2;
   new Watcher({
     watchFolder,
     watchDepth,
@@ -177,18 +189,18 @@ export function initTranscriptionWatcher(watchFolder: null | string = null, ioSo
     },
     fileMatchRegex: audioFileRegex,
     addHandler: async (filePath) => {
-      await process(filePath, ioSocket);
+      await process(filePath, { settleMs: options.settleMs });
     },
     changeHandler: (filePath) => {
-      void process(filePath, ioSocket);
+      void process(filePath, { settleMs: options.settleMs });
     },
   });
 }
 
-export function initTranscriptionForSourceFolders(sourceFolders: string[] = [], ioSocket: null | Socket = null) {
+export function initTranscriptionForSourceFolders(sourceFolders: string[] = []) {
   const depth = config.watch.recursiveYears ? 2 : 1;
   sourceFolders.forEach((folder) => {
-    initTranscriptionWatcher(folder, ioSocket, depth);
+    initTranscriptionWatcher(folder, { watchDepth: depth });
   });
   console.log(`[watch-source-folders] Transcription initialized for source folders: ${sourceFolders.join(', ')}`);
 }

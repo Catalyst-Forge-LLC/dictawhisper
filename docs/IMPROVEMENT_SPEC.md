@@ -35,7 +35,7 @@ The extract already has a real pipeline. It does **not** yet have a product shel
 After this pass, the loop should be:
 
 1. `pnpm install` once (workspace), `cp config.example.json config.json`, edit three things: watch roots, Python path, ollanet machine/model.
-2. `pnpm doctor` tells you ffmpeg, Python/`faster-whisper`, CUDA (or CPU fallback), watch folders, and ollanet are reachable — or exactly what is missing.
+2. `pnpm run doctor` tells you ffmpeg, Python/`faster-whisper`, CUDA (or CPU fallback), watch folders, and ollanet are reachable — or exactly what is missing.
 3. `pnpm dev` starts API + UI with matching ports and CORS.
 4. Phone note via Syncthing: appears as *settling*, then *transcribing*, then *cleaning*, then *done*. No silent 30-minute void.
 5. Browser record or drop: transcribes **immediately** (no Syncthing settle).
@@ -151,13 +151,10 @@ These are the places a user hits resistance. Each one should become invisible or
 
 ### 5.1 Ports, CORS, and the socket URL — daily-use break
 
-- README and CORS: `http://localhost:5173`
-- `client/vite.config.js`: **6173**
-- `pnpm ui` → Vite `--open` on 6173
-- `+page.svelte`: `io('localhost:8008')` (no protocol, no env, no Vite proxy)
-- CORS also allows `https://example.com` (Chilon host)
+- README and CORS were `http://localhost:5173`; Vite was **6173**; client hardcoded `localhost:8008`.
+- CORS also allowed `https://example.com` (Chilon host).
 
-**Do:** pick one UI origin (recommend **5173** to match the README). Put it in config + Vite. Proxy `/socket.io` and `/api` through Vite in dev, or inject `VITE_DICTA_URL`. Remove `example.com` from the example. Broadcast with `io.emit`.
+**Locked:** UI origin is **7777**. Vite proxies `/socket.io` and API paths to `127.0.0.1:8008`. Broadcast with `io.emit`. `example.com` is gone from the example.
 
 ### 5.2 Organize is Windows-path and first-root only
 
@@ -243,7 +240,7 @@ Priority: **P0** correctness / daily loop, **P1** friction, **P2** product, **P3
 - Neutral `config.example.json` and README (ports, placeholders, Python deps).
 - `pnpm` workspace: root + `client`, one lockfile, `pnpm dev` / `pnpm start` / `pnpm ui`.
 - Scripts: `typecheck`, `doctor`. Cross-platform `turbo` (no bare `WHISPER_MODEL=turbo` if you care about cmd.exe; bash is fine if documented).
-- Align Vite **5173** with CORS and README.
+- Align Vite **7777** with CORS and README.
 
 ### W1 — Make the UI path instant (P0, S)
 
@@ -271,7 +268,7 @@ Priority: **P0** correctness / daily loop, **P1** friction, **P2** product, **P3
 
 ### W4 — Preflight and honest health (P0, M)
 
-`pnpm doctor` and `/health` should report, not assume:
+`pnpm run doctor` and `/health` should report, not assume:
 
 - Node version, config parse
 - Each watch root exists (or create-if-empty flag)
@@ -383,7 +380,7 @@ W11 inbox v2, W12 tests, W13 client upgrade
 
 ## 9. Success criteria
 
-- Fresh clone: example config + `pnpm doctor` + `pnpm dev` is the whole setup story (plus Python venv and ffmpeg).
+- Fresh clone: example config + `pnpm run doctor` + `pnpm dev` is the whole setup story (plus Python venv and ffmpeg).
 - Browser record appears in the inbox within seconds of Stop, not after `settleMinutes`.
 - Phone notes show *settling* then move to `YYYY/MM/` and transcribe **once**, on the final path.
 - Two browser tabs both receive live updates.
@@ -408,16 +405,14 @@ W11 inbox v2, W12 tests, W13 client upgrade
 
 ---
 
-## 11. Decision log (open)
+## 11. Decision log (locked 2026-08-16)
 
-Lock these before coding if they are not obvious:
-
-1. **UI port:** 5173 (match README) vs 6173 (current Vite). Recommendation: **5173**.
-2. **Browser settle:** 0 vs ~2s. Recommendation: **0**, plus force on save.
-3. **Denoise output:** always `.mp3` vs keep container. Recommendation: **always `.mp3`** for the working file; keep `_original` with the real source bytes.
-4. **Whisper worker:** stdin JSON vs localhost HTTP. Recommendation: **stdin/stdout JSON lines** (fewer ports).
-5. **Client upgrade:** now vs after inbox v1. Recommendation: **after** (W13).
-6. **Kit vs Vite SPA:** keep Kit for now; revisit only if SSR/adapter pain shows up.
+1. **UI port:** **7777**. API stays `127.0.0.1:8008`. Vite proxies `/socket.io` and API paths so the browser only opens 7777.
+2. **Browser settle:** **0**, plus `{ force: true }` on save. Phone/watch roots stay at 30 minutes. `{ retry: true }` clears the in-process latch so force actually re-runs.
+3. **Denoise output:** **always `.mp3`** for the working file; keep `_original` with the real source bytes. (W6, not this slice.)
+4. **Whisper worker:** **stdin/stdout JSON lines**. (W7, not this slice.)
+5. **Client upgrade:** **after inbox v1** (W13).
+6. **Kit vs Vite SPA:** keep Kit for now.
 
 ---
 

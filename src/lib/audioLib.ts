@@ -7,14 +7,15 @@ export const audioExtensions = ['webm', 'mp3', 'm4a'];
 
 export const audioFileRegex = new RegExp(`\\.(${audioExtensions.join('|')})$`, 'i');
 
-export function saveAudioFile(dataUrl: string, clipName: string) {
+export function saveAudioFile(dataUrl: string, clipName: string): string {
   const folder = config.watch.browserDropFolder;
   fs.mkdirSync(folder, { recursive: true });
-  let filePath = path.join(folder, `${clipName}.webm`);
-  let data = dataUrl.replace(/data:.*?;base64,/i, '');
+  const safeName = (clipName || 'voice-recording').replace(/[<>:"/\\|?*]/g, '-');
+  const filePath = path.join(folder, `${safeName}.webm`);
+  const data = dataUrl.replace(/data:.*?;base64,/i, '');
   console.log('[save-audio-file] Saving Audio File', { filePath, dataLength: data.length });
-  let fileBuffer = Buffer.from(data, 'base64');
-  fs.writeFileSync(filePath, fileBuffer);
+  fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
+  return filePath;
 }
 
 export async function cleanAudioFile(file: string, cleanAgain: boolean = false): Promise<boolean> {

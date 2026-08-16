@@ -7,9 +7,11 @@
   "license": "MIT",
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
-    "dev": "node --experimental-strip-types src/server.ts",
+    "dev": "node --experimental-strip-types src/dev.ts",
     "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
-    "ui": "pnpm --dir client dev"
+    "ui": "pnpm --dir client dev",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "doctor": "node --experimental-strip-types src/doctor.ts"
   },
   "engines": {
     "node": ">=20"

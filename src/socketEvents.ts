@@ -1,12 +1,13 @@
 import fs from 'fs';
 import { audioExtensions, saveAudioFile } from './lib/audioLib.ts';
 import { Socket } from 'socket.io';
-import { emitTranscription, process } from './lib/transcriptionLib.ts';
+import { emitTranscription, forgetTranscription, process } from './lib/transcriptionLib.ts';
+import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 
-export function socketConnect(ioSocket: Socket, transcriptions: Record<string, any>) {
+export function socketConnect(socket: Socket, transcriptions: Record<string, any>) {
   console.log(`[socket-connection] A user connected, emitting ${Object.keys(transcriptions).length} transcriptions.`);
   Object.entries(transcriptions).forEach(([file]) => {
-    emitTranscription(ioSocket, file, null);
+    emitTranscription(socket, file, null);
   });
 }
 
@@ -22,33 +23,45 @@ export const socketEvents = [
     handler: (msg: any) => {
       if (msg.audioDataURL) {
         console.log('[socket-new-message] Message: Audio File', String(msg.audioDataURL).substr(0, 500));
-        saveAudioFile(msg.audioDataURL, msg.clipName);
+        const filePath = saveAudioFile(msg.audioDataURL, msg.clipName);
+        void process(filePath, { force: true });
       }
     },
   },
   {
     event: 'force-transcribe',
     handler: (msg: any) => {
-      if (msg?.file) {
-        console.log(`[socket-force-transcribe] Forcing transcription: ${msg.file}`);
-        void process(msg.file, null, { force: true });
+      if (!msg?.file) return;
+      const allowed = resolveAllowedPath(msg.file);
+      if (!allowed.ok) {
+        console.warn(`[socket-force-transcribe] rejected: ${allowed.error} (${msg.file})`);
+        return;
       }
+      console.log(`[socket-force-transcribe] Retrying transcription: ${allowed.path}`);
+      void process(allowed.path, { retry: true });
     },
   },
   {
     event: 'delete-transcription',
     handler: (msg: any) => {
-      if (msg.jsonFile && fs.existsSync(msg.jsonFile)) {
-        console.log(`[socket-delete-transcription] Deleting transcription file: ${msg.jsonFile}`);
-        fs.unlinkSync(msg.jsonFile);
-        audioExtensions.forEach((ext) => {
-          const audioFile = msg.jsonFile.replace(/\.json$/, `.${ext}`);
-          if (fs.existsSync(audioFile)) {
-            console.log(`[socket-delete-transcription] Deleting associated audio file: ${audioFile}`);
-            fs.unlinkSync(audioFile);
-          }
-        });
+      if (!msg.jsonFile) return;
+      const allowed = resolveAllowedPath(msg.jsonFile);
+      if (!allowed.ok) {
+        console.warn(`[socket-delete-transcription] rejected: ${allowed.error} (${msg.jsonFile})`);
+        return;
       }
+      if (!fs.existsSync(allowed.path)) return;
+      console.log(`[socket-delete-transcription] Deleting transcription file: ${allowed.path}`);
+      fs.unlinkSync(allowed.path);
+      forgetTranscription(allowed.path);
+      audioExtensions.forEach((ext) => {
+        const audioFile = allowed.path.replace(/\.json$/i, `.${ext}`);
+        const audioAllowed = resolveAllowedPath(audioFile);
+        if (audioAllowed.ok && fs.existsSync(audioAllowed.path)) {
+          console.log(`[socket-delete-transcription] Deleting associated audio file: ${audioAllowed.path}`);
+          fs.unlinkSync(audioAllowed.path);
+        }
+      });
     },
   },
 ];

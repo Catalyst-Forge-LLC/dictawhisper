@@ -6,32 +6,74 @@
   let audioCtx;
   let mainSection;
   let fileInput;
+  let mediaRecorder = null;
+  let chunks = [];
 
   export let socket;
 
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function getFilenameDate() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}_${pad2(d.getHours())}-${pad2(d.getMinutes())}-${pad2(d.getSeconds())}`;
+  }
+
   onMount(() => {
-    setup();
+    const record = document.querySelector('.record');
+    const stop = document.querySelector('.stop');
+    canvas = document.querySelector('.visualizer');
+    mainSection = document.querySelector('.main-controls');
+    canvasCtx = canvas.getContext('2d');
+    stop.disabled = true;
+
     window.onresize = function () {
       canvas.width = mainSection.offsetWidth;
     };
-
     window.onresize();
+
+    record.onclick = async function () {
+      try {
+        if (!mediaRecorder) {
+          await armRecorder();
+        }
+        chunks = [];
+        mediaRecorder.start();
+        record.style.background = 'red';
+        stop.disabled = false;
+        record.disabled = true;
+      } catch (err) {
+        console.log('The following error occured: ' + err);
+        alert('Microphone access is required to record.');
+      }
+    };
+
+    stop.onclick = function () {
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+      mediaRecorder.stop();
+      record.style.background = '';
+      record.style.color = '';
+      stop.disabled = true;
+      record.disabled = false;
+    };
   });
 
-  function getFilenameDate() {
-    return new Date()
-      .toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      })
-      .replaceAll('/', '-')
-      .replaceAll(':', '-')
-      .replace(', ', '_');
+  async function armRecorder() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('getUserMedia not supported');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    visualize(stream);
+    mediaRecorder.onstop = function () {
+      const clipName = `voice-recording_${getFilenameDate()}`;
+      uploadAudioFile(new Blob(chunks, { type: 'audio/webm; codecs=opus' }), 'blob', clipName);
+      chunks = [];
+    };
+    mediaRecorder.ondataavailable = function (e) {
+      chunks.push(e.data);
+    };
   }
 
   //**dataURL to blob**
@@ -133,82 +175,6 @@
         alert('Unsupported file type. Please upload an audio file.');
       }
     });
-  }
-
-  function setup() {
-    // set up basic variables for app
-
-    const record = document.querySelector('.record');
-    const stop = document.querySelector('.stop');
-    const soundClips = document.querySelector('.sound-clips');
-    canvas = document.querySelector('.visualizer');
-    mainSection = document.querySelector('.main-controls');
-
-    // disable stop button while not recording
-
-    stop.disabled = true;
-
-    // visualizer setup - create web audio api context and canvas
-
-    canvasCtx = canvas.getContext('2d');
-
-    //main block for doing the audio recording
-
-    if (navigator.mediaDevices.getUserMedia) {
-      console.log('getUserMedia supported.');
-
-      const constraints = { audio: true };
-      let chunks = [];
-
-      let onSuccess = function (stream) {
-        const mediaRecorder = new MediaRecorder(stream);
-
-        visualize(stream);
-
-        record.onclick = function () {
-          mediaRecorder.start();
-          console.log(mediaRecorder.state);
-          console.log('recorder started');
-          record.style.background = 'red';
-
-          stop.disabled = false;
-          record.disabled = true;
-        };
-
-        stop.onclick = function () {
-          mediaRecorder.stop();
-          console.log(mediaRecorder.state);
-          console.log('recorder stopped');
-          record.style.background = '';
-          record.style.color = '';
-          // mediaRecorder.requestData();
-
-          stop.disabled = true;
-          record.disabled = false;
-        };
-
-        mediaRecorder.onstop = function (e) {
-          console.log('data available after MediaRecorder.stop() called.');
-
-          const clipName = `voice-recording_${getFilenameDate()}`;
-          uploadAudioFile(new Blob(chunks, { type: 'audio/ogg; codecs=opus' }), 'blob', clipName);
-
-          chunks = [];
-        };
-
-        mediaRecorder.ondataavailable = function (e) {
-          chunks.push(e.data);
-        };
-      };
-
-      let onError = function (err) {
-        console.log('The following error occured: ' + err);
-      };
-
-      navigator.mediaDevices.getUserMedia(constraints).then(onSuccess, onError);
-    } else {
-      console.log('getUserMedia not supported on your browser!');
-    }
   }
 
   function visualize(stream) {

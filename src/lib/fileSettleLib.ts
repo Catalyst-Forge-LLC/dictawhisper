@@ -111,21 +111,31 @@ function fileKey(filePath: string): string {
   return path.normalize(filePath);
 }
 
+export type SettleOptions = {
+  /** Skip the mtime wait. Does not re-run if this file already started this process. */
+  force?: boolean;
+  /** Skip the wait and allow a file that already ran this process to run again. */
+  retry?: boolean;
+  label?: string;
+  settleMs?: number;
+};
+
 /**
  * Run `action` only after the file has not been written for VOICE_SETTLE_MINUTES
- * (default 60). Syncthing updates mtime while a phone recording is still syncing,
+ * (default 30). Syncthing updates mtime while a phone recording is still syncing,
  * so this waits until the last write — not until first appearance.
  *
- * Pass `{ force: true }` to skip the wait. Reschedules if the file is written again.
+ * Pass `{ force: true }` to skip the wait. Pass `{ retry: true }` to skip the wait
+ * and clear the in-process "already started" latch. Reschedules if the file is written again.
  */
 export function requestWhenSettled(
   filePath: string,
   action: () => void | Promise<void>,
-  options: { force?: boolean; label?: string } = {}
+  options: SettleOptions = {}
 ): void {
   const label = options.label ?? 'settle';
   const key = `${label}:${fileKey(filePath)}`;
-  const settleMs = getSettleMs();
+  const settleMs = options.settleMs ?? getSettleMs();
 
   const clearTimer = () => {
     const timer = pendingTimers.get(key);
@@ -144,9 +154,15 @@ export function requestWhenSettled(
     });
   };
 
-  if (options.force) {
+  if (options.retry) {
+    started.delete(key);
+  }
+
+  if (options.force || options.retry) {
     clearTimer();
-    console.log(`[${label}] forced; skipping settle for ${filePath}`);
+    console.log(
+      `[${label}] ${options.retry ? 'retry' : 'forced'}; skipping settle for ${filePath}`
+    );
     run();
     return;
   }
@@ -182,7 +198,7 @@ export function requestWhenSettled(
 export function logSettleConfig(label = 'settle'): void {
   const settleMs = getSettleMs();
   console.log(
-    `[${label}] process files ${settleMs === 0 ? 'immediately (settle disabled)' : `${formatDuration(settleMs)} after last write`}` +
-      ` (VOICE_SETTLE_MINUTES / VOICE_SETTLE_MS; force via POST /transcribe/force)`
+    `[${label}] phone/watch files ${settleMs === 0 ? 'immediately (settle disabled)' : `${formatDuration(settleMs)} after last write`}` +
+      ` (VOICE_SETTLE_MINUTES / VOICE_SETTLE_MS; retry via POST /transcribe/force)`
   );
 }

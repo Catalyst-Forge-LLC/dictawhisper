@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
+import fs from 'fs';
 import http from 'http';
 import express from 'express';
-import type { Socket } from 'socket.io';
 import { config } from './config.ts';
 import { apiRoutes } from './apiRoutes.ts';
 import { socketConnect, socketEvents } from './socketEvents.ts';
@@ -9,11 +9,11 @@ import {
   cleanTranscription,
   initTranscriptionForSourceFolders,
   initTranscriptionWatcher,
-  setTranscriptionSocket,
+  setTranscriptionIo,
   transcriptions,
 } from './lib/transcriptionLib.ts';
 import { watchAndOrganizeAudioFiles } from './lib/organizationLib.ts';
-import { logSettleConfig } from './lib/fileSettleLib.ts';
+import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
 import { resolveWhisperModel, whisperTranscribe } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
 import { cleanAudioFile } from './lib/audioLib.ts';
@@ -30,7 +30,7 @@ const io = new SocketIOServer(server, {
   },
 });
 
-let ioSocket: Socket | null = null;
+setTranscriptionIo(io);
 
 initQueues({
   transcription: {
@@ -61,10 +61,8 @@ for (const route of apiRoutes) {
   else throw new Error(`Unsupported method: ${route.method}`);
 }
 
-io.on('connection', async (socket) => {
-  ioSocket = socket;
-  setTranscriptionSocket(socket);
-  socketConnect(ioSocket, transcriptions);
+io.on('connection', (socket) => {
+  socketConnect(socket, transcriptions);
   for (const { event, handler } of socketEvents) {
     socket.on(event, handler);
   }
@@ -72,15 +70,27 @@ io.on('connection', async (socket) => {
 
 async function main() {
   console.log(`[dictawhisper] whisper=${resolveWhisperModel()} device=${config.whisper.device}`);
-  console.log(`[dictawhisper] ollanet ${config.ollanet.machine} / ${config.ollanet.cleanModel}`);
+  console.log(`[dictawhisper] ollanet ${config.ollanet.machine || '(unset)'} / ${config.ollanet.cleanModel || '(unset)'}`);
   logSettleConfig('voice-settle');
+  console.log(
+    `[voice-settle] browser-drop files ${
+      config.watch.browserSettleMs === 0
+        ? 'immediately (settle disabled)'
+        : `${formatDuration(config.watch.browserSettleMs)} after last write`
+    }`
+  );
 
-  initTranscriptionWatcher(config.watch.browserDropFolder, ioSocket);
+  fs.mkdirSync(config.watch.browserDropFolder, { recursive: true });
+
+  initTranscriptionWatcher(config.watch.browserDropFolder, {
+    watchDepth: 2,
+    settleMs: config.watch.browserSettleMs,
+  });
   watchAndOrganizeAudioFiles(config.watch.roots);
-  initTranscriptionForSourceFolders(config.watch.roots, ioSocket);
+  initTranscriptionForSourceFolders(config.watch.roots);
 
-  server.listen(config.http.port, () => {
-    console.log(`listening on *:${config.http.port}`);
+  server.listen(config.http.port, config.http.host, () => {
+    console.log(`listening on ${config.http.host}:${config.http.port}`);
   });
 }
 

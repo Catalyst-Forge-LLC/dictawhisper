@@ -7,3 +7,4 @@ data/audio-files/*
 client/node_modules/
 client/.svelte-kit/
 client/dist/
+config.json

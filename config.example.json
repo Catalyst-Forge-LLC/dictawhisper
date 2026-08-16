@@ -1,12 +1,14 @@
 {
   "http": {
+    "host": "127.0.0.1",
     "port": 8008,
-    "corsOrigins": ["http://localhost:5173", "https://example.com"]
+    "corsOrigins": ["http://localhost:7777", "http://127.0.0.1:7777"]
   },
   "watch": {
     "roots": ["C:\\Users\\YOU\\VoiceNotes"],
     "browserDropFolder": "./data/audio-files",
     "settleMinutes": 30,
+    "browserSettleMs": 0,
     "recursiveYears": true
   },
   "whisper": {

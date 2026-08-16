@@ -23,8 +23,13 @@
   }
 
   socket.on('transcription', (data) => {
-    console.log('transcription', { data });
-    transcriptions = [...transcriptions, data];
+    const i = transcriptions.findIndex((t) => t.jsonFile === data.jsonFile);
+    if (i >= 0) {
+      transcriptions[i] = data;
+      transcriptions = transcriptions;
+    } else {
+      transcriptions = [...transcriptions, data];
+    }
   });
 </script>
 
