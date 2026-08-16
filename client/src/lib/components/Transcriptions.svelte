@@ -144,12 +144,6 @@
       }));
   }
 
-  function matchesTags(item) {
-    if (!selectedTags.length) return true;
-    const have = new Set(tagsOf(item));
-    return selectedTags.every((tag) => have.has(tag));
-  }
-
   function toggleTag(tag) {
     selectedTags = selectedTags.includes(tag)
       ? selectedTags.filter((item) => item !== tag)
@@ -236,7 +230,11 @@
     applyResult = null;
   }
 
-  $: visible = transcriptions.filter(matchesTags);
+  $: visible = transcriptions.filter((item) => {
+    if (!selectedTags.length) return true;
+    const have = new Set(tagsOf(item));
+    return selectedTags.every((tag) => have.has(tag));
+  });
   $: groups = groupTranscriptions(visible);
   $: tagCloud = buildTagCloud(transcriptions);
   $: frequentTags = tagCloud.filter((item) => item.count > 1);
@@ -253,6 +251,7 @@
 
   function isOpen(key) {
     if (Object.prototype.hasOwnProperty.call(openGroups, key)) return openGroups[key];
+    if (selectedTags.length) return true;
     return key === newestKey;
   }
 
@@ -309,6 +308,9 @@
       </summary>
       {#if selectedTags.length}
         <div class="tag-cloud-head">
+          <span class="muted">
+            {visible.length} note{visible.length === 1 ? '' : 's'} with {selectedTags.join(' + ')}
+          </span>
           <button type="button" class="clear" on:click={() => (selectedTags = [])}>Clear filter</button>
         </div>
       {/if}
