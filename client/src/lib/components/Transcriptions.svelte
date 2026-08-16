@@ -18,7 +18,9 @@
   ];
 
   let expanded = {};
+  let showRaw = {};
   let openGroups = {};
+  let selectedTags = [];
 
   function folderOf(jsonFile) {
     const norm = String(jsonFile || '').replace(/\\/g, '/');
@@ -40,6 +42,25 @@
     return String(jsonFile || '').replace(/\\/g, '/').split('/').pop();
   }
 
+  function tagsOf(item) {
+    const tags = item.transcriptionJson?.tags;
+    return Array.isArray(tags) ? tags.map((tag) => String(tag).trim()).filter(Boolean) : [];
+  }
+
+  function cleanedOf(item) {
+    return String(item.transcriptionJson?.cleanedTranscription || '').trim();
+  }
+
+  function preview(text, limit = 200) {
+    const oneLine = text.replace(/\s+/g, ' ').trim();
+    if (oneLine.length <= limit) return oneLine;
+    return `${oneLine.slice(0, limit)}…`;
+  }
+
+  function paragraphs(text) {
+    return text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  }
+
   function groupTranscriptions(list) {
     const map = new Map();
     for (const item of list) {
@@ -56,7 +77,38 @@
     return other ? [...dated, other] : dated;
   }
 
-  $: groups = groupTranscriptions(transcriptions);
+  function buildTagCloud(list) {
+    const counts = new Map();
+    for (const item of list) {
+      for (const tag of tagsOf(item)) {
+        counts.set(tag, (counts.get(tag) || 0) + 1);
+      }
+    }
+    const max = Math.max(1, ...counts.values());
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag, count]) => ({
+        tag,
+        count,
+        size: `${0.8 + (count / max) * 0.7}rem`,
+      }));
+  }
+
+  function matchesTags(item) {
+    if (!selectedTags.length) return true;
+    const have = new Set(tagsOf(item));
+    return selectedTags.every((tag) => have.has(tag));
+  }
+
+  function toggleTag(tag) {
+    selectedTags = selectedTags.includes(tag)
+      ? selectedTags.filter((item) => item !== tag)
+      : [...selectedTags, tag];
+  }
+
+  $: visible = transcriptions.filter(matchesTags);
+  $: groups = groupTranscriptions(visible);
+  $: tagCloud = buildTagCloud(transcriptions);
   $: newestKey = groups[0]?.key;
 
   function isOpen(key) {
@@ -101,51 +153,117 @@
 </script>
 
 <section class="transcriptions">
+  {#if tagCloud.length}
+    <div class="tag-cloud">
+      <div class="tag-cloud-head">
+        <span>Tags</span>
+        {#if selectedTags.length}
+          <button type="button" class="clear" on:click={() => (selectedTags = [])}>Clear</button>
+        {/if}
+      </div>
+      <div class="tag-cloud-body">
+        {#each tagCloud as item}
+          <button
+            type="button"
+            class="tag"
+            class:active={selectedTags.includes(item.tag)}
+            style="font-size: {item.size}"
+            on:click={() => toggleTag(item.tag)}
+          >
+            {item.tag}
+            <span class="tag-count">{item.count}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if selectedTags.length && !visible.length}
+    <p class="empty">No notes match {selectedTags.join(' + ')}.</p>
+  {/if}
+
   {#each groups as group}
     <details class="folder" open={isOpen(group.key)} on:toggle={(event) => onToggle(group.key, event)}>
       <summary>
         <span class="folder-name">{groupLabel(group)}</span>
         <span class="folder-count">{group.items.length}</span>
       </summary>
-      <table>
-        <thead>
-          <tr>
-            <th>Note</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each group.items as transcription}
-            <tr class="transcription" class:expanded={expanded[transcription.jsonFile]}>
-              <td
-                title={transcription.jsonFile}
-                tabindex="0"
-                on:click={() => toggleExpanded(transcription.jsonFile)}
-                on:keydown={(event) => event.key === 'Enter' && toggleExpanded(transcription.jsonFile)}
-              >
-                {displayName(transcription.jsonFile)}
-                {#if transcription.transcriptionJson?.elapsed}
-                  <span class="elapsed">{transcription.transcriptionJson.elapsed}</span>
-                {/if}
-              </td>
-              <td class="actions">
-                <button type="button" on:click={() => deleteTranscription(transcription.jsonFile)}>DEL</button>
-                <button type="button" on:click={() => copyTranscription(transcription)}>COPY</button>
-              </td>
-            </tr>
-            {#if expanded[transcription.jsonFile]}
-              {#each transcription.transcriptionJson?.segments || [] as segment}
-                <tr class="segment">
-                  <td colspan="2">
-                    <span class="times">{segment.start}–{segment.end}</span>
-                    {segment.text}
-                  </td>
-                </tr>
-              {/each}
+      {#each group.items as transcription}
+        {@const cleaned = cleanedOf(transcription)}
+        {@const tags = tagsOf(transcription)}
+        <article class="note" class:expanded={expanded[transcription.jsonFile]}>
+          <header
+            title={transcription.jsonFile}
+            tabindex="0"
+            on:click={() => toggleExpanded(transcription.jsonFile)}
+            on:keydown={(event) => event.key === 'Enter' && toggleExpanded(transcription.jsonFile)}
+          >
+            <div class="note-title">
+              <span class="name">{displayName(transcription.jsonFile)}</span>
+              {#if transcription.transcriptionJson?.elapsed}
+                <span class="elapsed">{transcription.transcriptionJson.elapsed}</span>
+              {/if}
+              {#if !cleaned}
+                <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
+              {/if}
+            </div>
+            {#if tags.length}
+              <div class="note-tags">
+                {#each tags as tag}
+                  <button
+                    type="button"
+                    class="tag small"
+                    class:active={selectedTags.includes(tag)}
+                    on:click|stopPropagation={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                {/each}
+              </div>
             {/if}
-          {/each}
-        </tbody>
-      </table>
+            {#if !expanded[transcription.jsonFile]}
+              <p class="preview">{cleaned ? preview(cleaned) : preview(transcription.transcriptionJson?.text || '')}</p>
+            {/if}
+          </header>
+          <div class="actions">
+            <button type="button" on:click={() => deleteTranscription(transcription.jsonFile)}>DEL</button>
+            <button type="button" on:click={() => copyTranscription(transcription)}>COPY</button>
+          </div>
+          {#if expanded[transcription.jsonFile]}
+            <div class="note-body">
+              {#if cleaned}
+                {#each paragraphs(cleaned) as para}
+                  <p>{para}</p>
+                {/each}
+              {:else}
+                <p class="muted">No cleaned text yet. Raw transcript below.</p>
+              {/if}
+              {#if (transcription.transcriptionJson?.segments || []).length}
+                <button
+                  type="button"
+                  class="raw-toggle"
+                  on:click={() => {
+                    showRaw[transcription.jsonFile] = !showRaw[transcription.jsonFile];
+                    showRaw = showRaw;
+                  }}
+                >
+                  {showRaw[transcription.jsonFile] ? 'Hide raw segments' : 'Show raw segments'}
+                </button>
+              {/if}
+              {#if showRaw[transcription.jsonFile]}
+                <div class="segments">
+                  {#each transcription.transcriptionJson.segments as segment}
+                    <p>
+                      <span class="times">{segment.start}–{segment.end}</span>
+                      {segment.text}
+                    </p>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </article>
+      {/each}
     </details>
   {/each}
 </section>
@@ -153,6 +271,66 @@
 <style lang="scss">
   .transcriptions {
     padding: 0.5rem 0 1.5rem;
+  }
+
+  .tag-cloud {
+    margin: 0.75rem 0 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .tag-cloud-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+  }
+
+  .tag-cloud-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+  }
+
+  .tag {
+    border: 1px solid #c5d8e6;
+    background: #f4f8fb;
+    color: #135;
+    padding: 0.15rem 0.45rem;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+
+  .tag.small {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.35rem;
+  }
+
+  .tag.active {
+    background: #0088cc;
+    border-color: #0088cc;
+    color: #fff;
+  }
+
+  .tag-count {
+    opacity: 0.65;
+    margin-left: 0.2rem;
+    font-size: 0.75em;
+  }
+
+  .clear,
+  .raw-toggle {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.45rem;
+    background: #666;
+  }
+
+  .empty,
+  .muted {
+    color: #666;
+    padding: 0.5rem 0;
   }
 
   .folder {
@@ -183,41 +361,55 @@
     font-size: 0.8rem;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
+  .note {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.35rem 0.5rem;
+    padding: 0.55rem 0.15rem 0.7rem;
+    border-top: 1px solid #eee;
   }
 
-  th {
-    text-align: left;
-    border-bottom: 1px solid #ccc;
-    padding: 0.25rem;
-    font-weight: 600;
+  .note.expanded {
+    background: #faf6f6;
   }
 
-  td {
-    padding: 0.35rem 0.25rem;
-  }
-
-  tr.transcription:hover {
+  .note header {
     cursor: pointer;
-    background-color: #f1f1f1;
+    min-width: 0;
   }
 
-  tr.expanded {
-    background-color: #ebb;
+  .note-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .name {
     font-weight: 600;
   }
 
-  .elapsed {
+  .elapsed,
+  .status {
     color: #666;
     font-weight: 400;
-    margin-left: 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  .note-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+  }
+
+  .preview {
+    margin-top: 0.3rem;
+    color: #333;
+    line-height: 1.4;
   }
 
   .actions {
-    width: 8rem;
-    text-align: right;
     white-space: nowrap;
   }
 
@@ -226,10 +418,21 @@
     padding: 0.25rem 0.45rem;
   }
 
-  .segment td {
-    font-weight: 400;
-    color: #333;
-    padding-left: 0.75rem;
+  .note-body {
+    grid-column: 1 / -1;
+    padding: 0.25rem 0 0.15rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .note-body p {
+    margin: 0 0 0.7rem;
+  }
+
+  .segments p {
+    margin: 0 0 0.35rem;
+    color: #444;
+    font-size: 0.8rem;
   }
 
   .times {
