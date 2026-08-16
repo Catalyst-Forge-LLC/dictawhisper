@@ -33,7 +33,20 @@ export async function cleanWithOllanet(
     meta: {
       machine: result.machine,
       model: result.model,
-      ...result.ollama,
+      ...slimOllamaMeta(result.ollama),
     },
   };
+}
+
+/** Keep timing/token stats; drop the response body (already stored as cleanedTranscription). */
+const OLLAMA_BODY_KEYS = new Set(['message', 'messages', 'response', 'content', 'thinking']);
+
+function slimOllamaMeta(ollama: unknown): Record<string, unknown> {
+  if (!ollama || typeof ollama !== 'object' || Array.isArray(ollama)) return {};
+  const slim: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(ollama as Record<string, unknown>)) {
+    if (OLLAMA_BODY_KEYS.has(key)) continue;
+    slim[key] = value;
+  }
+  return slim;
 }
