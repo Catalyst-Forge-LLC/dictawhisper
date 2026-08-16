@@ -282,7 +282,7 @@
                 <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
               {/if}
             </div>
-            {#if tags.length}
+            {#if expanded[transcription.jsonFile] && tags.length}
               <div class="note-tags">
                 {#each tags as tag}
                   <button
