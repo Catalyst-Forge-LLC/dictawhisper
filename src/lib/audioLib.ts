@@ -7,6 +7,31 @@ export const audioExtensions = ['webm', 'mp3', 'm4a'];
 
 export const audioFileRegex = new RegExp(`\\.(${audioExtensions.join('|')})$`, 'i');
 
+const AUDIO_TYPES: Record<string, string> = {
+  '.mp3': 'audio/mpeg',
+  '.webm': 'audio/webm',
+  '.m4a': 'audio/mp4',
+};
+
+export function audioContentType(filePath: string): string {
+  return AUDIO_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+}
+
+/** Working audio next to a sidecar JSON (not `_original` / `_clean`). */
+export function findAudioForSidecar(jsonFile: string): string | null {
+  const parsed = path.parse(jsonFile);
+  const base = path.join(parsed.dir, parsed.name);
+  for (const ext of audioExtensions) {
+    const candidate = `${base}.${ext}`;
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  for (const ext of audioExtensions) {
+    const candidate = `${base}_original.${ext}`;
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function saveAudioFile(dataUrl: string, clipName: string): string {
   const folder = config.watch.browserDropFolder;
   fs.mkdirSync(folder, { recursive: true });

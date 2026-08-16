@@ -5,6 +5,7 @@ import z from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { q } from './queueLib.ts';
 import { audioFileRegex } from './audioLib.ts';
+import { ensurePlaybackCues } from './alignLib.ts';
 import { isTransientSyncFile, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { parseJSON } from './jsonLib.ts';
@@ -30,8 +31,13 @@ export function emitTranscription(target: Socket | SocketIOServer | null = null,
     return;
   }
   const transcriptionJson = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
+  let dirty = false;
   if (elapsed && !Object.hasOwn(transcriptionJson, 'elapsed')) {
     transcriptionJson.elapsed = elapsed;
+    dirty = true;
+  }
+  if (ensurePlaybackCues(transcriptionJson)) dirty = true;
+  if (dirty) {
     fs.writeFileSync(jsonFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
   }
   transcriptions[jsonFile] = transcriptionJson;
@@ -61,6 +67,14 @@ export function checkTranscription(file: string): {
 export async function cleanTranscription(file: string, callback: (err: Error | null, result?: string) => void) {
   const { isProcessed, transcriptionFile, transcriptionExists } = checkTranscription(file);
   if (isProcessed) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
+      if (ensurePlaybackCues(existing)) {
+        fs.writeFileSync(transcriptionFile, JSON.stringify(existing, null, 2), { encoding: 'utf-8' });
+      }
+    } catch {
+      // already cleaned; cues are optional
+    }
     console.log(`[clean-transcription] Transcription already cleaned: ${transcriptionFile}`);
     callback(null);
     return;
@@ -109,6 +123,7 @@ export async function cleanTranscription(file: string, callback: (err: Error | n
     if (thinking) transcriptionJson.thinking = thinking;
     if (meta) transcriptionJson.meta = meta;
     delete transcriptionJson.cleanupError;
+    ensurePlaybackCues(transcriptionJson);
     fs.writeFileSync(transcriptionFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
     console.log(`[clean-transcription] Cleaned transcription file: ${transcriptionFile}`);
     callback(null, transcriptionJson.cleanedTranscription);

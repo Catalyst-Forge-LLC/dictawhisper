@@ -30,6 +30,7 @@ export default defineConfig({
       "/status": { target },
       "/transcribe": { target },
       "/process": { target },
+      "/audio": { target },
     },
   },
   preview: {

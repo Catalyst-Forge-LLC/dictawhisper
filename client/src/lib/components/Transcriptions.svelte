@@ -61,6 +61,45 @@
     return text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
   }
 
+  function cuesOf(item) {
+    const cues = item.transcriptionJson?.playbackCues;
+    if (Array.isArray(cues) && cues.length) return cues;
+    const cleaned = cleanedOf(item);
+    return cleaned ? paragraphs(cleaned).map((text) => ({ text, start: 0, end: 0 })) : [];
+  }
+
+  function audioUrl(jsonFile) {
+    return `/audio?file=${encodeURIComponent(jsonFile)}`;
+  }
+
+  function formatTime(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    const minutes = Math.floor(total / 60);
+    const rest = total % 60;
+    return `${minutes}:${String(rest).padStart(2, '0')}`;
+  }
+
+  function playCue(event, start) {
+    const article = event.currentTarget.closest('.note');
+    const audio = article?.querySelector('audio');
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Number(start) || 0);
+    audio.play();
+  }
+
+  function cueActive(item, cue, index) {
+    const current = item.transcriptionJson?._currentTime;
+    if (typeof current !== 'number') return false;
+    const next = cuesOf(item)[index + 1];
+    const end = cue.end > cue.start ? cue.end : next ? next.start : Infinity;
+    return current >= cue.start && current < end;
+  }
+
+  function onAudioTime(item, event) {
+    item.transcriptionJson._currentTime = event.currentTarget.currentTime;
+    transcriptions = transcriptions;
+  }
+
   function groupTranscriptions(list) {
     const map = new Map();
     for (const item of list) {
@@ -231,9 +270,23 @@
           </div>
           {#if expanded[transcription.jsonFile]}
             <div class="note-body">
+              <audio
+                controls
+                preload="metadata"
+                src={audioUrl(transcription.jsonFile)}
+                on:timeupdate={(event) => onAudioTime(transcription, event)}
+              ></audio>
               {#if cleaned}
-                {#each paragraphs(cleaned) as para}
-                  <p>{para}</p>
+                {#each cuesOf(transcription) as cue, index}
+                  <button
+                    type="button"
+                    class="cue"
+                    class:active={cueActive(transcription, cue, index)}
+                    on:click={(event) => playCue(event, cue.start)}
+                  >
+                    <span class="cue-time">{formatTime(cue.start)}</span>
+                    <span class="cue-text">{cue.text}</span>
+                  </button>
                 {/each}
               {:else}
                 <p class="muted">No cleaned text yet. Raw transcript below.</p>
@@ -427,6 +480,49 @@
 
   .note-body p {
     margin: 0 0 0.7rem;
+  }
+
+  .note-body audio {
+    width: 100%;
+    margin: 0 0 0.75rem;
+  }
+
+  .cue {
+    display: grid;
+    grid-template-columns: 3.2rem 1fr;
+    gap: 0.6rem;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: inherit;
+    padding: 0.45rem 0.35rem;
+    margin: 0 0 0.35rem;
+    border: 0;
+    border-left: 3px solid transparent;
+  }
+
+  .cue:hover,
+  .cue:focus {
+    background: #eef6fb;
+    box-shadow: none;
+  }
+
+  .cue.active {
+    background: #e8f4fa;
+    border-left-color: #0088cc;
+  }
+
+  .cue-time {
+    color: #0088cc;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.75rem;
+    padding-top: 0.15rem;
+  }
+
+  .cue-text {
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: pre-wrap;
   }
 
   .segments p {

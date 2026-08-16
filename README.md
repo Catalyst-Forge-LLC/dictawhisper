@@ -56,6 +56,7 @@ The UI proxies `/socket.io` and API paths to the server, so open **7777** only.
 |---|---|---|
 | GET | `/health` | host, queues, whisper model, ollanet target |
 | GET | `/status` | pending / raw / done counts |
+| GET | `/audio` | stream allowlisted audio (`?file=` sidecar or audio path) |
 | POST | `/transcribe/force` | `{ "file": "..." }` retry transcription (allowlisted) |
 | POST | `/process/force` | re-run cleanup on an existing note (allowlisted) |
 

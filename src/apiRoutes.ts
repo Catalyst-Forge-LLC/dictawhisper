@@ -1,9 +1,11 @@
+import path from 'path';
 import express from 'express';
 import { process, cleanTranscription, countStatus } from './lib/transcriptionLib.ts';
 import { q } from './lib/queueLib.ts';
 import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
+import { audioContentType, findAudioForSidecar } from './lib/audioLib.ts';
 
 function requireAllowedFile(req: express.Request, res: express.Response): string | null {
   const file = typeof req.body?.file === 'string' ? req.body.file.trim() : '';
@@ -48,6 +50,38 @@ export const apiRoutes = [
             : null,
         },
       });
+    },
+  },
+  {
+    path: '/audio',
+    method: 'GET',
+    handler: (req: express.Request, res: express.Response) => {
+      const file = typeof req.query.file === 'string' ? req.query.file.trim() : '';
+      if (!file) {
+        res.status(400).json({ error: 'GET /audio?file=<path under a watch root>' });
+        return;
+      }
+      const allowed = resolveAllowedPath(file);
+      if (!allowed.ok) {
+        res.status(403).json({ error: allowed.error });
+        return;
+      }
+      let audioPath = allowed.path;
+      if (audioPath.toLowerCase().endsWith('.json')) {
+        const sibling = findAudioForSidecar(audioPath);
+        if (!sibling) {
+          res.status(404).json({ error: 'no audio file next to that sidecar' });
+          return;
+        }
+        audioPath = sibling;
+      }
+      const audioAllowed = resolveAllowedPath(audioPath);
+      if (!audioAllowed.ok) {
+        res.status(403).json({ error: audioAllowed.error });
+        return;
+      }
+      res.setHeader('Content-Type', audioContentType(audioAllowed.path));
+      res.sendFile(path.resolve(audioAllowed.path));
     },
   },
   {
