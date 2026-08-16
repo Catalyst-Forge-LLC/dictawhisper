@@ -23,6 +23,14 @@
   let selectedTags = [];
   let showSingletons = false;
   let showAllFrequent = false;
+  let useModelForTags = true;
+  let consolidateBusy = false;
+  let consolidatePhase = '';
+  let consolidateError = '';
+  let consolidatePlan = null;
+  let consolidateSelected = {};
+  let applyBusy = false;
+  let applyResult = null;
   const TAG_CLOUD_CAP = 40;
 
   function folderOf(jsonFile) {
@@ -148,6 +156,86 @@
       : [...selectedTags, tag];
   }
 
+  function reasonLabel(reason) {
+    if (reason === 'spelling') return 'spelling / plural';
+    if (reason === 'similar') return 'close spelling';
+    return 'same topic';
+  }
+
+  function selectedConsolidateGroups() {
+    if (!consolidatePlan?.groups) return [];
+    return consolidatePlan.groups.filter((_, index) => consolidateSelected[index] !== false);
+  }
+
+  async function postJson(url, body) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `request failed (${response.status})`);
+    return data;
+  }
+
+  async function previewConsolidate() {
+    consolidateBusy = true;
+    consolidateError = '';
+    applyResult = null;
+    consolidatePlan = null;
+    try {
+      consolidatePhase = 'Finding spelling twins…';
+      const local = await postJson('/tags/consolidate/preview', { useModel: false });
+      consolidatePlan = local;
+      consolidateSelected = Object.fromEntries((local.groups || []).map((_, index) => [index, true]));
+      consolidateBusy = false;
+      if (useModelForTags) {
+        consolidatePhase = 'Asking the cleanup model for close synonyms…';
+        const full = await postJson('/tags/consolidate/preview', { useModel: true });
+        consolidatePlan = full;
+        consolidateSelected = Object.fromEntries((full.groups || []).map((_, index) => [index, true]));
+        if (full.modelError) consolidateError = `Model skipped: ${full.modelError}`;
+      }
+    } catch (error) {
+      consolidateError = error.message || String(error);
+    } finally {
+      consolidateBusy = false;
+      consolidatePhase = '';
+    }
+  }
+
+  async function applyConsolidate() {
+    const groups = selectedConsolidateGroups().map((group) => ({
+      keep: group.keep,
+      drop: group.drop,
+    }));
+    if (!groups.length) {
+      consolidateError = 'Select at least one merge.';
+      return;
+    }
+    applyBusy = true;
+    consolidateError = '';
+    try {
+      const result = await postJson('/tags/consolidate/apply', { groups });
+      applyResult = result;
+      const mapping = result.mapping || {};
+      selectedTags = [...new Set(selectedTags.map((tag) => mapping[tag] || tag))];
+      consolidatePlan = { ...consolidatePlan, groups: [] };
+      consolidateSelected = {};
+    } catch (error) {
+      consolidateError = error.message || String(error);
+    } finally {
+      applyBusy = false;
+    }
+  }
+
+  function dismissConsolidate() {
+    consolidatePlan = null;
+    consolidateSelected = {};
+    consolidateError = '';
+    applyResult = null;
+  }
+
   $: visible = transcriptions.filter(matchesTags);
   $: groups = groupTranscriptions(visible);
   $: tagCloud = buildTagCloud(transcriptions);
@@ -249,7 +337,82 @@
             {showSingletons ? 'Hide single-use tags' : `Show ${singletonTags.length} single-use tags`}
           </button>
         {/if}
+        <label class="model-toggle">
+          <input type="checkbox" bind:checked={useModelForTags} disabled={consolidateBusy || applyBusy} />
+          Ask model for synonyms
+        </label>
+        <button
+          type="button"
+          class="clear"
+          disabled={consolidateBusy || applyBusy}
+          on:click={previewConsolidate}
+        >
+          {consolidateBusy ? consolidatePhase || 'Reviewing tags…' : 'Consolidate similar tags'}
+        </button>
       </div>
+      {#if consolidateError}
+        <p class="empty">{consolidateError}</p>
+      {/if}
+      {#if applyResult}
+        <p class="muted">
+          Merged tags on {applyResult.filesChanged} notes
+          ({applyResult.uniqueBefore} → {applyResult.uniqueAfter} unique).
+        </p>
+      {/if}
+      {#if consolidatePlan}
+        <div class="consolidate">
+          <div class="consolidate-head">
+            <strong>
+              {consolidatePlan.groups.length
+                ? `${consolidatePlan.groups.length} merge${consolidatePlan.groups.length === 1 ? '' : 's'} from ${consolidatePlan.unique} tags`
+                : `No close duplicates in ${consolidatePlan.unique} tags`}
+            </strong>
+            {#if consolidatePhase}
+              <span class="muted">{consolidatePhase}</span>
+            {:else if consolidatePlan.modelError}
+              <span class="muted">Model skipped: {consolidatePlan.modelError}</span>
+            {:else if consolidatePlan.modelUsed}
+              <span class="muted">Includes model suggestions</span>
+            {:else}
+              <span class="muted">Spelling pass only</span>
+            {/if}
+          </div>
+          {#if consolidatePlan.groups.length}
+            <ul class="consolidate-list">
+              {#each consolidatePlan.groups as group, index}
+                <li>
+                  <label>
+                    <input type="checkbox" bind:checked={consolidateSelected[index]} />
+                    <span>
+                      <strong>{group.keep}</strong>
+                      <span class="tag-count">{group.counts?.[group.keep] || ''}</span>
+                      ←
+                      {group.drop
+                        .map((tag) => `${tag}${group.counts?.[tag] ? ` (${group.counts[tag]})` : ''}`)
+                        .join(', ')}
+                      <em>{reasonLabel(group.reason)}</em>
+                    </span>
+                  </label>
+                </li>
+              {/each}
+            </ul>
+            <div class="tag-cloud-more">
+              <button type="button" class="clear" disabled={applyBusy} on:click={applyConsolidate}>
+                {applyBusy
+                  ? 'Applying…'
+                  : `Apply ${selectedConsolidateGroups().length} merge${selectedConsolidateGroups().length === 1 ? '' : 's'}`}
+              </button>
+              <button type="button" class="clear" disabled={applyBusy} on:click={dismissConsolidate}>
+                Cancel
+              </button>
+            </div>
+          {:else}
+            <div class="tag-cloud-more">
+              <button type="button" class="clear" on:click={dismissConsolidate}>Dismiss</button>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </details>
   {/if}
 
@@ -421,6 +584,55 @@
     font-size: 0.75rem;
     padding: 0.2rem 0.45rem;
     background: #666;
+  }
+
+  .model-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: #444;
+  }
+
+  .consolidate {
+    margin-top: 0.7rem;
+    padding: 0.55rem 0.6rem 0.65rem;
+    background: #f7f4ee;
+    border: 1px solid #e2d8c4;
+  }
+
+  .consolidate-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    align-items: baseline;
+    margin-bottom: 0.4rem;
+  }
+
+  .consolidate-list {
+    margin: 0 0 0.55rem;
+    padding: 0;
+    list-style: none;
+    max-height: 16rem;
+    overflow: auto;
+  }
+
+  .consolidate-list li {
+    margin: 0.2rem 0;
+  }
+
+  .consolidate-list label {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-start;
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  .consolidate-list em {
+    color: #666;
+    font-style: normal;
+    margin-left: 0.35rem;
   }
 
   .empty,

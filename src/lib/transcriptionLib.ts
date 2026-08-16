@@ -98,7 +98,8 @@ export async function cleanTranscription(file: string, callback: (err: Error | n
       .replace(/\s+/g, ' ')
       .trim();
 
-    const prompt = buildCleanTranscriptionPrompt(transcriptionJson.text);
+    const { preferredTagsForCleanup } = await import('./tagConsolidateLib.ts');
+    const prompt = buildCleanTranscriptionPrompt(transcriptionJson.text, preferredTagsForCleanup());
     console.log(
       `[clean-transcription] Cleaning via ollanet ${config.ollanet.machine} / ${config.ollanet.cleanModel}: ${transcriptionFile}`
     );

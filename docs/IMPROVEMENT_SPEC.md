@@ -322,6 +322,7 @@ This is the main GPU-friction item. Do it after W1–W2 so you are not optimizin
 
 - Search, tag chips, date grouping (`YYYY/MM`).
 - Player + cleaned/raw toggle.
+- Tag consolidation: preview near-duplicates (local spelling + ollanet synonyms), apply rename across sidecars.
 - Holding / unfiled review.
 - Empty and first-run states that point at `doctor`.
 

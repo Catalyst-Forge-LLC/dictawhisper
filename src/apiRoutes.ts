@@ -6,6 +6,7 @@ import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 import { audioContentType, findAudioForSidecar } from './lib/audioLib.ts';
+import { applyConsolidateGroups, buildConsolidatePlan } from './lib/tagConsolidateLib.ts';
 
 function requireAllowedFile(req: express.Request, res: express.Response): string | null {
   const file = typeof req.body?.file === 'string' ? req.body.file.trim() : '';
@@ -114,6 +115,48 @@ export const apiRoutes = [
         }
         res.json({ ok: true, file, processed: true });
       });
+    },
+  },
+  {
+    path: '/tags/consolidate/preview',
+    method: 'POST',
+    handler: async (req: express.Request, res: express.Response) => {
+      try {
+        const useModel = req.body?.useModel !== false;
+        const plan = await buildConsolidatePlan({ useModel });
+        res.json(plan);
+      } catch (error: any) {
+        res.status(500).json({ error: error?.message || 'tag preview failed' });
+      }
+    },
+  },
+  {
+    path: '/tags/consolidate/apply',
+    method: 'POST',
+    handler: (req: express.Request, res: express.Response) => {
+      const groups = Array.isArray(req.body?.groups) ? req.body.groups : null;
+      if (!groups) {
+        res.status(400).json({ error: 'POST { "groups": [{ "keep": "tag", "drop": ["alias"] }] }' });
+        return;
+      }
+      const cleaned: { keep: string; drop: string[] }[] = [];
+      for (const group of groups) {
+        const keep = typeof group?.keep === 'string' ? group.keep.trim() : '';
+        const drop = Array.isArray(group?.drop)
+          ? group.drop.map((tag: unknown) => String(tag || '').trim()).filter(Boolean)
+          : [];
+        if (!keep || !drop.length) continue;
+        cleaned.push({ keep, drop });
+      }
+      if (!cleaned.length) {
+        res.status(400).json({ error: 'no merge groups to apply' });
+        return;
+      }
+      try {
+        res.json(applyConsolidateGroups(cleaned));
+      } catch (error: any) {
+        res.status(500).json({ error: error?.message || 'tag apply failed' });
+      }
     },
   },
 ];

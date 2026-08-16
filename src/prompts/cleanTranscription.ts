@@ -1,4 +1,15 @@
-export function buildCleanTranscriptionPrompt(rawText: string): string {
+export function buildCleanTranscriptionPrompt(rawText: string, preferredTags: string[] = []): string {
+  const preferred =
+    preferredTags.length > 0
+      ? `
+<PREFERRED_TAGS>
+When a topic already has a tag below, reuse it instead of inventing a close variant (plural, hyphen, or synonym).
+Only add a new tag when none of these cover the topic.
+${preferredTags.join(', ')}
+</PREFERRED_TAGS>
+`
+      : '';
+
   return `
 <AGENT_ROLE>
 You are an expert transcription editor specializing in audio journals.
@@ -27,6 +38,7 @@ In addition to generating a cleaned transcription, generate a list of topic tags
 - Be in lower-dash-case format (e.g., "new-york-city", "personal-reflection", "family-discussion").
 - Be concise, relevant, and non-redundant (aim for 5-15 tags, depending on content length).
 </TOPIC_TAGS>
+${preferred}
 
 <OUTPUT_JSON_FORMAT>
 {

@@ -31,6 +31,7 @@ export default defineConfig({
       "/transcribe": { target },
       "/process": { target },
       "/audio": { target },
+      "/tags": { target },
     },
   },
   preview: {
