@@ -1,5 +1,7 @@
 # DictaWhisper
 
+**[dictawhisper.com](https://dictawhisper.com)** · [GitHub](https://github.com/Catalyst-Forge-LLC/dictawhisper)
+
 **A local voice journal.** Speak into your phone or the browser. DictaWhisper waits until the file is really there, transcribes it on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags on another machine via [ollanet](https://ollanet.dev).
 
 The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on your workstation. The sidecar `.json` next to each recording is the source of truth — no database, no cloud account, no “upload to our servers.”

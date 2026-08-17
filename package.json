@@ -2,6 +2,14 @@
   "name": "dictawhisper",
   "version": "0.1.0",
   "description": "Local voice journal: watch folders, transcribe with faster-whisper, clean and tag via ollanet",
+  "homepage": "https://dictawhisper.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Catalyst-Forge-LLC/dictawhisper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Catalyst-Forge-LLC/dictawhisper/issues"
+  },
   "type": "module",
   "main": "src/server.ts",
   "license": "MIT",
