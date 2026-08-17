@@ -23,7 +23,7 @@ pnpm dev
 
 Open [http://localhost:7777](http://localhost:7777). Record, or drag a file onto the page. You do not need an extra sync tool for that.
 
-`pnpm run doctor` is a checkup. It tells you what is missing instead of failing later in silence. If the writing helper is asleep, that is a warning. Notes still get written.
+`pnpm run doctor` is a checkup. It names what is missing up front instead of failing later without explanation. If the cleanup model cannot be reached, that is a warning rather than an error, and notes still get written.
 
 ### Optional: sync a phone folder
 

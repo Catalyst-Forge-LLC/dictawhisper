@@ -1,6 +1,6 @@
 ---
 title: A voice journal that stays on your computer.
-description: Record or drop a file. Get a readable note. Nothing is uploaded to a cloud account.
+description: Record or drop a file, get a readable note. Nothing is uploaded to a cloud account.
 order: 1
 ---
 
@@ -19,9 +19,9 @@ The name is **dicta** (dictation, a dictaphone) plus **Whisper**. There is no ac
 
 - Hit Record in the inbox, or drag an audio file onto the page. A phone folder that syncs in later (via [Syncthing](https://syncthing.net) or any folder sync) is optional.
 - Copy the folder and you copied the journal. Open a note in any editor. There is nothing to export.
-- Speech is transcribed on this computer. A second pass can tidy the prose here, or on another computer you already use. If that helper is asleep, you still have the raw words.
+- Speech is transcribed on this computer. A second pass can tidy the prose here, or on another computer you already use. If that computer is off or offline, you still have the raw words.
 - At home the inbox is a page on this machine. On [Tailscale](https://tailscale.com) the same page works from your phone.
-- You get readable paragraphs, a few tags, and playback that follows what you are reading.
+- Readable paragraphs, a few tags, and playback that follows what you are reading.
 
 ## A normal day
 

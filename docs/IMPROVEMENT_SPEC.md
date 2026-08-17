@@ -268,7 +268,7 @@ Priority: **P0** correctness / daily loop, **P1** friction, **P2** product, **P3
 - `GET /status` on a timer or socket for pending / raw / done / queues.
 - Remove MDN aside.
 
-### W4 — Preflight and honest health (P0, M)
+### W4 — Preflight and health reporting (P0, M)
 
 `pnpm run doctor` and `/health` should report, not assume:
 
