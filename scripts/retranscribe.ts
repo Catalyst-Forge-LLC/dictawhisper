@@ -33,10 +33,26 @@ function transcribeOne(audio: string, jsonFile: string): Promise<void> {
   });
 }
 
-const limitArg = process.argv.find((arg) => arg.startsWith('--limit='));
-const limit = limitArg ? Number(limitArg.slice('--limit='.length)) : Infinity;
+function argValue(name: string): string | undefined {
+  const prefix = `${name}=`;
+  const eq = process.argv.find((arg) => arg.startsWith(prefix));
+  if (eq) return eq.slice(prefix.length);
+  const index = process.argv.indexOf(name);
+  if (index >= 0) {
+    const next = process.argv[index + 1];
+    if (next && !next.startsWith('-')) return next;
+  }
+  return undefined;
+}
+
+const limitRaw = argValue('--limit');
+const limit = limitRaw ? Number(limitRaw) : Infinity;
 const force = process.argv.includes('--force');
 const reclean = process.argv.includes('--reclean');
+const dirArg =
+  argValue('--dir') ||
+  argValue('--folder') ||
+  process.argv.slice(2).find((arg) => !arg.startsWith('-') && arg !== limitRaw);
 
 function recleanOne(jsonFile: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -61,11 +77,28 @@ function noteSortKey(filePath: string): string {
   }
 }
 
-const roots = [...config.watch.roots, config.watch.browserDropFolder];
+const defaultRoots = [...config.watch.roots, config.watch.browserDropFolder];
+const roots = dirArg ? [path.resolve(dirArg)] : defaultRoots;
+for (const root of roots) {
+  if (!fs.existsSync(root)) {
+    console.error(`[retranscribe] folder not found: ${root}`);
+    process.exit(1);
+  }
+}
+
 const files: string[] = [];
-for (const root of roots) walkJsonFiles(root, files);
+for (const root of roots) {
+  if (fs.statSync(root).isFile()) {
+    if (root.toLowerCase().endsWith('.json')) files.push(root);
+    continue;
+  }
+  walkJsonFiles(root, files);
+}
 files.sort((a, b) => noteSortKey(b).localeCompare(noteSortKey(a)));
-console.log(`[retranscribe] ${files.length} sidecars, newest first`);
+console.log(
+  `[retranscribe] ${files.length} sidecars in ${roots.join(', ')}, newest first` +
+    (Number.isFinite(limit) ? `, limit ${limit}` : '')
+);
 
 let done = 0;
 let skipped = 0;
