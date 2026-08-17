@@ -8,5 +8,8 @@ client/node_modules/
 client/.svelte-kit/
 client/dist/
 config.json
+.env
+.env.*
+.wrangler/
 __pycache__/
 *.py[cod]
