@@ -32,6 +32,8 @@ export default defineConfig({
       "/process": { target },
       "/audio": { target },
       "/tags": { target },
+      "/notes": { target },
+      "/note": { target },
     },
   },
   preview: {

@@ -7,13 +7,12 @@ import { apiRoutes } from './apiRoutes.ts';
 import { socketConnect, socketEvents } from './socketEvents.ts';
 import {
   cleanTranscription,
-  initTranscriptionForSourceFolders,
   initTranscriptionWatcher,
   loadExistingTranscriptions,
   setTranscriptionIo,
   transcriptions,
 } from './lib/transcriptionLib.ts';
-import { watchAndOrganizeAudioFiles } from './lib/organizationLib.ts';
+import { initVoiceRootPipeline } from './lib/organizationLib.ts';
 import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
 import { resolveWhisperModel, whisperTranscribe } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
@@ -88,8 +87,7 @@ async function main() {
     watchDepth: 2,
     settleMs: config.watch.browserSettleMs,
   });
-  watchAndOrganizeAudioFiles(config.watch.roots);
-  initTranscriptionForSourceFolders(config.watch.roots);
+  initVoiceRootPipeline(config.watch.roots);
 
   server.listen(config.http.port, config.http.host, () => {
     console.log(`listening on ${config.http.host}:${config.http.port}`);

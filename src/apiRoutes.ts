@@ -1,6 +1,6 @@
 import path from 'path';
 import express from 'express';
-import { process, cleanTranscription, countStatus } from './lib/transcriptionLib.ts';
+import { process, cleanTranscription, countStatus, listNoteSummaries, readTranscription } from './lib/transcriptionLib.ts';
 import { q } from './lib/queueLib.ts';
 import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
@@ -83,6 +83,39 @@ export const apiRoutes = [
       }
       res.setHeader('Content-Type', audioContentType(audioAllowed.path));
       res.sendFile(path.resolve(audioAllowed.path));
+    },
+  },
+  {
+    path: '/notes/index',
+    method: 'GET',
+    handler: (_req: express.Request, res: express.Response) => {
+      res.json({ notes: listNoteSummaries() });
+    },
+  },
+  {
+    path: '/note',
+    method: 'GET',
+    handler: (req: express.Request, res: express.Response) => {
+      const file = typeof req.query.file === 'string' ? req.query.file.trim() : '';
+      if (!file) {
+        res.status(400).json({ error: 'GET /note?file=<sidecar path under a watch root>' });
+        return;
+      }
+      const allowed = resolveAllowedPath(file);
+      if (!allowed.ok) {
+        res.status(403).json({ error: allowed.error });
+        return;
+      }
+      try {
+        const note = readTranscription(allowed.path);
+        if (!note) {
+          res.status(404).json({ error: 'note not found' });
+          return;
+        }
+        res.json(note);
+      } catch (error: any) {
+        res.status(500).json({ error: error?.message || 'failed to read note' });
+      }
     },
   },
   {

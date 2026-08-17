@@ -1,7 +1,7 @@
 import fs from 'fs';
 import z from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { emitTranscription, transcriptions } from './transcriptionLib.ts';
+import { emitNotesIndex, transcriptions } from './transcriptionLib.ts';
 import { cleanWithOllanet } from './ollanetLib.ts';
 import { parseJSON } from './jsonLib.ts';
 import { resolveAllowedPath } from './pathAllowLib.ts';
@@ -414,9 +414,9 @@ export function applyConsolidateGroups(groups: { keep: string; drop: string[] }[
     tagsRewritten += previous.filter((tag) => mapping.has(normalizeTag(String(tag)))).length;
     json.tags = nextTags;
     fs.writeFileSync(allowed.path, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
-    emitTranscription(null, allowed.path);
     filesChanged += 1;
   }
+  if (filesChanged) emitNotesIndex();
 
   return {
     ok: true,

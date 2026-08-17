@@ -21,8 +21,59 @@ export function setTranscriptionIo(io: SocketIOServer | null) {
   liveIo = io;
 }
 
+export function emitNotesIndex(target: Socket | SocketIOServer | null = null) {
+  const dest = target ?? liveIo;
+  dest?.emit('notes-index', { notes: listNoteSummaries() });
+}
+
 export function forgetTranscription(jsonFile: string) {
   delete transcriptions[jsonFile];
+}
+
+export function relocateTranscription(oldJson: string, newJson: string) {
+  if (oldJson === newJson) return;
+  if (Object.hasOwn(transcriptions, oldJson)) {
+    transcriptions[newJson] = transcriptions[oldJson];
+    delete transcriptions[oldJson];
+  }
+}
+
+const PREVIEW_LIMIT = 200;
+
+export function summarizeTranscription(jsonFile: string, json: any = transcriptions[jsonFile]) {
+  const cleaned = String(json?.cleanedTranscription || '').trim();
+  const raw = String(json?.text || '').trim();
+  const source = cleaned || raw;
+  const compact = source.replace(/\s+/g, ' ').trim();
+  const preview =
+    compact.length > PREVIEW_LIMIT ? `${compact.slice(0, PREVIEW_LIMIT)}…` : compact;
+  return {
+    jsonFile,
+    transcriptionJson: {
+      tags: Array.isArray(json?.tags) ? json.tags : [],
+      elapsed: json?.elapsed ?? null,
+      cleanupError: json?.cleanupError ?? null,
+      preview,
+      hasCleaned: Boolean(cleaned),
+      _partial: true,
+    },
+  };
+}
+
+export function listNoteSummaries() {
+  return Object.entries(transcriptions).map(([jsonFile, json]) => summarizeTranscription(jsonFile, json));
+}
+
+export function readTranscription(jsonFile: string) {
+  if (!fs.existsSync(jsonFile)) return null;
+  const transcriptionJson = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
+  let dirty = false;
+  if (ensurePlaybackCues(transcriptionJson)) dirty = true;
+  if (dirty) {
+    fs.writeFileSync(jsonFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
+  }
+  transcriptions[jsonFile] = transcriptionJson;
+  return { jsonFile, transcriptionJson };
 }
 
 export function emitTranscription(target: Socket | SocketIOServer | null = null, jsonFile: string, elapsed: string | null = null) {
@@ -178,7 +229,6 @@ function enqueueTranscription(file: string, options: ProcessOptions = {}) {
 
   if (transcriptionExists && !options.retry) {
     if (!isProcessed) enqueueProcessing(file);
-    else emitTranscription(null, transcriptionFile);
     return;
   }
 
@@ -238,7 +288,7 @@ export function loadExistingTranscriptions(roots: string[]) {
       try {
         const json = JSON.parse(fs.readFileSync(full, 'utf-8'));
         if (!json?.text && !json?.cleanedTranscription && !Array.isArray(json?.segments)) continue;
-        emitTranscription(null, full);
+        transcriptions[full] = json;
         loaded += 1;
       } catch {
         // skip unreadable sidecars
@@ -251,11 +301,9 @@ export function loadExistingTranscriptions(roots: string[]) {
 }
 
 export function initTranscriptionForSourceFolders(sourceFolders: string[] = []) {
-  const depth = config.watch.recursiveYears ? 2 : 1;
-  sourceFolders.forEach((folder) => {
-    initTranscriptionWatcher(folder, { watchDepth: depth });
-  });
-  console.log(`[watch-source-folders] Transcription initialized for source folders: ${sourceFolders.join(', ')}`);
+  console.log(
+    `[watch-source-folders] skipped separate transcribe watch; voice pipeline owns ${sourceFolders.join(', ')}`
+  );
 }
 
 export function countStatus(roots: string[]) {

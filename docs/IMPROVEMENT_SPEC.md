@@ -256,8 +256,9 @@ Priority: **P0** correctness / daily loop, **P1** friction, **P2** product, **P3
 - Per root: wait until settled, organize onto the final path, then enqueue transcription for **that** path.
 - Do not run a depth-2 transcribe watcher on the same files independently.
 - Filename date on basename; dest = that root.
-- `_holding` and `_unfiled` are visible, not skipped-forever.
+- `_holding` and `_unfiled` are visible, not skipped-forever. `__inbox` stays skipped until an inbox flow exists.
 - Shared `AUDIO_EXTENSIONS`; sidecar via `path.parse`.
+- Inbox first load is a summary index; full sidecar hydrates on expand; older months load as you scroll.
 
 ### W3 — Live updates and inbox v1 (P0, M)
 

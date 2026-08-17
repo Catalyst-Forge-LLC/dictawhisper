@@ -1,14 +1,13 @@
 import fs from 'fs';
 import { audioExtensions, saveAudioFile } from './lib/audioLib.ts';
 import { Socket } from 'socket.io';
-import { emitTranscription, forgetTranscription, process } from './lib/transcriptionLib.ts';
+import { forgetTranscription, listNoteSummaries, process } from './lib/transcriptionLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 
 export function socketConnect(socket: Socket, transcriptions: Record<string, any>) {
-  console.log(`[socket-connection] A user connected, emitting ${Object.keys(transcriptions).length} transcriptions.`);
-  Object.entries(transcriptions).forEach(([file]) => {
-    emitTranscription(socket, file, null);
-  });
+  const notes = listNoteSummaries();
+  console.log(`[socket-connection] A user connected, emitting ${notes.length} note summaries (${Object.keys(transcriptions).length} cached).`);
+  socket.emit('notes-index', { notes });
 }
 
 export const socketEvents = [

@@ -35,6 +35,8 @@
 
   function folderOf(jsonFile) {
     const norm = String(jsonFile || '').replace(/\\/g, '/');
+    if (/\/_holding(?:\/|$)/i.test(norm)) return { year: null, month: null, key: 'holding' };
+    if (/\/_unfiled(?:\/|$)/i.test(norm)) return { year: null, month: null, key: 'unfiled' };
     const inPath = norm.match(/\/(\d{4})\/(\d{2})(?:\/|$)/);
     if (inPath) return { year: inPath[1], month: inPath[2], key: `${inPath[1]}-${inPath[2]}` };
     const base = norm.split('/').pop() || '';
@@ -44,6 +46,8 @@
   }
 
   function groupLabel(group) {
+    if (group.key === 'holding') return 'Holding';
+    if (group.key === 'unfiled') return 'Unfiled';
     if (group.key === 'other') return 'Other';
     const monthName = MONTHS[Number(group.month) - 1] || group.month;
     return `${monthName} ${group.year}`;
@@ -59,7 +63,9 @@
   }
 
   function cleanedOf(item) {
-    return String(item.transcriptionJson?.cleanedTranscription || '').trim();
+    const json = item.transcriptionJson || {};
+    if (json._partial) return json.hasCleaned ? String(json.preview || '').trim() : '';
+    return String(json.cleanedTranscription || json.preview || '').trim();
   }
 
   function preview(text, limit = 200) {
@@ -121,10 +127,11 @@
     for (const group of map.values()) {
       group.items.sort((a, b) => displayName(b.jsonFile).localeCompare(displayName(a.jsonFile)));
     }
-    const dated = [...map.values()].filter((group) => group.key !== 'other');
+    const specialKeys = new Set(['holding', 'unfiled', 'other']);
+    const dated = [...map.values()].filter((group) => !specialKeys.has(group.key));
     dated.sort((a, b) => b.key.localeCompare(a.key));
-    const other = map.get('other');
-    return other ? [...dated, other] : dated;
+    const special = ['holding', 'unfiled', 'other'].map((key) => map.get(key)).filter(Boolean);
+    return [...special.filter((group) => group.key !== 'other'), ...dated, ...special.filter((group) => group.key === 'other')];
   }
 
   function buildTagCloud(list) {
@@ -247,12 +254,19 @@
     );
     return [...capped, ...extraSelected];
   })();
-  $: newestKey = groups[0]?.key;
+  let monthPage = 1;
+  $: specialGroups = groups.filter((group) => group.key === 'holding' || group.key === 'unfiled');
+  $: datedGroups = groups.filter((group) => group.key !== 'holding' && group.key !== 'unfiled');
+  $: pagedGroups = selectedTags.length
+    ? groups
+    : [...specialGroups, ...datedGroups.slice(0, monthPage)];
+  $: hiddenMonths = selectedTags.length ? 0 : Math.max(0, datedGroups.length - monthPage);
+  $: newestKey = datedGroups[0]?.key;
 
   function isOpen(key) {
     if (Object.prototype.hasOwnProperty.call(openGroups, key)) return openGroups[key];
     if (selectedTags.length) return true;
-    return key === newestKey;
+    return true;
   }
 
   function onToggle(key, event) {
@@ -260,9 +274,55 @@
     openGroups = openGroups;
   }
 
-  function toggleExpanded(jsonFile) {
+  async function hydrateNote(jsonFile) {
+    const item = transcriptions.find((note) => note.jsonFile === jsonFile);
+    if (!item?.transcriptionJson?._partial) return item;
+    const response = await fetch(`/note?file=${encodeURIComponent(jsonFile)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'failed to load note');
+    const i = transcriptions.findIndex((note) => note.jsonFile === jsonFile);
+    if (i >= 0) {
+      transcriptions[i] = data;
+      transcriptions = transcriptions;
+      return transcriptions[i];
+    }
+    transcriptions = [...transcriptions, data];
+    return data;
+  }
+
+  async function toggleExpanded(jsonFile) {
+    if (!expanded[jsonFile]) {
+      try {
+        await hydrateNote(jsonFile);
+      } catch (error) {
+        console.error(error);
+        return;
+      }
+    }
     expanded[jsonFile] = !expanded[jsonFile];
     expanded = expanded;
+  }
+
+  function lazyMore(node, remaining) {
+    const bump = (left) => {
+      if (left > 0) monthPage += 1;
+    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) bump(remaining);
+      },
+      { rootMargin: '800px' }
+    );
+    observer.observe(node);
+    return {
+      update(left) {
+        remaining = left;
+        if (left > 0 && node.getBoundingClientRect().top < window.innerHeight + 800) bump(left);
+      },
+      destroy() {
+        observer.disconnect();
+      },
+    };
   }
 
   function deleteTranscription(jsonFile) {
@@ -272,22 +332,57 @@
     }
   }
 
-  function copyTranscription(transcription) {
-    const json = transcription.transcriptionJson || {};
-    const text =
-      json.cleanedTranscription ||
-      (json.segments || []).map((segment) => segment.text).join('\n');
-    navigator.clipboard.writeText(text);
+  async function copyTranscription(transcription) {
+    try {
+      const item = await hydrateNote(transcription.jsonFile);
+      const json = item?.transcriptionJson || {};
+      const text =
+        json.cleanedTranscription ||
+        (json.segments || []).map((segment) => segment.text).join('\n') ||
+        json.preview ||
+        '';
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
-  socket.on('transcription', (data) => {
-    const i = transcriptions.findIndex((t) => t.jsonFile === data.jsonFile);
+  function upsertNote(data) {
+    if (!data?.jsonFile) return;
+    const i = transcriptions.findIndex((note) => note.jsonFile === data.jsonFile);
     if (i >= 0) {
-      transcriptions[i] = data;
+      const current = transcriptions[i];
+      if (data.transcriptionJson?._partial && current.transcriptionJson && !current.transcriptionJson._partial) {
+        transcriptions[i] = {
+          ...current,
+          transcriptionJson: { ...current.transcriptionJson, tags: data.transcriptionJson.tags },
+        };
+      } else {
+        transcriptions[i] = data;
+      }
       transcriptions = transcriptions;
     } else {
       transcriptions = [...transcriptions, data];
     }
+  }
+
+  socket.on('notes-index', (data) => {
+    const incoming = data?.notes || [];
+    const have = new Map(transcriptions.map((note) => [note.jsonFile, note]));
+    transcriptions = incoming.map((note) => {
+      const prev = have.get(note.jsonFile);
+      if (prev && !prev.transcriptionJson?._partial) {
+        return {
+          ...prev,
+          transcriptionJson: { ...prev.transcriptionJson, tags: note.transcriptionJson?.tags },
+        };
+      }
+      return note;
+    });
+  });
+
+  socket.on('transcription', (data) => {
+    upsertNote(data);
   });
 </script>
 
@@ -422,12 +517,13 @@
     <p class="empty">No notes match {selectedTags.join(' + ')}.</p>
   {/if}
 
-  {#each groups as group}
+  {#each pagedGroups as group}
     <details class="folder" open={isOpen(group.key)} on:toggle={(event) => onToggle(group.key, event)}>
       <summary>
         <span class="folder-name">{groupLabel(group)}</span>
         <span class="folder-count">{group.items.length}</span>
       </summary>
+      {#if isOpen(group.key)}
       {#each group.items as transcription}
         {@const cleaned = cleanedOf(transcription)}
         {@const tags = tagsOf(transcription)}
@@ -462,7 +558,14 @@
               </div>
             {/if}
             {#if !expanded[transcription.jsonFile]}
-              <p class="preview">{cleaned ? preview(cleaned) : preview(transcription.transcriptionJson?.text || '')}</p>
+              <p class="preview">
+                {preview(
+                  cleaned ||
+                    transcription.transcriptionJson?.preview ||
+                    transcription.transcriptionJson?.text ||
+                    ''
+                )}
+              </p>
             {/if}
           </header>
           <div class="actions">
@@ -518,8 +621,14 @@
           {/if}
         </article>
       {/each}
+      {/if}
     </details>
   {/each}
+  {#if hiddenMonths > 0}
+    <p class="muted" use:lazyMore={hiddenMonths}>
+      {hiddenMonths} older month{hiddenMonths === 1 ? '' : 's'} — scroll to load
+    </p>
+  {/if}
 </section>
 
 <style lang="scss">

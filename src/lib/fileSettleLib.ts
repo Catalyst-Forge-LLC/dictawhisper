@@ -43,8 +43,7 @@ export function isTransientSyncFile(filePath: string): boolean {
     name.startsWith('.syncthing.') ||
     name.endsWith('.tmp') ||
     lower.includes('/.stfolder') ||
-    lower.includes('/.stversions/') ||
-    lower.includes('/_holding/')
+    lower.includes('/.stversions/')
   );
 }
 
