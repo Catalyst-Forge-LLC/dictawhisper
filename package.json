@@ -40,7 +40,7 @@
     "site:build": "pnpm --dir site build",
     "site:deploy": "pnpm --dir site run ship",
     "ship": "pnpm --dir site run ship",
-    "prepublishOnly": "pnpm test && pnpm typecheck"
+    "prepublishOnly": "node scripts/publish-gate.mjs && pnpm test && pnpm typecheck"
   },
   "engines": {
     "node": ">=20"
