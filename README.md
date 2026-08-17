@@ -6,6 +6,8 @@
 
 **[dictawhisper.com](https://dictawhisper.com)** · [GitHub](https://github.com/Catalyst-Forge-LLC/dictawhisper)
 
+The npm package is a name hold. Clone this repo to run it.
+
 **A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. DictaWhisper transcribes on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) on localhost or another box with a cleanup model.
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on this computer. The `.json` next to each recording is the note: no database, no account.

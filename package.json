@@ -1,8 +1,8 @@
 {
   "name": "dictawhisper",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": false,
-  "description": "Local voice journal: watch folders, transcribe with faster-whisper, clean and tag via ollanet",
+  "description": "Name hold. The voice journal is a git clone (dictawhisper.com). A CLI or library may land here later.",
   "homepage": "https://dictawhisper.com",
   "repository": {
     "type": "git",
@@ -22,14 +22,8 @@
     "ollanet"
   ],
   "type": "module",
-  "main": "src/server.ts",
   "license": "MIT",
   "files": [
-    "src",
-    "scripts/*.ts",
-    "scripts/*.py",
-    "client",
-    "config.example.json",
     "README.md",
     "LICENSE"
   ],
