@@ -96,15 +96,21 @@
     return `${minutes}:${String(rest).padStart(2, '0')}`;
   }
 
-  function playCue(event, start) {
+  function cueHasTime(cue) {
+    return typeof cue?.start === 'number' && Number.isFinite(cue.start);
+  }
+
+  function playCue(event, cue) {
+    if (!cueHasTime(cue)) return;
     const article = event.currentTarget.closest('.note');
     const audio = article?.querySelector('audio');
     if (!audio) return;
-    audio.currentTime = Math.max(0, Number(start) || 0);
+    audio.currentTime = Math.max(0, Number(cue.start) || 0);
     audio.play();
   }
 
   function cueActive(item, cue, index) {
+    if (!cueHasTime(cue)) return false;
     const current = item.transcriptionJson?._currentTime;
     if (typeof current !== 'number') return false;
     const next = cuesOf(item)[index + 1];
@@ -581,14 +587,20 @@
                 on:timeupdate={(event) => onAudioTime(transcription, event)}
               ></audio>
               {#if cleaned}
+                {#if transcription.transcriptionJson?.playbackCuesSource !== 'words'}
+                  <p class="muted">
+                    Section times need a re-transcribe for word timestamps. Raw segments below still have Whisper times.
+                  </p>
+                {/if}
                 {#each cuesOf(transcription) as cue, index}
                   <button
                     type="button"
                     class="cue"
                     class:active={cueActive(transcription, cue, index)}
-                    on:click={(event) => playCue(event, cue.start)}
+                    class:untimed={!cueHasTime(cue)}
+                    on:click={(event) => playCue(event, cue)}
                   >
-                    <span class="cue-time">{formatTime(cue.start)}</span>
+                    <span class="cue-time">{cueHasTime(cue) ? formatTime(cue.start) : '—'}</span>
                     <span class="cue-text">{cue.text}</span>
                   </button>
                 {/each}
@@ -876,6 +888,15 @@
   .cue.active {
     background: #e8f4fa;
     border-left-color: #0088cc;
+  }
+
+  .cue.untimed {
+    cursor: default;
+  }
+
+  .cue.untimed:hover,
+  .cue.untimed:focus {
+    background: transparent;
   }
 
   .cue-time {

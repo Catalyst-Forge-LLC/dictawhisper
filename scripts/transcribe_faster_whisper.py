@@ -93,6 +93,7 @@ def main() -> int:
         vad_filter=args.vad_filter,
         initial_prompt=initial_prompt,
         condition_on_previous_text=True,
+        word_timestamps=True,
         log_progress=False,
     )
 
@@ -107,6 +108,18 @@ def main() -> int:
     for i, segment in enumerate(segments_iter):
         text = segment.text
         texts.append(text)
+        words = []
+        for word in segment.words or []:
+            if word.start is None or word.end is None:
+                continue
+            words.append(
+                {
+                    "word": word.word,
+                    "start": float(word.start),
+                    "end": float(word.end),
+                    "probability": float(word.probability) if word.probability is not None else None,
+                }
+            )
         segments.append(
             {
                 "id": i,
@@ -114,6 +127,7 @@ def main() -> int:
                 "start": segment.start,
                 "end": segment.end,
                 "text": text,
+                "words": words,
                 "tokens": [],
                 "temperature": segment.temperature,
                 "avg_logprob": segment.avg_logprob,
@@ -134,19 +148,41 @@ def main() -> int:
     if duration > 0:
         log(f"[transcribe] 100.0% done ({duration:.1f}s)")
 
-    payload = {
-        "text": "".join(texts).strip(),
-        "segments": segments,
-        "language": info.language,
-        "whisper": {
-            "engine": "faster-whisper",
-            "model": model_name,
-            "device": args.device,
-            "compute_type": args.compute_type,
-            "duration": info.duration,
-            "vad_filter": args.vad_filter,
-        },
-    }
+    existing: dict = {}
+    if output_path.is_file():
+        try:
+            loaded = json.loads(output_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                existing = loaded
+        except Exception:
+            existing = {}
+
+    keep_keys = (
+        "cleanedTranscription",
+        "tags",
+        "thinking",
+        "meta",
+        "elapsed",
+        "cleanupError",
+        "cleanupAttempts",
+    )
+    payload = {key: existing[key] for key in keep_keys if key in existing}
+    payload.update(
+        {
+            "text": "".join(texts).strip(),
+            "segments": segments,
+            "language": info.language,
+            "whisper": {
+                "engine": "faster-whisper",
+                "model": model_name,
+                "device": args.device,
+                "compute_type": args.compute_type,
+                "duration": info.duration,
+                "vad_filter": args.vad_filter,
+                "word_timestamps": True,
+            },
+        }
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")

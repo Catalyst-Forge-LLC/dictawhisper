@@ -11,7 +11,8 @@
     "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
     "ui": "pnpm --dir client dev",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "doctor": "node --experimental-strip-types src/doctor.ts"
+    "doctor": "node --experimental-strip-types src/doctor.ts",
+    "retranscribe": "node --experimental-strip-types scripts/retranscribe.ts"
   },
   "engines": {
     "node": ">=20"

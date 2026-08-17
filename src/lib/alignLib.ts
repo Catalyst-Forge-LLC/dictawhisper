@@ -1,12 +1,19 @@
+export type WhisperWord = {
+  word: string;
+  start: number;
+  end: number;
+};
+
 export type WhisperSegment = {
   start: number;
   end: number;
   text: string;
+  words?: WhisperWord[];
 };
 
 export type PlaybackCue = {
-  start: number;
-  end: number;
+  start: number | null;
+  end: number | null;
   text: string;
 };
 
@@ -22,81 +29,94 @@ export function splitCleanedSections(cleaned: string): string[] {
   return [trimmed];
 }
 
-function words(text: string): string[] {
+function normWord(text: string): string {
   return String(text || '')
     .toLowerCase()
     .replace(/['’]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function contentWords(text: string): string[] {
+  return String(text || '')
     .split(/\s+/)
+    .map(normWord)
     .filter((word) => word.length > 1 && !FILLERS.has(word));
 }
 
-function overlap(sectionWords: string[], windowWords: string[]): number {
-  if (!sectionWords.length || !windowWords.length) return 0;
-  const counts = new Map<string, number>();
-  for (const word of windowWords) counts.set(word, (counts.get(word) || 0) + 1);
-  let hit = 0;
-  for (const word of sectionWords) {
-    const remaining = counts.get(word) || 0;
-    if (remaining > 0) {
-      hit += 1;
-      counts.set(word, remaining - 1);
+export function flattenSegmentWords(segments: WhisperSegment[] | undefined): WhisperWord[] {
+  const out: WhisperWord[] = [];
+  for (const segment of segments || []) {
+    if (!Array.isArray(segment.words)) continue;
+    for (const word of segment.words) {
+      if (typeof word?.start !== 'number' || typeof word.end !== 'number') continue;
+      if (!String(word.word || '').trim()) continue;
+      out.push({ word: word.word, start: word.start, end: word.end });
     }
   }
-  return hit / sectionWords.length;
+  return out;
 }
 
-/** Map cleaned sections onto Whisper timestamps. Does not change the cleaned text. */
-export function alignCleanedToSegments(cleaned: string, segments: WhisperSegment[]): PlaybackCue[] {
+type Token = WhisperWord & { key: string };
+
+function tokenizeWords(words: WhisperWord[]): Token[] {
+  return words
+    .map((word) => ({ ...word, key: normWord(word.word) }))
+    .filter((word) => word.key.length > 1 && !FILLERS.has(word.key));
+}
+
+/** Map cleaned sections onto Whisper word timestamps. Sequential; does not invent times. */
+export function alignCleanedToWords(cleaned: string, words: WhisperWord[]): PlaybackCue[] {
   const sections = splitCleanedSections(cleaned);
-  const usable = (segments || []).filter(
-    (segment) => typeof segment?.start === 'number' && typeof segment.text === 'string'
-  );
-  if (!sections.length || !usable.length) return [];
+  const tokens = tokenizeWords(words);
+  if (!sections.length || !tokens.length) return [];
 
   let cursor = 0;
   const cues: PlaybackCue[] = [];
 
   for (const text of sections) {
-    const sectionWords = words(text);
-    let bestIdx = cursor;
-    let bestScore = -1;
-    const searchEnd = Math.min(usable.length, cursor + Math.max(12, Math.ceil(sectionWords.length / 2) + 4));
-
-    for (let i = cursor; i < searchEnd; i += 1) {
-      const windowWords: string[] = [];
-      const windowLimit = Math.min(usable.length, i + 8);
-      for (let j = i; j < windowLimit; j += 1) windowWords.push(...words(usable[j].text));
-      const score = sectionWords.length ? overlap(sectionWords, windowWords) : 0;
-      if (score > bestScore) {
-        bestScore = score;
-        bestIdx = i;
-      }
+    const needed = contentWords(text);
+    if (!needed.length) {
+      const at = tokens[Math.min(cursor, tokens.length - 1)];
+      cues.push({ start: at.start, end: at.end, text });
+      continue;
     }
 
-    let endIdx = bestIdx;
-    if (sectionWords.length) {
-      const gathered: string[] = [];
-      for (let i = bestIdx; i < usable.length; i += 1) {
-        gathered.push(...words(usable[i].text));
-        endIdx = i;
-        if (overlap(sectionWords, gathered) >= 0.85 || gathered.length >= sectionWords.length * 1.4) break;
-        if (i - bestIdx > 20) break;
+    const searchEnd = Math.min(tokens.length, cursor + Math.max(30, needed.length * 4));
+    let startIdx = -1;
+    for (let i = cursor; i < searchEnd; i += 1) {
+      if (tokens[i].key === needed[0]) {
+        startIdx = i;
+        break;
       }
+    }
+    if (startIdx < 0) {
+      cues.push({ start: null, end: null, text });
+      continue;
+    }
+
+    let wordIdx = startIdx;
+    let needIdx = 0;
+    let endIdx = startIdx;
+    while (wordIdx < tokens.length && needIdx < needed.length) {
+      if (tokens[wordIdx].key === needed[needIdx]) {
+        endIdx = wordIdx;
+        wordIdx += 1;
+        needIdx += 1;
+        continue;
+      }
+      const upcoming = tokens.slice(wordIdx + 1, wordIdx + 4).some((token) => token.key === needed[needIdx]);
+      if (upcoming) wordIdx += 1;
+      else needIdx += 1;
     }
 
     cues.push({
-      start: Number(usable[bestIdx].start) || 0,
-      end: Number(usable[endIdx].end) || Number(usable[bestIdx].end) || 0,
+      start: tokens[startIdx].start,
+      end: tokens[endIdx].end,
       text,
     });
-    cursor = Math.min(endIdx + 1, usable.length - 1);
+    cursor = endIdx + 1;
   }
 
-  for (let i = 1; i < cues.length; i += 1) {
-    if (cues[i].start < cues[i - 1].start) cues[i].start = cues[i - 1].start;
-    if (cues[i].end < cues[i].start) cues[i].end = cues[i].start;
-  }
   return cues;
 }
 
@@ -104,21 +124,31 @@ export function ensurePlaybackCues(json: {
   cleanedTranscription?: string;
   segments?: WhisperSegment[];
   playbackCues?: PlaybackCue[];
+  playbackCuesSource?: string;
 }): boolean {
   const cleaned = json?.cleanedTranscription;
-  const segments = json?.segments;
-  if (!cleaned || !Array.isArray(segments) || !segments.length) return false;
+  const words = flattenSegmentWords(json?.segments);
+  const sections = cleaned ? splitCleanedSections(cleaned) : [];
 
-  const sections = splitCleanedSections(cleaned);
-  const existing = json.playbackCues;
-  if (
-    Array.isArray(existing) &&
-    existing.length === sections.length &&
-    existing.every((cue) => typeof cue?.start === 'number' && typeof cue.text === 'string')
-  ) {
-    return false;
+  if (words.length && cleaned && sections.length) {
+    const existing = json.playbackCues;
+    if (
+      json.playbackCuesSource === 'words' &&
+      Array.isArray(existing) &&
+      existing.length === sections.length &&
+      existing.every((cue) => cue && typeof cue.text === 'string')
+    ) {
+      return false;
+    }
+    json.playbackCues = alignCleanedToWords(cleaned, words);
+    json.playbackCuesSource = 'words';
+    return true;
   }
 
-  json.playbackCues = alignCleanedToSegments(cleaned, segments);
-  return true;
+  if (json.playbackCues || json.playbackCuesSource) {
+    delete json.playbackCues;
+    delete json.playbackCuesSource;
+    return true;
+  }
+  return false;
 }
