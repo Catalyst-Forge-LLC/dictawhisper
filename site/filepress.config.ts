@@ -7,7 +7,7 @@ export default defineFilepressConfig({
 	description:
 		'A local voice journal. Speak, transcribe on your GPU, keep notes as files next to the audio.',
 	tagline: 'Dictation, meet Whisper.',
-	lede: 'Speak. Keep the notes. Stay on your machine.',
+	lede: 'Speak, keep the note, stay on your machine.',
 	url: 'https://dictawhisper.com',
 	author: 'Catalyst Forge LLC',
 	homePage: 'about',

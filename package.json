@@ -43,6 +43,7 @@
     "@types/async": "^3.2.25",
     "@types/express": "^5.0.3",
     "@types/node": "^24.6.2",
+    "aibreze": "^0.1.2",
     "typescript": "^5.9.3"
   }
 }

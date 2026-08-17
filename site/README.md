@@ -41,4 +41,6 @@ Dependency is the public npm package:
 
 ## Content sync
 
-**Site** = product narrative (home, Install, posts). **Root README** = flags, HTTP, env. Same promise sentence in both; when behavior changes, update README + `site/pages/*`.
+**Site** = product narrative (home, Install, posts). **Root README** = flags, HTTP, env. Same facts in both; the site stays plainer. When behavior changes, update README + `site/pages/*`.
+
+Site copy follows [aiBreze](https://aibreze.com): `landing.md` plus [`docs/aibreze-overlay.md`](../docs/aibreze-overlay.md).

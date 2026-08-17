@@ -181,7 +181,7 @@ Useful `config.json` knobs (see `config.example.json`):
 
 ## Site
 
-Marketing site (FilePress): [`site/`](site/). `pnpm site:dev` / `pnpm site:build` / `pnpm ship`. Live: [dictawhisper.com](https://dictawhisper.com).
+Marketing site (FilePress): [`site/`](site/). `pnpm site:dev` / `pnpm site:build` / `pnpm ship`. Live: [dictawhisper.com](https://dictawhisper.com). Page copy follows [aiBreze](https://aibreze.com); see [`docs/aibreze-overlay.md`](docs/aibreze-overlay.md).
 
 ## License
 
