@@ -1,12 +1,12 @@
 ---
 title: Install
-description: Put DictaWhisper on a desktop you already leave on, then record or drop a file.
+description: Put DictaWhisper on a computer you leave turned on, then record or drop a file.
 order: 1
 ---
 
 You run this on a computer at home. It is not a website that holds your audio.
 
-A desktop that can stay on helps. A graphics card makes transcription much faster. A writing model for cleanup is optional; without it you still get the raw transcript.
+A computer you leave turned on helps. A graphics card makes transcription much faster. A writing model for cleanup is optional; without it you still get the raw transcript.
 
 ### Get it running
 

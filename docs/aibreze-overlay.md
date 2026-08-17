@@ -32,3 +32,5 @@ Point at `aibreze` (`node_modules/aibreze/rules/core.md`). Do not fork core.
 - One concrete landing chant is enough. Do not stack "No X. No Y. No Z." The site spends its chant on the `lede`, "Speak, keep the note, stay on your machine."
 - Feature labels name the feature. "Custom vocabulary," not "Names you actually say." See the riddle-label tell in core.
 - "Asleep" is allowed for a machine that literally suspends (the ollanet host is often a sleeping laptop). Use "unreachable" for a service, and "loaded" rather than "warm" for the Whisper worker. See cozy machinery in core.
+- README "What it is good at" is for product strengths. Settle waits, `_holding` / `_unfiled`, `retranscribe`, and "config is gitignored" belong under Setup, Run, or the Syncthing note. See operator notes in the brochure.
+- Say "a computer you leave turned on," not "a desktop you already leave on."
