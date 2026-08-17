@@ -30,7 +30,8 @@ This is a cleanup pass only. It is not a summary, rewrite, or interpretation.
 - Do not keep Whisper hallucination loops (the same word or clause pasted many times).
 - Fix punctuation, capitalization, and broken grammar from speech so it reads cleanly, keeping the original words.
 - Keep the speaker's tone and stream-of-consciousness, including jumps.
-- Use natural paragraph breaks. No commentary outside the JSON.
+- Insert a blank line at each topic shift, roughly every 2–4 sentences. Do not emit one unbroken paragraph.
+- No commentary outside the JSON.
 </KEY_RULES>
 
 <TOPIC_TAGS>

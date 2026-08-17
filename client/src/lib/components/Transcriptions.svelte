@@ -78,11 +78,20 @@
     return text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
   }
 
+  function sectionsOf(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return [];
+    const paras = paragraphs(trimmed);
+    if (paras.length >= 2) return paras;
+    const sentences = trimmed.split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter(Boolean);
+    return sentences.length >= 2 ? sentences : [trimmed];
+  }
+
   function cuesOf(item) {
     const cues = item.transcriptionJson?.playbackCues;
     if (Array.isArray(cues) && cues.length) return cues;
     const cleaned = cleanedOf(item);
-    return cleaned ? paragraphs(cleaned).map((text) => ({ text, start: 0, end: 0 })) : [];
+    return cleaned ? sectionsOf(cleaned).map((text) => ({ text, start: 0, end: 0 })) : [];
   }
 
   function audioUrl(jsonFile) {
@@ -340,9 +349,13 @@
     try {
       const item = await hydrateNote(transcription.jsonFile);
       const json = item?.transcriptionJson || {};
+      const fromCues = cuesOf(item)
+        .map((cue) => String(cue.text || '').trim())
+        .filter(Boolean);
       const text =
-        json.cleanedTranscription ||
-        (json.segments || []).map((segment) => segment.text).join('\n') ||
+        (fromCues.length ? fromCues.join('\n\n') : '') ||
+        sectionsOf(json.cleanedTranscription || '').join('\n\n') ||
+        (json.segments || []).map((segment) => segment.text).join('\n\n') ||
         json.preview ||
         '';
       await navigator.clipboard.writeText(text);
