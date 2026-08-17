@@ -9,7 +9,8 @@
     "browserDropFolder": "./data/audio-files",
     "settleMinutes": 30,
     "browserSettleMs": 0,
-    "recursiveYears": true
+    "recursiveYears": true,
+    "createMissingRoots": false
   },
   "whisper": {
     "python": "python",

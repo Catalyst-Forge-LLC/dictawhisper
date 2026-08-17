@@ -14,9 +14,10 @@ import {
 } from './lib/transcriptionLib.ts';
 import { initVoiceRootPipeline } from './lib/organizationLib.ts';
 import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
-import { resolveWhisperModel, whisperTranscribe } from './lib/whisperLib.ts';
+import { startWhisperWorker, stopWhisperWorker, whisperTranscribe } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
 import { cleanAudioFile } from './lib/audioLib.ts';
+import { collectHealth, printHealthReport } from './lib/healthLib.ts';
 
 const app = express();
 app.use(express.json());
@@ -32,28 +33,30 @@ const io = new SocketIOServer(server, {
 
 setTranscriptionIo(io);
 
-initQueues({
-  transcription: {
-    processor: async (task, callback) => {
-      console.log(`[queue-transcription] Cleaning file: ${task.file}`);
-      const fileCleaned = config.audio.preprocess ? await cleanAudioFile(task.file, false) : false;
-      console.log(
-        `[queue-transcription] Transcribing file: ${task.file} -> ${task.transcriptionFile}, fileCleaned: ${fileCleaned}`
-      );
-      await whisperTranscribe(task.file, task.transcriptionFile, callback as any);
+function startQueues(): void {
+  initQueues({
+    transcription: {
+      processor: async (task, callback) => {
+        console.log(`[queue-transcription] Cleaning file: ${task.file}`);
+        const fileCleaned = config.audio.preprocess ? await cleanAudioFile(task.file, false) : false;
+        console.log(
+          `[queue-transcription] Transcribing file: ${task.file} -> ${task.transcriptionFile}, fileCleaned: ${fileCleaned}`
+        );
+        await whisperTranscribe(task.file, task.transcriptionFile, callback as any);
+      },
+      concurrency: config.queues.transcription.concurrency,
+      active: config.queues.transcription.active,
     },
-    concurrency: config.queues.transcription.concurrency,
-    active: config.queues.transcription.active,
-  },
-  processing: {
-    processor: (task, callback) => {
-      console.log(`[queue-processing] Processing file: ${task.file}`);
-      cleanTranscription(task.file, callback);
+    processing: {
+      processor: (task, callback) => {
+        console.log(`[queue-processing] Processing file: ${task.file}`);
+        cleanTranscription(task.file, callback);
+      },
+      concurrency: config.queues.processing.concurrency,
+      active: config.queues.processing.active,
     },
-    concurrency: config.queues.processing.concurrency,
-    active: config.queues.processing.active,
-  },
-});
+  });
+}
 
 for (const route of apiRoutes) {
   if (route.method === 'GET') app.get(route.path, route.handler);
@@ -69,8 +72,13 @@ io.on('connection', (socket) => {
 });
 
 async function main() {
-  console.log(`[dictawhisper] whisper=${resolveWhisperModel()} device=${config.whisper.device}`);
-  console.log(`[dictawhisper] ollanet ${config.ollanet.machine || '(unset)'} / ${config.ollanet.cleanModel || '(unset)'}`);
+  const report = await collectHealth(config, { mode: 'startup' });
+  printHealthReport(report, 'health');
+  if (!report.ok) {
+    process.exit(1);
+  }
+
+  startQueues();
   logSettleConfig('voice-settle');
   console.log(
     `[voice-settle] browser-drop files ${
@@ -89,9 +97,27 @@ async function main() {
   });
   initVoiceRootPipeline(config.watch.roots);
 
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    console.error(`[health] FAIL  port ${config.http.host}:${config.http.port} ${error.message}`);
+    process.exit(1);
+  });
   server.listen(config.http.port, config.http.host, () => {
     console.log(`listening on ${config.http.host}:${config.http.port}`);
   });
+
+  void startWhisperWorker().catch((error: Error) => {
+    console.warn(`[whisper] worker did not start (${error.message}); one-shot fallback until it recovers`);
+  });
 }
+
+function shutdown(code = 0) {
+  void stopWhisperWorker().finally(() => {
+    server.close(() => process.exit(code));
+    setTimeout(() => process.exit(code), 4000).unref();
+  });
+}
+
+process.on('SIGINT', () => shutdown(0));
+process.on('SIGTERM', () => shutdown(0));
 
 main();

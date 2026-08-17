@@ -4,6 +4,7 @@ import { process, cleanTranscription, countStatus, listNoteSummaries, readTransc
 import { q } from './lib/queueLib.ts';
 import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
+import { getHealthReport } from './lib/healthLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 import { audioContentType, findAudioForSidecar } from './lib/audioLib.ts';
 import { applyConsolidateGroups, buildConsolidatePlan } from './lib/tagConsolidateLib.ts';
@@ -33,15 +34,24 @@ export const apiRoutes = [
   {
     path: '/health',
     method: 'GET',
-    handler: (_req: express.Request, res: express.Response) => {
-      res.json({
-        ok: true,
+    handler: async (req: express.Request, res: express.Response) => {
+      const fresh = req.query.fresh === '1' || req.query.fresh === 'true';
+      const report = await getHealthReport(config, { mode: 'live', fresh });
+      res.status(report.ok ? 200 : 503).json({
+        ok: report.ok,
+        degraded: report.degraded,
         host: config.http.host,
         port: config.http.port,
         whisper: resolveWhisperModel(),
-        ollanet: config.ollanet,
+        whisperWorker: report.whisper.worker,
+        device: report.whisper.device,
+        ollanet: {
+          ...config.ollanet,
+          reachable: report.ollanet.reachable,
+        },
         settleMinutes: config.watch.settleMinutes,
         browserSettleMs: config.watch.browserSettleMs,
+        checks: report.checks,
         queues: {
           transcription: q['transcription']
             ? { length: q['transcription'].length(), running: q['transcription'].running() }

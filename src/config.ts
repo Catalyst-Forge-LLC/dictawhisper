@@ -13,6 +13,8 @@ export type DictaConfig = {
     settleMinutes: number;
     browserSettleMs: number;
     recursiveYears: boolean;
+    /** If true, missing watch roots are created as empty folders instead of failing doctor. */
+    createMissingRoots: boolean;
   };
   whisper: {
     python: string;
@@ -35,7 +37,13 @@ export type DictaConfig = {
 
 function readJson(filePath: string): Partial<DictaConfig> {
   if (!fs.existsSync(filePath)) return {};
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Partial<DictaConfig>;
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  try {
+    return JSON.parse(raw) as Partial<DictaConfig>;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`config is not valid JSON (${filePath}): ${detail}`);
+  }
 }
 
 function resolveExistingOrPlain(filePath: string): string {
@@ -59,6 +67,7 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
           ? Number(process.env.VOICE_BROWSER_SETTLE_MS)
           : (file.watch?.browserSettleMs ?? 0),
       recursiveYears: file.watch?.recursiveYears ?? true,
+      createMissingRoots: file.watch?.createMissingRoots ?? false,
     },
     whisper: {
       python: process.env.WHISPER_PYTHON?.trim() || file.whisper?.python || 'python',
