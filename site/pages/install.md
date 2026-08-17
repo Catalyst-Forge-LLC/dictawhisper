@@ -1,54 +1,39 @@
 ---
 title: Install
-description: Clone DictaWhisper, point it at your GPU, then record or drop files in the inbox.
+description: Put DictaWhisper on a desktop you already leave on, then record or drop a file.
 order: 1
 ---
 
-This is a **personal workstation service**, not an npm global. It wants a desktop you already leave on, a Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and optionally [ollanet](https://ollanet.dev) talking to Ollama — on this machine or another.
+DictaWhisper is an app you run on a computer at home — not something you install from an app store, and not a website that holds your audio.
 
-Requires **Node.js 20+**, [pnpm](https://pnpm.io), and `ffmpeg` on PATH if denoise is on. CUDA is the happy path; `whisper.device=cpu` works and is slow.
+You will want a desktop that can stay on, and a graphics card if you have one (it will be much faster). A writing model for cleanup is optional; without it you still get the raw transcript.
 
-### Clone and doctor
+### Get it running
 
 ```bash
 git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
 cd dictawhisper
 cp config.example.json config.json
-# edit whisper.python, whisper.promptTerms, ollanet.machine / cleanModel
-# watch.roots is optional — the inbox can record and accept drops on its own
+# point it at your speech setup, names you say often,
+# and (optionally) which computer should tidy the text
 pnpm install
 pnpm run doctor
 pnpm dev
 ```
 
-Inbox: [http://localhost:7777](http://localhost:7777). The UI proxies the API, so open **7777** only.
+Open [http://localhost:7777](http://localhost:7777). Record, or drag a file onto the page. You do not need Syncthing or an extra folder for that.
 
-`config.json` is gitignored. The inbox can record and accept dropped files with no Syncthing and no extra watch roots. Add `watch.roots` only if you already have a phone folder or dump directory. Then: which Python has CUDA Whisper, and which Ollama ollanet should use (this computer or another name it already sees).
+`pnpm run doctor` is a checkup: it tells you what is missing instead of failing later in silence. If the writing helper is asleep, that is a warning — notes still get written.
 
-### Confirm cleanup (optional)
+### Read it from your phone
 
-```bash
-ollanet prompt YOUR-OLLANET-HOST YOUR-CLEAN-MODEL --format json "ping"
-```
+On the home computer, turn on Tailscale in the config (`"http": { "tailscale": true }`) and start the app again. The checkup prints a private link. Open that from a phone that is on the same Tailscale. There is no login — if you can see the tailnet, you can see the inbox.
 
-Localhost is a valid host. If that Ollama is down, raw transcripts still write. Doctor will warn.
-
-### Inbox on Tailscale
-
-On the workstation, set `"http": { "tailscale": true }` (or `DICTA_TAILSCALE=1`) and restart `pnpm dev`. Doctor prints `http://<machine>.<tailnet>.ts.net:7777`. Open that from a phone signed into the same Tailscale. There is no login on the app — the tailnet is the door.
-
-### Retranscribe
+### Already have a pile of recordings?
 
 ```bash
 pnpm retranscribe
 pnpm retranscribe --dir="D:\VoiceNotes\2026\08" --limit=5 --reclean
-pnpm retranscribe --force
 ```
 
-Newest first. Without `--reclean`, cleaned text and tags stay; only words, times, and raw text update. The Whisper worker stays loaded across the batch.
-
-### What doctor checks
-
-Node, config parse, watch roots, ffmpeg, `faster-whisper` import, CUDA vs CPU, ollanet reachability, API port. Failures block queues. CPU or a sleeping cleanup host is a warning, not a crash.
-
-Full HTTP table, env vars, and sidecar shape: [README on GitHub](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).
+That walks your existing notes, newest first. Details and every flag live in the [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).

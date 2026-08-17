@@ -1,42 +1,41 @@
 ---
-title: A local voice journal.
-description: Record or drop a file in the browser. Transcribe on your GPU. Keep notes as files next to the audio.
+title: A voice journal that stays on your computer.
+description: Record or drop a file. Get a readable note. Nothing is uploaded to a cloud account.
 order: 1
 ---
 
-Voice notes are easy to *make* and hard to *keep*. **DictaWhisper** waits until the file is really there, transcribes it on your workstation with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev).
+Voice notes are easy to *make* and hard to *keep*. **DictaWhisper** turns what you said into a note you can actually reread — on your own computer, next to the recording.
 
-The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on your machine. The sidecar `.json` next to each recording is the source of truth — no database, no cloud account, no “upload to our servers.”
+The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. There is no account and no “upload to our servers.” Each recording keeps a small notes file beside it. That *is* the journal.
 
 <div class="cta-row">
-  <a class="cta cta-primary" href="/install">Install DictaWhisper →</a>
+  <a class="cta cta-primary" href="/install">Get started →</a>
   <a class="cta cta-secondary" href="https://github.com/Catalyst-Forge-LLC/dictawhisper">View on GitHub</a>
 </div>
 
-<p class="kicker">pnpm · Node 20+ · CUDA Whisper · MIT</p>
+<p class="kicker">Runs on your desktop · your audio stays put · MIT</p>
 
 ## What you get
 
-- **Record or drop — Syncthing is optional** — the inbox is enough. If you also watch a phone folder, those files settle for 30 minutes; browser files start immediately.
-- **Files are the database** — each note is `audio` + `audio.json`. Rsync the tree. There is nothing to export.
-- **Whisper here; cleanup wherever it is best** — faster-whisper stays on this GPU. [ollanet](https://ollanet.dev) finds Ollama on localhost and the network. Put the instruct model on this box or another; that is a quality choice.
-- **Inbox on Tailscale** — default bind is localhost. Turn on `http.tailscale` and open the same inbox from a phone on your tailnet.
-- **A note you can listen through** — cleaned paragraphs, tags, playback cues aligned to Whisper word times.
-- **Honest first run** — `pnpm run doctor` reports ffmpeg, faster-whisper, CUDA, watch roots, and ollanet. Failures refuse to start queues.
+- **Talk, or drop a file** — hit Record in the inbox, or drag an audio file onto the page. That is enough. A phone folder that syncs in the background is optional.
+- **Notes live next to the audio** — you can copy the folder, back it up, or open a note in any editor. There is nothing to export.
+- **Speech on this machine; cleanup wherever it sounds best** — transcription runs on your computer. Tidying the text can happen here or on another computer you already trust. If that helper is asleep, you still have the raw words.
+- **Read it from your phone** — at home it is just a page on this computer. On [Tailscale](https://tailscale.com), the same page works from your phone. No public website, no login.
+- **A note you can listen through** — cleaned paragraphs, simple tags, and playback that follows what you are reading.
 
-## Daily loop
+## A normal day
 
-1. Talk. Hit Record in the inbox, or drag an audio file onto the page. A watched phone folder is optional.
-2. Dated names (`YYYY-MM-DD…`) file into `YYYY/MM/`. Collisions go to `_holding`. Undated files go to `_unfiled`.
-3. A long-lived Whisper worker (model loaded once) writes the sidecar.
-4. ollanet cleans the text and adds tags onto the **same** JSON.
-5. Open [localhost:7777](http://localhost:7777) — or the MagicDNS URL if Tailscale is on — cleaned text by default, raw on a toggle.
+1. Say something. Record in the inbox, or drop a file you already have.
+2. DictaWhisper writes the words, then a cleaner pass that drops the ums and adds tags.
+3. Open the inbox. Notes are grouped by month. You see the readable version first; the raw speech is one click away.
 
-## The ollanet loop
+If a phone app is also dropping files into a folder, those wait until the copy is finished. Browser recordings start right away.
+
+## Who does the writing
 
 <div class="mesh-panel">
-  <p><a href="https://ollanet.dev"><strong>ollanet</strong></a> already looks at localhost and the rest of your mesh. Cleanup can run on this machine or on a quieter one with a better instruct model. Same API either way.</p>
-  <p>Audio stays on the workstation. Only text leaves, and only if you pointed cleanup at another host. Doctor and <code>/health</code> say when that host is down.</p>
+  <p>Transcription happens on your desktop. A second step can tidy the prose — on this same computer, or on another one that has a stronger writing model. <a href="https://ollanet.dev">ollanet</a> is how DictaWhisper finds that helper, whether it is in the next room or on this machine.</p>
+  <p>The recording does not leave. Only the text does, and only if you asked another computer to help clean it up.</p>
 </div>
 
 ## Quick start
@@ -50,7 +49,7 @@ pnpm run doctor
 pnpm dev
 ```
 
-Inbox: [http://localhost:7777](http://localhost:7777). Flags and HTTP live on the [install](/install) page and the [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).
+Then open [http://localhost:7777](http://localhost:7777). Setup notes are on [Install](/install). Flags and wiring live in the [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).
 
 <div class="cta-row">
   <a class="cta cta-primary" href="/install">Get started →</a>
