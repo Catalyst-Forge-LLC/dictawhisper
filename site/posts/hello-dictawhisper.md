@@ -9,7 +9,7 @@ tags: [meta, releases]
 
 What the workstation already does:
 
-- **Watch** phone folders (Syncthing-safe 30-minute settle) and browser record/drop (immediate)
+- **Capture** in the browser (record or drop a file). A watched phone folder is optional; those settle for 30 minutes so a sync can finish
 - **Organize** `YYYY-MM-DD` names into `YYYY/MM/`, with `_holding` and `_unfiled` instead of silence
 - **Transcribe** with a persistent faster-whisper worker — model loaded once
 - **Clean and tag** over [ollanet](https://ollanet.dev) — localhost or another Ollama, whichever model is better; raw speech stays on the sidecar

@@ -1,6 +1,6 @@
 ---
 title: A local voice journal.
-description: Speak into your phone or the browser. Transcribe on your GPU. Keep notes as files next to the audio.
+description: Record or drop a file in the browser. Transcribe on your GPU. Keep notes as files next to the audio.
 order: 1
 ---
 
@@ -17,7 +17,7 @@ The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. A
 
 ## What you get
 
-- **Two clocks, one pipeline** — Syncthing folders settle for 30 minutes; browser record/drop starts immediately. Then organize and transcribe the *final* path.
+- **Record or drop — Syncthing is optional** — the inbox is enough. If you also watch a phone folder, those files settle for 30 minutes; browser files start immediately.
 - **Files are the database** — each note is `audio` + `audio.json`. Rsync the tree. There is nothing to export.
 - **Whisper here; cleanup wherever it is best** — faster-whisper stays on this GPU. [ollanet](https://ollanet.dev) finds Ollama on localhost and the network. Put the instruct model on this box or another; that is a quality choice.
 - **Inbox on Tailscale** — default bind is localhost. Turn on `http.tailscale` and open the same inbox from a phone on your tailnet.
@@ -26,7 +26,7 @@ The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. A
 
 ## Daily loop
 
-1. Talk. A phone app writes into Syncthing, or you record / drop a file in the inbox.
+1. Talk. Hit Record in the inbox, or drag an audio file onto the page. A watched phone folder is optional.
 2. Dated names (`YYYY-MM-DD…`) file into `YYYY/MM/`. Collisions go to `_holding`. Undated files go to `_unfiled`.
 3. A long-lived Whisper worker (model loaded once) writes the sidecar.
 4. ollanet cleans the text and adds tags onto the **same** JSON.

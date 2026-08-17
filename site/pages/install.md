@@ -1,6 +1,6 @@
 ---
 title: Install
-description: Clone DictaWhisper, point it at your folders and GPU, then open the inbox.
+description: Clone DictaWhisper, point it at your GPU, then record or drop files in the inbox.
 order: 1
 ---
 
@@ -14,8 +14,8 @@ Requires **Node.js 20+**, [pnpm](https://pnpm.io), and `ffmpeg` on PATH if denoi
 git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
 cd dictawhisper
 cp config.example.json config.json
-# edit watch.roots, whisper.python, whisper.promptTerms,
-#      ollanet.machine / cleanModel
+# edit whisper.python, whisper.promptTerms, ollanet.machine / cleanModel
+# watch.roots is optional — the inbox can record and accept drops on its own
 pnpm install
 pnpm run doctor
 pnpm dev
@@ -23,7 +23,7 @@ pnpm dev
 
 Inbox: [http://localhost:7777](http://localhost:7777). The UI proxies the API, so open **7777** only.
 
-`config.json` is gitignored. Three things matter on a new machine: where audio lands, which Python has CUDA Whisper, and which Ollama ollanet should use (this computer or another name it already sees).
+`config.json` is gitignored. The inbox can record and accept dropped files with no Syncthing and no extra watch roots. Add `watch.roots` only if you already have a phone folder or dump directory. Then: which Python has CUDA Whisper, and which Ollama ollanet should use (this computer or another name it already sees).
 
 ### Confirm cleanup (optional)
 

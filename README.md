@@ -2,7 +2,7 @@
 
 **[dictawhisper.com](https://dictawhisper.com)** · [GitHub](https://github.com/Catalyst-Forge-LLC/dictawhisper)
 
-**A local voice journal.** Speak into your phone or the browser. DictaWhisper waits until the file is really there, transcribes it on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) — localhost or another box, whichever hosts the better cleanup model.
+**A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. DictaWhisper transcribes on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) — localhost or another box, whichever hosts the better cleanup model.
 
 The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on your workstation. The sidecar `.json` next to each recording is the source of truth — no database, no cloud account, no “upload to our servers.”
 
@@ -14,7 +14,7 @@ Open the inbox at [http://localhost:7777](http://localhost:7777). On Tailscale, 
 
 Voice notes are easy to *make* and hard to *keep*. Phone recordings pile up as undated blobs. Cloud speech-to-text wants the audio. Desktop Whisper dumps a wall of “um” and repeated phrases. A journal you will actually reread needs three things at once:
 
-1. **Capture that does not fight your tools** — Syncthing from a phone, or record/drop in the browser.
+1. **Capture that does not fight your tools** — record or drop a file in the browser. Syncthing from a phone is optional.
 2. **Transcription that is accurate and local** — `large-v3` on CUDA, names you actually say, word times that survive cleanup.
 3. **A note you can use** — cleaned prose, tags, playback that follows the cleaned paragraphs, files you can copy and back up.
 
@@ -24,16 +24,16 @@ DictaWhisper is a **personal workstation service**. By default the API binds to 
 
 ## Daily loop
 
-1. Talk. A phone app writes into a Syncthing folder, or you record / drop a file in the UI.
-2. Phone files **settle for 30 minutes** so Syncthing can finish. Browser files start **immediately**.
+1. Talk. Hit Record in the inbox, or drag an audio file onto the page. That is enough.
+2. Browser files start **immediately**. If you also watch a phone folder (Syncthing is optional), those files **settle for 30 minutes** so the transfer can finish.
 3. Dated names (`YYYY-MM-DD…`) are filed into `YYYY/MM/` on **that** watch root. Collisions go to `_holding`. Undated files go to `_unfiled`.
 4. Optional ffmpeg denoise. Then a long-lived Whisper worker (model loaded once) writes a sidecar `.json`.
 5. ollanet cleans the text and adds tags onto the **same** JSON. Raw speech is kept.
 6. The inbox groups notes by month, shows cleaned text by default, and plays audio with cues aligned to those cleaned sections.
 
 ```
-Phone (Syncthing)  →  watch roots  →  settle 30m  →  YYYY/MM/  ─┐
-Browser record/drop →  drop folder →  immediately ─────────────┼─→ whisper → sidecar.json → ollanet → inbox
+Browser record/drop →  drop folder →  immediately ─────────────┐
+Optional phone folder →  watch roots  →  settle 30m  →  YYYY/MM/ ┼─→ whisper → sidecar.json → ollanet → inbox
 Force / retranscribe ─────────────────────────────────────────┘
 ```
 
@@ -41,7 +41,7 @@ Force / retranscribe ───────────────────�
 
 ## What it is good at
 
-**Two clocks, one pipeline.** Syncthing is racy if you transcribe while the file is still growing. Browser drops are not. DictaWhisper uses a long mtime settle on phone/watch roots and a zero settle on the browser folder, then organizes and transcribes the **final** path. No “whisper started, then the file moved.”
+**Two clocks, one pipeline.** The browser path has no wait. Optional folder sync (Syncthing or anything that drops files into a watch root) is racy if you transcribe while the file is still growing, so those roots settle for 30 minutes, then organize and transcribe the **final** path. No “whisper started, then the file moved.”
 
 **Files are the database.** Each note is `audio` + `audio.json`. You can rsync the tree, open a sidecar in an editor, or point `pnpm retranscribe` at one month. Identity is the path. There is nothing to export.
 
@@ -80,9 +80,10 @@ The UI is a journal, not a file manager dump.
 - Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) — point `whisper.python` at that interpreter
 - `ffmpeg` on PATH if denoise is on
 - [ollanet](https://ollanet.dev) + an Ollama model for cleanup (localhost or another reachable host; optional for raw transcripts)
-- Optional: [Tailscale](https://tailscale.com) on the workstation and the phone, if you want the inbox off-LAN
+- Optional: [Tailscale](https://tailscale.com) if you want the inbox from another device on your tailnet
+- Optional: a watched folder (Syncthing, a shared drive, a dump directory) if you already record outside the browser
 
-This is meant to live on a desktop you already leave on. A phone can be a microphone (Syncthing) and, on the tailnet, a browser for the inbox.
+The inbox alone is enough: record or drag files at [localhost:7777](http://localhost:7777). This is meant to live on a desktop you already leave on.
 
 ---
 
@@ -90,13 +91,13 @@ This is meant to live on a desktop you already leave on. A phone can be a microp
 
 ```bash
 cp config.example.json config.json
-# edit watch.roots, whisper.python, whisper.promptTerms,
-#      ollanet.machine / cleanModel
+# edit whisper.python, whisper.promptTerms, ollanet.machine / cleanModel
+# watch.roots is optional — record or drop files in the inbox without Syncthing
 pnpm install
 pnpm run doctor
 ```
 
-`config.json` is gitignored. Three things matter on a new machine: where audio lands, which Python has CUDA Whisper, and which Ollama (local or remote) ollanet should use for cleanup.
+`config.json` is gitignored. The inbox can record and accept dropped files with no Syncthing. Add `watch.roots` only if you already have a phone folder or dump directory. Then: which Python has CUDA Whisper, and which Ollama (local or remote) ollanet should use for cleanup.
 
 Optional sanity check (machine can be this computer or another name ollanet already sees):
 

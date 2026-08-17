@@ -155,7 +155,7 @@ export async function collectHealth(
   add(checks, 'config', 'ok', `config ${configPath}`);
 
   if (!config.watch.roots.length) {
-    add(checks, 'watch-roots', 'fail', 'no watch.roots configured');
+    add(checks, 'watch-roots', 'ok', 'no extra watch roots (browser record/drop only)');
   }
   for (const root of config.watch.roots) {
     if (fs.existsSync(root)) {
