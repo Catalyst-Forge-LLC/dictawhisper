@@ -22,8 +22,12 @@ This is a cleanup pass only. It is not a summary, rewrite, or interpretation.
 - Do not add information. Do not guess what the speaker probably meant.
 - If a phrase is garbled, implausible, or only half a word, leave those words as they appear. Do not replace them with a fluent guess.
 - Do not change names, places, or uncommon words to more common lookalikes.
-- "Yeah", "yes", "no", and similar answers are content. Only drop true vocalized pauses (uh, um, umm, hmm) and empty repetitions or false starts.
-- "Like" and "you know" may be fillers or real wording; remove them only when they clearly add no meaning.
+- Always remove vocalized pauses: uh, um, umm, hmm. Do not leave them in.
+- "Yeah", "yes", and "no" are content when they answer something. Keep those.
+- Drop "like" and "you know" when they are only pacing, not meaning.
+- Collapse immediate repeats from speech or ASR: "the the the" → "the", "it's, it's, it's" → "it's", "very very very very" → "very".
+- If two consecutive sentences or lines say the same thing, keep one.
+- Do not keep Whisper hallucination loops (the same word or clause pasted many times).
 - Fix punctuation, capitalization, and broken grammar from speech so it reads cleanly, keeping the original words.
 - Keep the speaker's tone and stream-of-consciousness, including jumps.
 - Use natural paragraph breaks. No commentary outside the JSON.

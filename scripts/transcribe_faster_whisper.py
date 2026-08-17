@@ -92,7 +92,8 @@ def main() -> int:
         beam_size=5,
         vad_filter=args.vad_filter,
         initial_prompt=initial_prompt,
-        condition_on_previous_text=True,
+        condition_on_previous_text=False,
+        compression_ratio_threshold=2.2,
         word_timestamps=True,
         log_progress=False,
     )

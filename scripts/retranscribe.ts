@@ -5,6 +5,7 @@ import { findAudioForSidecar } from '../src/lib/audioLib.ts';
 import { isSkippedWatchPath } from '../src/lib/fileSettleLib.ts';
 import { ensurePlaybackCues, flattenSegmentWords } from '../src/lib/alignLib.ts';
 import { whisperTranscribe } from '../src/lib/whisperLib.ts';
+import { cleanTranscription } from '../src/lib/transcriptionLib.ts';
 
 function walkJsonFiles(dir: string, out: string[]) {
   if (!fs.existsSync(dir)) return;
@@ -35,6 +36,16 @@ function transcribeOne(audio: string, jsonFile: string): Promise<void> {
 const limitArg = process.argv.find((arg) => arg.startsWith('--limit='));
 const limit = limitArg ? Number(limitArg.slice('--limit='.length)) : Infinity;
 const force = process.argv.includes('--force');
+const reclean = process.argv.includes('--reclean');
+
+function recleanOne(jsonFile: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    void cleanTranscription(jsonFile, (err) => {
+      if (err) reject(err);
+      else resolve();
+    }, { reclean: true });
+  });
+}
 
 const roots = [...config.watch.roots, config.watch.browserDropFolder];
 const files: string[] = [];
@@ -71,6 +82,7 @@ for (const jsonFile of files) {
   console.log(`[retranscribe] ${done + 1} ${audio}`);
   try {
     await transcribeOne(audio, jsonFile);
+    if (reclean) await recleanOne(jsonFile);
     const next = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
     if (ensurePlaybackCues(next)) {
       fs.writeFileSync(jsonFile, JSON.stringify(next, null, 2), { encoding: 'utf-8' });

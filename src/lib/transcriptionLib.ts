@@ -11,6 +11,7 @@ import { Watcher } from '../classes/Watcher.ts';
 import { parseJSON } from './jsonLib.ts';
 import { cleanWithOllanet, describeCleanError } from './ollanetLib.ts';
 import { buildCleanTranscriptionPrompt } from '../prompts/cleanTranscription.ts';
+import { collapseSpeechLoops } from './speechCleanupLib.ts';
 import { config } from '../config.ts';
 
 export const transcriptions: Record<string, any> = {};
@@ -115,9 +116,13 @@ export function checkTranscription(file: string): {
   return { isProcessed: false, transcriptionFile, transcriptionExists };
 }
 
-export async function cleanTranscription(file: string, callback: (err: Error | null, result?: string) => void) {
+export async function cleanTranscription(
+  file: string,
+  callback: (err: Error | null, result?: string) => void,
+  options: { reclean?: boolean } = {}
+) {
   const { isProcessed, transcriptionFile, transcriptionExists } = checkTranscription(file);
-  if (isProcessed) {
+  if (isProcessed && !options.reclean) {
     try {
       const existing = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
       if (ensurePlaybackCues(existing)) {
@@ -143,7 +148,10 @@ export async function cleanTranscription(file: string, callback: (err: Error | n
     }
 
     const { preferredTagsForCleanup } = await import('./tagConsolidateLib.ts');
-    const prompt = buildCleanTranscriptionPrompt(transcriptionJson.text, preferredTagsForCleanup());
+    const prompt = buildCleanTranscriptionPrompt(
+      collapseSpeechLoops(transcriptionJson.text),
+      preferredTagsForCleanup()
+    );
     console.log(
       `[clean-transcription] Cleaning via ollanet ${config.ollanet.machine} / ${config.ollanet.cleanModel}: ${transcriptionFile}`
     );
