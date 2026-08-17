@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="site/static/logo.png" alt="DictaWhisper logo" width="128" />
+</p>
+
 # DictaWhisper
 
 **[dictawhisper.com](https://dictawhisper.com)** · [GitHub](https://github.com/Catalyst-Forge-LLC/dictawhisper)
 
-**A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. DictaWhisper transcribes on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) — localhost or another box, whichever hosts the better cleanup model.
+**A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. DictaWhisper transcribes on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) on localhost or another box with a cleanup model.
 
-The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on your workstation. The sidecar `.json` next to each recording is the source of truth — no database, no cloud account, no “upload to our servers.”
+The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on your workstation. The sidecar `.json` next to each recording is the source of truth: no database, no cloud account, no external servers.
 
 Open the inbox at [http://localhost:7777](http://localhost:7777). On Tailscale, the same inbox is reachable from your phone.
 
@@ -12,11 +16,11 @@ Open the inbox at [http://localhost:7777](http://localhost:7777). On Tailscale, 
 
 ## Why it exists
 
-Voice notes are easy to *make* and hard to *keep*. Phone recordings pile up as undated blobs. Cloud speech-to-text wants the audio. Desktop Whisper dumps a wall of “um” and repeated phrases. A journal you will actually reread needs three things at once:
+Voice notes are easy to make and hard to keep. Phone recordings pile up as undated blobs. Cloud speech-to-text wants the audio. Desktop Whisper dumps a wall of filler words and repeated phrases. A journal you can reread needs three things:
 
-1. **Capture that does not fight your tools** — record or drop a file in the browser. Syncthing from a phone is optional.
-2. **Transcription that is accurate and local** — `large-v3` on CUDA, names you actually say, word times that survive cleanup.
-3. **A note you can use** — cleaned prose, tags, playback that follows the cleaned paragraphs, files you can copy and back up.
+1. **Capture that fits your tools:** record or drop a file in the browser. Syncthing from a phone is optional.
+2. **Accurate, local transcription:** `large-v3` on CUDA, names you actually say, word times that survive cleanup.
+3. **Usable notes:** cleaned prose, tags, playback that follows the cleaned paragraphs, files you can copy and back up.
 
 DictaWhisper is a **personal workstation service**. By default the API binds to `127.0.0.1`. Turn on `http.tailscale` and the inbox listens on your tailnet so a phone or laptop on the same Tailscale can open it. File APIs only accept paths under your watch roots. If cleanup is asleep, you still get the raw transcript.
 
@@ -24,7 +28,7 @@ DictaWhisper is a **personal workstation service**. By default the API binds to 
 
 ## Daily loop
 
-1. Talk. Hit Record in the inbox, or drag an audio file onto the page. That is enough.
+1. Talk. Hit Record in the inbox, or drag an audio file onto the page.
 2. Browser files start **immediately**. If you also watch a phone folder (Syncthing is optional), those files **settle for 30 minutes** so the transfer can finish.
 3. Dated names (`YYYY-MM-DD…`) are filed into `YYYY/MM/` on **that** watch root. Collisions go to `_holding`. Undated files go to `_unfiled`.
 4. Optional ffmpeg denoise. Then a long-lived Whisper worker (model loaded once) writes a sidecar `.json`.
@@ -41,19 +45,19 @@ Force / retranscribe ───────────────────�
 
 ## What it is good at
 
-**Two clocks, one pipeline.** The browser path has no wait. Optional folder sync (Syncthing or anything that drops files into a watch root) is racy if you transcribe while the file is still growing, so those roots settle for 30 minutes, then organize and transcribe the **final** path. No “whisper started, then the file moved.”
+**Two clocks, one pipeline.** The browser path has no wait. Folder sync (via Syncthing or any sync tool) can fail if transcription starts while the file is still transferring, so watched roots settle for 30 minutes before organizing and transcribing the final path.
 
 **Files are the database.** Each note is `audio` + `audio.json`. You can rsync the tree, open a sidecar in an editor, or point `pnpm retranscribe` at one month. Identity is the path. There is nothing to export.
 
-**Whisper here; cleanup wherever it is best.** Faster-whisper stays on this GPU. [ollanet](https://ollanet.dev) finds Ollama on localhost *and* the network — same desk, LAN, or Tailscale. Put the instruct model on this box or on a quieter machine; that is a quality choice, not an architecture requirement. Cleanup sends *text*, not audio. If ollanet is down, doctor and `/health` say so; raw mode still works.
+**Whisper here; cleanup wherever it is best.** Faster-whisper stays on this GPU. [ollanet](https://ollanet.dev) finds Ollama on localhost and across your network. Put the instruct model on this box or on a quieter machine: that is a quality choice, not an architecture requirement. Cleanup sends text, not audio. If ollanet is down, doctor and `/health` report it; raw mode still works.
 
-**Inbox on the tailnet.** Default bind is localhost. Set `http.tailscale` (or `DICTA_TAILSCALE=1`) and `pnpm dev` advertises `http://<magicdns>:7777` / `http://<100.x>:7777` so you can read and record from a phone that is on the same Tailscale. Still no public internet, still no auth — the mesh is the door.
+**Inbox on the tailnet.** Default bind is localhost. Set `http.tailscale` (or `DICTA_TAILSCALE=1`) and `pnpm dev` advertises `http://<magicdns>:7777` / `http://<100.x>:7777` so you can read and record from a phone that is on the same Tailscale. Still no public internet, still no auth: the mesh is the door.
 
-**A transcript you can listen through.** Cleanup is allowed to drop fillers and collapse ASR loops, but playback cues are aligned back to Whisper **word timestamps**, not guessed from bag-of-words. Copy uses the same sections the player shows.
+**A transcript you can listen through.** Cleanup drops fillers and collapses loops, but playback cues align back to Whisper **word timestamps**, not guessed from bag-of-words. Copy uses the same sections the player shows.
 
 **Names you actually say.** `whisper.promptTerms` (a person, a company, a street) go into Whisper’s initial prompt. Preferred tags from your existing inventory are fed into cleanup so the model does not invent a new spelling every week. A consolidate preview/apply pass merges near-duplicates when you ask.
 
-**Honest first run.** `pnpm run doctor` and startup `/health` probe the same things: Node, config, watch roots, ffmpeg, `faster-whisper` import, CUDA vs CPU, ollanet reachability, port bind. Failures refuse to start queues. Warnings (CPU, ollanet asleep, port already in use) are labeled, not hidden.
+**Explicit checkup.** `pnpm run doctor` and startup `/health` probe the same things: Node, config, watch roots, ffmpeg, `faster-whisper` import, CUDA vs CPU, ollanet reachability, and port availability. Failures refuse to start queues. Warnings (CPU mode, ollanet asleep, port already in use) are labeled clearly.
 
 **Batch without reloading the model.** `pnpm retranscribe --dir=… --limit=5 --reclean` walks newest-first, keeps the worker warm, and can rewrite words/times without throwing away cleaned text unless you ask.
 
@@ -104,7 +108,7 @@ The inbox alone is enough: record or drag files at [localhost:7777](http://local
 ```bash
 cp config.example.json config.json
 # edit whisper.python, whisper.promptTerms, ollanet.machine / cleanModel
-# watch.roots is optional — record or drop files in the inbox without Syncthing
+# watch.roots is optional: record or drop files in the inbox without Syncthing
 pnpm install
 pnpm run doctor
 ```
@@ -136,7 +140,7 @@ To reach the inbox from a phone on your Tailscale:
 "http": { "tailscale": true }
 ```
 
-or `DICTA_TAILSCALE=1`. Doctor and startup print the MagicDNS / `100.x` URL. There is still no login — only devices on that tailnet should be able to open it.
+or `DICTA_TAILSCALE=1`. Doctor and startup print the MagicDNS / `100.x` URL. There is still no login: only devices on that tailnet should be able to open it.
 
 ```bash
 pnpm retranscribe                              # newest first, skip notes that already have word times
@@ -174,7 +178,7 @@ Force/delete/read only accept realpaths under configured watch roots.
 | Env | Meaning |
 |---|---|
 | `HOST` / `PORT` | API bind (default `127.0.0.1:8008`; Tailscale mode listens on `0.0.0.0`) |
-| `DICTA_TAILSCALE` | `1` / `true` — expose UI + API on the tailnet |
+| `DICTA_TAILSCALE` | `1` / `true`: expose UI + API on the tailnet |
 | `WHISPER_MODEL` | `large-v3` or `turbo` |
 | `WHISPER_PYTHON` | Interpreter with faster-whisper |
 | `WHISPER_DEVICE` | `cuda` or `cpu` |
@@ -185,13 +189,13 @@ Force/delete/read only accept realpaths under configured watch roots.
 
 Useful `config.json` knobs (see `config.example.json`):
 
-- `watch.createMissingRoots` — create empty watch roots instead of failing doctor
-- `whisper.promptTerms` — names and terms Whisper should prefer
-- `whisper.computeType` — `float16`, or `int8_float16` if VRAM is tight
-- `audio.preprocess` — ffmpeg denoise
-- `queues.*.concurrency` — keep transcription at 1 on a single GPU
-- `http.tailscale` — bind beyond localhost and allow Tailscale origins for the inbox
-- `ollanet.required` — treat missing cleanup host/model as a failure (default false; raw transcripts still work)
+- `watch.createMissingRoots`: create empty watch roots instead of failing doctor
+- `whisper.promptTerms`: names and terms Whisper should prefer
+- `whisper.computeType`: `float16`, or `int8_float16` if VRAM is tight
+- `audio.preprocess`: ffmpeg denoise
+- `queues.*.concurrency`: keep transcription at 1 on a single GPU
+- `http.tailscale`: bind beyond localhost and allow Tailscale origins for the inbox
+- `ollanet.required`: treat missing cleanup host/model as a failure (default false; raw transcripts still work)
 
 ---
 
