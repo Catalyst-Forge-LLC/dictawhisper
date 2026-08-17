@@ -21,13 +21,29 @@ pnpm run doctor
 pnpm dev
 ```
 
-Open [http://localhost:7777](http://localhost:7777). Record, or drag a file onto the page. You do not need Syncthing or an extra folder for that.
+Open [http://localhost:7777](http://localhost:7777). Record, or drag a file onto the page. You do not need an extra sync tool for that.
 
 `pnpm run doctor` is a checkup. It tells you what is missing instead of failing later in silence. If the writing helper is asleep, that is a warning. Notes still get written.
 
-### Read it from your phone
+### Optional: sync a phone folder
 
-On the home computer, set `"http": { "tailscale": true }` and start the app again. The checkup prints a private link. Open that from a phone on the same Tailscale. There is no login on the app.
+If you already record on your phone, install [Syncthing](https://syncthing.net) (or any folder sync tool) on both devices and share a folder to your workstation.
+
+Add that directory to `"roots"` in `config.json`:
+
+```json
+"watch": {
+  "roots": ["C:\\Users\\YOU\\VoiceNotes"]
+}
+```
+
+Files arriving via folder sync wait 30 minutes after the last write before organizing into `YYYY/MM/` and transcribing, so recordings never process mid-transfer.
+
+### Optional: read from your phone on Tailscale
+
+If you want to open the inbox from a phone or laptop away from your desk, install [Tailscale](https://tailscale.com) on both devices.
+
+Set `"http": { "tailscale": true }` in `config.json` (or `DICTA_TAILSCALE=1`) and start the app. The checkup and startup logs print your private link. Open that from any device on the same Tailscale. There is no login on the app — access is limited to your tailnet.
 
 ### Already have a pile of recordings?
 

@@ -17,7 +17,7 @@ The name is **dicta** (dictation, a dictaphone) plus **Whisper**. There is no ac
 
 ## What you get
 
-- Hit Record in the inbox, or drag an audio file onto the page. A phone folder that syncs in later is optional.
+- Hit Record in the inbox, or drag an audio file onto the page. A phone folder that syncs in later (via [Syncthing](https://syncthing.net) or any folder sync) is optional.
 - Copy the folder and you copied the journal. Open a note in any editor. There is nothing to export.
 - Speech is transcribed on this computer. A second pass can tidy the prose here, or on another computer you already use. If that helper is asleep, you still have the raw words.
 - At home the inbox is a page on this machine. On [Tailscale](https://tailscale.com) the same page works from your phone.

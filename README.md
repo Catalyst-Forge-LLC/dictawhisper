@@ -73,6 +73,18 @@ The UI is a journal, not a file manager dump.
 
 ---
 
+## Privacy and network boundary
+
+DictaWhisper is built to run on a private workstation without cloud dependencies:
+
+- **Zero telemetry or analytics:** Nothing pings an external telemetry server or cloud service.
+- **Audio stays local:** Faster-whisper processes audio files directly on your GPU or CPU. Audio never leaves the machine.
+- **Cleanup sends text, not audio:** If ollanet is configured, only the raw transcript text is sent to your designated Ollama host (localhost or your private network).
+- **Strict loopback default:** API (`8008`) and UI (`7777`) bind to `127.0.0.1`. They only listen on `0.0.0.0` if you explicitly turn on `http.tailscale`.
+- **Path allowlisting:** Every HTTP route that touches the filesystem resolves realpaths and rejects any path outside configured `watch.roots` and `browserDropFolder` with a `403`.
+
+---
+
 ## Requirements
 
 - Node 20+ and [pnpm](https://pnpm.io)
@@ -81,7 +93,7 @@ The UI is a journal, not a file manager dump.
 - `ffmpeg` on PATH if denoise is on
 - [ollanet](https://ollanet.dev) + an Ollama model for cleanup (localhost or another reachable host; optional for raw transcripts)
 - Optional: [Tailscale](https://tailscale.com) if you want the inbox from another device on your tailnet
-- Optional: a watched folder (Syncthing, a shared drive, a dump directory) if you already record outside the browser
+- Optional: a watched folder ([Syncthing](https://syncthing.net), a shared drive, a dump directory) if you already record outside the browser
 
 The inbox alone is enough: record or drag files at [localhost:7777](http://localhost:7777). This is meant to live on a desktop you already leave on.
 
