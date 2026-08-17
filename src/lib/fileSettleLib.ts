@@ -1,24 +1,20 @@
 import fs from 'fs';
 import path from 'path';
+import { config } from '../config.ts';
 
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const started = new Set<string>();
 
-const DEFAULT_SETTLE_MINUTES = 30;
 const RETRY_SLACK_MS = 2000;
 
-export function getSettleMs(): number {
+export function getSettleMs(explicit?: number): number {
+  if (typeof explicit === 'number' && Number.isFinite(explicit) && explicit >= 0) return explicit;
   const msRaw = process.env.VOICE_SETTLE_MS?.trim();
   if (msRaw) {
     const parsed = Number(msRaw);
     if (Number.isFinite(parsed) && parsed >= 0) return parsed;
   }
-  const minutesRaw = process.env.VOICE_SETTLE_MINUTES?.trim();
-  if (minutesRaw) {
-    const parsed = Number(minutesRaw);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed * 60_000;
-  }
-  return DEFAULT_SETTLE_MINUTES * 60_000;
+  return config.watch.settleMinutes * 60_000;
 }
 
 export function formatDuration(ms: number): string {
@@ -212,6 +208,6 @@ export function logSettleConfig(label = 'settle'): void {
   const settleMs = getSettleMs();
   console.log(
     `[${label}] phone/watch files ${settleMs === 0 ? 'immediately (settle disabled)' : `${formatDuration(settleMs)} after last write`}` +
-      ` (VOICE_SETTLE_MINUTES / VOICE_SETTLE_MS; retry via POST /transcribe/force)`
+      ` (watch.settleMinutes; retry via POST /transcribe/force)`
   );
 }

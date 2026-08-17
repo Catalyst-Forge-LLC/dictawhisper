@@ -10,9 +10,11 @@ import { isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { parseJSON } from './jsonLib.ts';
 import { cleanWithOllanet, describeCleanError } from './ollanetLib.ts';
-import { buildCleanTranscriptionPrompt } from '../prompts/cleanTranscription.ts';
+import { buildCleanTranscriptionPrompt, CLEAN_PROMPT_VERSION } from '../prompts/cleanTranscription.ts';
 import { collapseSpeechLoops } from './speechCleanupLib.ts';
 import { config } from '../config.ts';
+import { ollanetIsConfigured } from './ollanetReadyLib.ts';
+import type { TranscriptionDocument } from '../types/transcription.ts';
 
 export const transcriptions: Record<string, any> = {};
 
@@ -50,11 +52,16 @@ export function summarizeTranscription(jsonFile: string, json: any = transcripti
     compact.length > PREVIEW_LIMIT ? `${compact.slice(0, PREVIEW_LIMIT)}…` : compact;
   return {
     jsonFile,
+    basename: path.basename(jsonFile),
     transcriptionJson: {
       tags: Array.isArray(json?.tags) ? json.tags : [],
       elapsed: json?.elapsed ?? null,
       cleanupError: json?.cleanupError ?? null,
+      cleanupAttempts: json?.cleanupAttempts ?? 0,
+      cleanupSkipped: Boolean(json?.cleanupSkipped),
       preview,
+      searchBody: source,
+      searchRaw: raw,
       hasCleaned: Boolean(cleaned),
       _partial: true,
     },
@@ -173,9 +180,11 @@ export async function cleanTranscription(
 
     transcriptionJson.cleanedTranscription = jsonCompletion.cleanedTranscription;
     transcriptionJson.tags = jsonCompletion.tags || [];
+    transcriptionJson.promptVersion = CLEAN_PROMPT_VERSION;
     if (thinking) transcriptionJson.thinking = thinking;
     if (meta) transcriptionJson.meta = meta;
     delete transcriptionJson.cleanupError;
+    delete transcriptionJson.cleanupSkipped;
     ensurePlaybackCues(transcriptionJson);
     fs.writeFileSync(transcriptionFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
     console.log(`[clean-transcription] Cleaned transcription file: ${transcriptionFile}`);
@@ -215,8 +224,31 @@ export async function process(file: string, options: ProcessOptions = {}) {
   });
 }
 
+function readSidecar(transcriptionFile: string): TranscriptionDocument | null {
+  try {
+    if (!fs.existsSync(transcriptionFile)) return null;
+    return JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8')) as TranscriptionDocument;
+  } catch {
+    return null;
+  }
+}
+
 function enqueueProcessing(file: string, elapsed?: string) {
   const { transcriptionFile } = checkTranscription(file);
+  const sidecar = readSidecar(transcriptionFile);
+  if (sidecar?.cleanupSkipped) {
+    emitTranscription(null, transcriptionFile, elapsed ?? null);
+    return;
+  }
+  if (!ollanetIsConfigured()) {
+    if (config.ollanet.required) {
+      recordCleanupFailure(transcriptionFile, new Error('ollanet is required but machine/model are not configured'));
+    } else {
+      console.log(`[process] ollanet not configured; leaving raw transcript ${transcriptionFile}`);
+    }
+    emitTranscription(null, transcriptionFile, elapsed ?? null);
+    return;
+  }
   if (!q['processing']) {
     emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
@@ -226,6 +258,16 @@ function enqueueProcessing(file: string, elapsed?: string) {
     emitTranscription(null, transcriptionFile, elapsed ?? null);
   });
   emitTranscription(null, transcriptionFile, elapsed ?? null);
+}
+
+export function skipCleanup(file: string): void {
+  const jsonFile = getTranscriptionFilename(file);
+  const json = readSidecar(jsonFile) || {};
+  json.cleanupSkipped = true;
+  json.cleanupError = json.cleanupError || 'skipped';
+  fs.writeFileSync(jsonFile, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
+  transcriptions[jsonFile] = json;
+  emitTranscription(null, jsonFile);
 }
 
 function enqueueTranscription(file: string, options: ProcessOptions = {}) {

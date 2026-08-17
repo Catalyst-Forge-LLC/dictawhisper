@@ -1,13 +1,20 @@
 import path from 'path';
 import express from 'express';
-import { process, cleanTranscription, countStatus, listNoteSummaries, readTranscription } from './lib/transcriptionLib.ts';
+import multer from 'multer';
+import { process, cleanTranscription, countStatus, listNoteSummaries, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
 import { q } from './lib/queueLib.ts';
 import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
 import { getHealthReport } from './lib/healthLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
-import { audioContentType, findAudioForSidecar } from './lib/audioLib.ts';
+import { audioContentType, findAudioForSidecar, saveUploadedAudio } from './lib/audioLib.ts';
 import { applyConsolidateGroups, buildConsolidatePlan } from './lib/tagConsolidateLib.ts';
+import { resolveHeldFile, type HoldingAction } from './lib/organizationLib.ts';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 80 * 1024 * 1024 },
+});
 
 function requireAllowedFile(req: express.Request, res: express.Response): string | null {
   const file = typeof req.body?.file === 'string' ? req.body.file.trim() : '';
@@ -157,7 +164,67 @@ export const apiRoutes = [
           return;
         }
         res.json({ ok: true, file, processed: true });
+      }, { reclean: true });
+    },
+  },
+  {
+    path: '/process/skip',
+    method: 'POST',
+    handler: (req: express.Request, res: express.Response) => {
+      const file = requireAllowedFile(req, res);
+      if (!file) return;
+      try {
+        skipCleanup(file);
+        res.json({ ok: true, file, skipped: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error?.message || 'skip failed' });
+      }
+    },
+  },
+  {
+    path: '/audio',
+    method: 'POST',
+    handler: (req: express.Request, res: express.Response) => {
+      upload.fields([
+        { name: 'file', maxCount: 1 },
+        { name: 'audio', maxCount: 1 },
+      ])(req, res, (err: unknown) => {
+        if (err) {
+          res.status(400).json({ error: err instanceof Error ? err.message : 'upload failed' });
+          return;
+        }
+        const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+        const uploaded = files?.file?.[0] || files?.audio?.[0];
+        if (!uploaded?.buffer) {
+          res.status(400).json({ error: 'POST multipart field "file" (or "audio")' });
+          return;
+        }
+        const clipName = typeof req.body?.clipName === 'string' ? req.body.clipName.trim() : '';
+        const saved = saveUploadedAudio(uploaded.buffer, uploaded.originalname, clipName || undefined);
+        void process(saved, { force: true });
+        res.json({ ok: true, file: saved });
       });
+    },
+  },
+  {
+    path: '/holding/resolve',
+    method: 'POST',
+    handler: async (req: express.Request, res: express.Response) => {
+      const file = requireAllowedFile(req, res);
+      if (!file) return;
+      const action = String(req.body?.action || '').trim() as HoldingAction;
+      if (action !== 'overwrite' && action !== 'rename' && action !== 'unfile') {
+        res.status(400).json({ error: 'POST { "file", "action": "overwrite" | "rename" | "unfile" }' });
+        return;
+      }
+      try {
+        const dest = await resolveHeldFile(file, action);
+        void process(dest, { force: true });
+        emitNotesIndex();
+        res.json({ ok: true, file: dest, action });
+      } catch (error: any) {
+        res.status(500).json({ error: error?.message || 'holding resolve failed' });
+      }
     },
   },
   {

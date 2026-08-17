@@ -9,8 +9,6 @@
   let mediaRecorder = null;
   let chunks = [];
 
-  export let socket;
-
   function pad2(n) {
     return String(n).padStart(2, '0');
   }
@@ -76,26 +74,15 @@
     };
   }
 
-  //**dataURL to blob**
-  function dataURLtoBlob(dataurl) {
-    var arr = dataurl.split(','),
-      mime = arr[0].match(/:(.*?);/)[1],
-      bstr = atob(arr[1]),
-      n = bstr.length,
-      u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-  }
-
-  //**blob to dataURL**
-  function blobToDataURL(blob, callback) {
-    var a = new FileReader();
-    a.onload = function (e) {
-      callback(e.target.result);
-    };
-    a.readAsDataURL(blob);
+  async function postAudio(blobOrFile, clipName) {
+    const form = new FormData();
+    const filename = blobOrFile.name || `${clipName}.webm`;
+    form.append('file', blobOrFile, filename);
+    form.append('clipName', clipName);
+    const response = await fetch('/audio', { method: 'POST', body: form });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `upload failed (${response.status})`);
+    return data;
   }
 
   function handleDragOver(event) {
@@ -141,16 +128,15 @@
       const reader = new FileReader();
       reader.onload = () => {
         audio.src = reader.result;
-        socket.emit('new-message', { audioDataURL: reader.result, clipName });
       };
       reader.readAsDataURL(file);
-    } else if (type === 'blob') {
-      const audioURL = window.URL.createObjectURL(file);
-      audio.src = audioURL;
-      blobToDataURL(file, (audioDataURL) => {
-        socket.emit('new-message', { audioDataURL, clipName });
-      });
+    } else {
+      audio.src = window.URL.createObjectURL(file);
     }
+
+    void postAudio(file, clipName).catch((error) => {
+      alert(error.message || String(error));
+    });
 
     deleteButton.onclick = function (e) {
       e.target.closest('.clip').remove();

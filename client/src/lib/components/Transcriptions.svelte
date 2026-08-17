@@ -1,4 +1,6 @@
 <script>
+  import Fuse from 'fuse.js';
+
   export let transcriptions = [];
   export let socket;
 
@@ -31,7 +33,38 @@
   let consolidateSelected = {};
   let applyBusy = false;
   let applyResult = null;
+  let searchQuery = '';
+  let inboxError = '';
+  let noteBusy = {};
   const TAG_CLOUD_CAP = 40;
+  const FUSE_OPTS = {
+    keys: [
+      { name: 'transcriptionJson.tags', weight: 2 },
+      {
+        name: 'searchBody',
+        weight: 1.5,
+        getFn: (item) =>
+          item.transcriptionJson?.searchBody ||
+          item.transcriptionJson?.cleanedTranscription ||
+          item.transcriptionJson?.text ||
+          item.transcriptionJson?.preview ||
+          '',
+      },
+      {
+        name: 'basename',
+        weight: 1,
+        getFn: (item) => item.basename || displayName(item.jsonFile),
+      },
+      {
+        name: 'searchRaw',
+        weight: 0.6,
+        getFn: (item) => item.transcriptionJson?.searchRaw || item.transcriptionJson?.text || '',
+      },
+    ],
+    useTokenSearch: true,
+    ignoreLocation: true,
+    threshold: 0.4,
+  };
 
   function folderOf(jsonFile) {
     const norm = String(jsonFile || '').replace(/\\/g, '/');
@@ -252,7 +285,11 @@
     applyResult = null;
   }
 
-  $: visible = transcriptions.filter((item) => {
+  $: fuseIndex = new Fuse(transcriptions, FUSE_OPTS);
+  $: searched = searchQuery.trim()
+    ? fuseIndex.search(searchQuery.trim()).map((result) => result.item)
+    : transcriptions;
+  $: visible = searched.filter((item) => {
     if (!selectedTags.length) return true;
     const have = new Set(tagsOf(item));
     return selectedTags.every((tag) => have.has(tag));
@@ -338,6 +375,48 @@
     };
   }
 
+  function isHolding(jsonFile) {
+    return folderOf(jsonFile).key === 'holding';
+  }
+
+  function hasDateName(jsonFile) {
+    return /^\d{4}-\d{2}-\d{2}/.test(displayName(jsonFile));
+  }
+
+  async function withNoteBusy(jsonFile, work) {
+    noteBusy[jsonFile] = true;
+    noteBusy = noteBusy;
+    inboxError = '';
+    try {
+      await work();
+    } catch (error) {
+      inboxError = error.message || String(error);
+    } finally {
+      noteBusy[jsonFile] = false;
+      noteBusy = noteBusy;
+    }
+  }
+
+  async function retryCleanup(jsonFile) {
+    await withNoteBusy(jsonFile, async () => {
+      await postJson('/process/force', { file: jsonFile });
+      await hydrateNote(jsonFile);
+    });
+  }
+
+  async function skipNoteCleanup(jsonFile) {
+    await withNoteBusy(jsonFile, async () => {
+      await postJson('/process/skip', { file: jsonFile });
+      await hydrateNote(jsonFile);
+    });
+  }
+
+  async function resolveHolding(jsonFile, action) {
+    await withNoteBusy(jsonFile, async () => {
+      await postJson('/holding/resolve', { file: jsonFile, action });
+    });
+  }
+
   function deleteTranscription(jsonFile) {
     if (confirm('Are you sure you want to delete this transcription?')) {
       transcriptions = transcriptions.filter((transcription) => transcription.jsonFile !== jsonFile);
@@ -395,6 +474,29 @@
 </script>
 
 <section class="transcriptions">
+  <div class="search">
+    <input
+      type="search"
+      bind:value={searchQuery}
+      placeholder="Search notes, tags, filenames…"
+      aria-label="Search notes"
+    />
+    {#if searchQuery}
+      <button type="button" class="clear" on:click={() => (searchQuery = '')}>Clear</button>
+    {/if}
+  </div>
+
+  {#if inboxError}
+    <p class="empty">{inboxError}</p>
+  {/if}
+
+  {#if !transcriptions.length}
+    <p class="empty">
+      No notes yet. Record or drop a file above. If setup looks wrong, run
+      <code>pnpm run doctor</code>.
+    </p>
+  {/if}
+
   {#if tagCloud.length}
     <details class="tag-cloud" open>
       <summary>
@@ -521,8 +623,19 @@
     </details>
   {/if}
 
-  {#if selectedTags.length && !visible.length}
-    <p class="empty">No notes match {selectedTags.join(' + ')}.</p>
+  {#if transcriptions.length && !visible.length}
+    <p class="empty">
+      No notes match
+      {#if searchQuery.trim()}
+        “{searchQuery.trim()}”
+      {/if}
+      {#if searchQuery.trim() && selectedTags.length}
+        and
+      {/if}
+      {#if selectedTags.length}
+        {selectedTags.join(' + ')}
+      {/if}.
+    </p>
   {/if}
 
   {#each pagedGroups as group}
@@ -547,7 +660,9 @@
               {#if transcription.transcriptionJson?.elapsed}
                 <span class="elapsed">{transcription.transcriptionJson.elapsed}</span>
               {/if}
-              {#if !cleaned}
+              {#if transcription.transcriptionJson?.cleanupSkipped}
+                <span class="status">cleanup skipped</span>
+              {:else if !cleaned}
                 <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
               {/if}
             </div>
@@ -579,6 +694,51 @@
           <div class="actions">
             <button type="button" on:click={() => deleteTranscription(transcription.jsonFile)}>DEL</button>
             <button type="button" on:click={() => copyTranscription(transcription)}>COPY</button>
+            {#if !cleaned || transcription.transcriptionJson?.cleanupError}
+              <button
+                type="button"
+                disabled={noteBusy[transcription.jsonFile]}
+                on:click={() => retryCleanup(transcription.jsonFile)}
+              >
+                Retry
+              </button>
+            {/if}
+            {#if !cleaned && !transcription.transcriptionJson?.cleanupSkipped}
+              <button
+                type="button"
+                disabled={noteBusy[transcription.jsonFile]}
+                on:click={() => skipNoteCleanup(transcription.jsonFile)}
+              >
+                Skip
+              </button>
+            {/if}
+            {#if isHolding(transcription.jsonFile) || (folderOf(transcription.jsonFile).key === 'unfiled' && hasDateName(transcription.jsonFile))}
+              {#if hasDateName(transcription.jsonFile)}
+                <button
+                  type="button"
+                  disabled={noteBusy[transcription.jsonFile]}
+                  on:click={() => resolveHolding(transcription.jsonFile, 'overwrite')}
+                >
+                  File
+                </button>
+                <button
+                  type="button"
+                  disabled={noteBusy[transcription.jsonFile]}
+                  on:click={() => resolveHolding(transcription.jsonFile, 'rename')}
+                >
+                  File as copy
+                </button>
+              {/if}
+              {#if isHolding(transcription.jsonFile)}
+                <button
+                  type="button"
+                  disabled={noteBusy[transcription.jsonFile]}
+                  on:click={() => resolveHolding(transcription.jsonFile, 'unfile')}
+                >
+                  Unfile
+                </button>
+              {/if}
+            {/if}
           </div>
           {#if expanded[transcription.jsonFile]}
             <div class="note-body">
@@ -648,6 +808,21 @@
 <style lang="scss">
   .transcriptions {
     padding: 0.5rem 0 1.5rem;
+  }
+
+  .search {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    margin: 0.25rem 0 0.75rem;
+  }
+
+  .search input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #ccc;
+    font: inherit;
   }
 
   .tag-cloud {
@@ -843,7 +1018,11 @@
   }
 
   .actions {
-    white-space: nowrap;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.2rem;
+    max-width: 14rem;
   }
 
   .actions button {

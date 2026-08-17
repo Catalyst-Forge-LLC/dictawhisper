@@ -16,12 +16,20 @@ type WatcherConfig = {
   readyHandler?: () => void
 };
 
+const liveWatchers: Watcher[] = [];
+
+export async function closeAllWatchers(): Promise<void> {
+  const closing = liveWatchers.splice(0, liveWatchers.length);
+  await Promise.all(closing.map((watcher) => watcher.close()));
+}
+
 export class Watcher {
   private watcher: FSWatcher;
   logEvents: boolean = false;
 
   constructor(config: WatcherConfig = {watchFolder: '', watchDepth: 0, logEvents: false, ignoreCheck: () => false, fileMatchRegex: new RegExp(''), addHandler: async () => {}}) {
     this.watcher = chokidar.watch(config.watchFolder, { persistent: true, ignored: config.ignoreCheck, depth: config.watchDepth });
+    liveWatchers.push(this);
 
     this.watcher
       .on('add', async (filePath) => {
@@ -73,6 +81,6 @@ export class Watcher {
   }
 
   close() {
-    this.watcher.close();
+    return this.watcher.close();
   }
 }

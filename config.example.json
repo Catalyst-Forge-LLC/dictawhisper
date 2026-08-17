@@ -30,6 +30,7 @@
   "ollanet": {
     "machine": "YOUR-OLLANET-HOST",
     "cleanModel": "YOUR-CLEAN-MODEL",
-    "saveChats": false
+    "saveChats": false,
+    "required": false
   }
 }

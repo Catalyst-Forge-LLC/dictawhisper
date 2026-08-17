@@ -1,20 +1,13 @@
 <label for="toggle">❔</label>
 <input type="checkbox" id="toggle" />
 <aside>
-  <h2>Information</h2>
+  <h2>DictaWhisper</h2>
 
-  <p>
-    Web dictaphone is built using <a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator.getUserMedia"
-      >getUserMedia</a
-    >
-    and the <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder_API">MediaRecorder API</a>, which
-    provides an easier way to capture Media streams.
-  </p>
+  <p>Record or drop an audio file. Browser clips start immediately. Phone-folder watches wait until the file has settled, then file into <code>YYYY/MM/</code>.</p>
 
-  <p>
-    Icon courtesy of <a href="http://findicons.com/search/microphone">Find Icons</a>. Thanks to
-    <a href="http://soledadpenades.com/">Sole</a> for the Oscilloscope code!
-  </p>
+  <p>Cleaned text and tags are the default view. Retry cleanup if ollanet was asleep; Skip leaves the raw transcript. Holding notes can File, File as copy, or Unfile.</p>
+
+  <p>Search the inbox by words, tags, or filename. First-run problems: <code>pnpm run doctor</code>.</p>
 </aside>
 
 <style lang="scss">
@@ -51,8 +44,8 @@
     margin: 0.5rem 0;
   }
 
-  aside a {
-    color: #666;
+  aside code {
+    font-size: 0.95em;
   }
 
   /* Toggled State of information box */

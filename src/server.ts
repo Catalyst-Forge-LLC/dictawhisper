@@ -13,6 +13,7 @@ import {
   transcriptions,
 } from './lib/transcriptionLib.ts';
 import { initVoiceRootPipeline } from './lib/organizationLib.ts';
+import { closeAllWatchers } from './classes/Watcher.ts';
 import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
 import { startWhisperWorker, stopWhisperWorker, whisperTranscribe } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
@@ -33,7 +34,7 @@ const app = express();
 app.use(express.json());
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  maxHttpBufferSize: 1e8,
+  maxHttpBufferSize: 1e6,
   pingTimeout: 60000,
   cors: {
     origin: corsOrigins,
@@ -48,11 +49,11 @@ function startQueues(): void {
     transcription: {
       processor: async (task, callback) => {
         console.log(`[queue-transcription] Cleaning file: ${task.file}`);
-        const fileCleaned = config.audio.preprocess ? await cleanAudioFile(task.file, false) : false;
+        const working = config.audio.preprocess ? await cleanAudioFile(task.file, false) : task.file;
         console.log(
-          `[queue-transcription] Transcribing file: ${task.file} -> ${task.transcriptionFile}, fileCleaned: ${fileCleaned}`
+          `[queue-transcription] Transcribing file: ${working} -> ${task.transcriptionFile}`
         );
-        await whisperTranscribe(task.file, task.transcriptionFile, callback as any);
+        await whisperTranscribe(working, task.transcriptionFile, callback as any);
       },
       concurrency: config.queues.transcription.concurrency,
       active: config.queues.transcription.active,
@@ -128,10 +129,13 @@ async function main() {
 }
 
 function shutdown(code = 0) {
-  void stopWhisperWorker().finally(() => {
-    server.close(() => process.exit(code));
-    setTimeout(() => process.exit(code), 4000).unref();
-  });
+  void closeAllWatchers()
+    .catch((error) => console.warn(`[shutdown] watchers: ${error}`))
+    .then(() => stopWhisperWorker())
+    .finally(() => {
+      server.close(() => process.exit(code));
+      setTimeout(() => process.exit(code), 4000).unref();
+    });
 }
 
 process.on('SIGINT', () => shutdown(0));

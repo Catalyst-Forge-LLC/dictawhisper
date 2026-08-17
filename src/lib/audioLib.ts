@@ -1,9 +1,10 @@
+import { spawn } from 'child_process';
 import fs from 'fs';
-import * as child_process from 'child_process';
-import * as path from 'path';
+import os from 'os';
+import path from 'path';
 import { config } from '../config.ts';
 
-export const audioExtensions = ['webm', 'mp3', 'm4a'];
+export const audioExtensions = ['webm', 'mp3', 'm4a', 'wav', 'ogg'];
 
 export const audioFileRegex = new RegExp(`\\.(${audioExtensions.join('|')})$`, 'i');
 
@@ -11,6 +12,8 @@ const AUDIO_TYPES: Record<string, string> = {
   '.mp3': 'audio/mpeg',
   '.webm': 'audio/webm',
   '.m4a': 'audio/mp4',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
 };
 
 export function audioContentType(filePath: string): string {
@@ -43,35 +46,87 @@ export function saveAudioFile(dataUrl: string, clipName: string): string {
   return filePath;
 }
 
-export async function cleanAudioFile(file: string, cleanAgain: boolean = false): Promise<boolean> {
-    // Run ffmpeg to clean the audio file before transcription
-    const cleanFile = path.join(
-      path.dirname(file),
-      path.basename(file, path.extname(file)) + '_clean' + path.extname(file)
-    );
-    const originalFile = path.join(
-      path.dirname(file),
-      path.basename(file, path.extname(file)) + '_original' + path.extname(file)
-    );
-    if (fs.existsSync(originalFile) && !cleanAgain) {
-      return false;
-    }
-    const ffmpegCmd = `ffmpeg -y -i "${file}" -af "silenceremove=1:0:-50dB,afftdn=nr=15:nf=-40,highpass=f=200,volume=1.5" -c:a libmp3lame -b:a 128k "${cleanFile}"`;
+export function saveUploadedAudio(buffer: Buffer, originalName: string, clipName?: string): string {
+  const folder = config.watch.browserDropFolder;
+  fs.mkdirSync(folder, { recursive: true });
+  const ext = path.extname(originalName || '').toLowerCase() || '.webm';
+  const safeExt = audioExtensions.includes(ext.slice(1)) ? ext : '.webm';
+  const base = (clipName || path.basename(originalName || 'voice-recording', ext) || 'voice-recording').replace(
+    /[<>:"/\\|?*]/g,
+    '-'
+  );
+  const filePath = path.join(folder, `${base}${safeExt}`);
+  fs.writeFileSync(filePath, buffer);
+  console.log('[save-audio-file] saved upload', { filePath, bytes: buffer.length });
+  return filePath;
+}
 
-    await new Promise<void>((resolve, reject) => {
-      child_process.exec(ffmpegCmd, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`[ffmpeg] Error cleaning file: ${error.message}`);
-          return reject(error);
-        }
-        fs.copyFileSync(file, originalFile);
-        fs.copyFileSync(cleanFile, file);
-        fs.unlinkSync(cleanFile);
-        console.log(`[ffmpeg] Cleaned file created at: ${file}`);
-        resolve();
-      });
+function unlinkIfExists(filePath: string): void {
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {
+    // leftover cleanup is best-effort
+  }
+}
+
+function runFfmpeg(args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('ffmpeg', args, { windowsHide: true });
+    let stderr = '';
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
     });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(-400)}`));
+    });
+  });
+}
 
-    return true;
+/**
+ * Denoise to a working `.mp3`. Keeps `*_original` with the source bytes.
+ * Returns the path Whisper should read (may differ from `file` if the ext changed).
+ */
+export async function cleanAudioFile(file: string, cleanAgain = false): Promise<string> {
+  const parsed = path.parse(file);
+  const base = path.join(parsed.dir, parsed.name.replace(/_original$/i, ''));
+  const workingMp3 = `${base}.mp3`;
+  const originalFile = `${base}_original${parsed.ext}`;
+  const tmpMp3 = path.join(os.tmpdir(), `dicta-clean-${Date.now()}-${path.basename(base)}.mp3`);
 
+  unlinkIfExists(`${base}_clean${parsed.ext}`);
+  unlinkIfExists(`${base}_clean.mp3`);
+
+  if (fs.existsSync(originalFile) && fs.existsSync(workingMp3) && !cleanAgain) {
+    return workingMp3;
+  }
+
+  const source = fs.existsSync(originalFile) && cleanAgain ? originalFile : file;
+  await runFfmpeg([
+    '-y',
+    '-i',
+    source,
+    '-af',
+    'silenceremove=1:0:-50dB,afftdn=nr=15:nf=-40,highpass=f=200,volume=1.5',
+    '-c:a',
+    'libmp3lame',
+    '-b:a',
+    '128k',
+    tmpMp3,
+  ]);
+
+  if (!fs.existsSync(originalFile)) {
+    fs.copyFileSync(file, originalFile);
+  }
+  fs.copyFileSync(tmpMp3, workingMp3);
+  unlinkIfExists(tmpMp3);
+  if (path.resolve(file) !== path.resolve(workingMp3)) {
+    unlinkIfExists(file);
+  }
+  console.log(`[ffmpeg] cleaned working file ${workingMp3}`);
+  return workingMp3;
 }

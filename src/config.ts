@@ -1,16 +1,73 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { z } from 'zod';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const defaultConfigPath = path.resolve(__dirname, '../config.json');
+
+const httpSchema = z
+  .object({
+    host: z.string().min(1).default('127.0.0.1'),
+    port: z.number().int().positive().default(8008),
+    corsOrigins: z.array(z.string()).default(['http://localhost:7777', 'http://127.0.0.1:7777']),
+    tailscale: z.boolean().default(false),
+  })
+  .default({});
+
+const watchSchema = z
+  .object({
+    roots: z.array(z.string()).default([]),
+    browserDropFolder: z.string().default('./data/audio-files'),
+    settleMinutes: z.number().nonnegative().default(30),
+    browserSettleMs: z.number().nonnegative().default(0),
+    recursiveYears: z.boolean().default(true),
+    createMissingRoots: z.boolean().default(false),
+  })
+  .default({});
+
+const whisperSchema = z
+  .object({
+    python: z.string().min(1).default('python'),
+    model: z.string().min(1).default('large-v3'),
+    device: z.string().min(1).default('cuda'),
+    computeType: z.string().min(1).default('float16'),
+    promptTerms: z.array(z.string()).default([]),
+  })
+  .default({});
+
+const queuesSchema = z
+  .object({
+    transcription: z.object({ active: z.boolean().default(true), concurrency: z.number().int().positive().default(1) }).default({}),
+    processing: z.object({ active: z.boolean().default(true), concurrency: z.number().int().positive().default(1) }).default({}),
+  })
+  .default({});
+
+const ollanetSchema = z
+  .object({
+    machine: z.string().default(''),
+    cleanModel: z.string().default(''),
+    saveChats: z.boolean().default(false),
+    required: z.boolean().default(false),
+  })
+  .default({});
+
+export const dictaConfigFileSchema = z
+  .object({
+    http: httpSchema,
+    watch: watchSchema,
+    whisper: whisperSchema,
+    audio: z.object({ preprocess: z.boolean().default(true) }).default({}),
+    queues: queuesSchema,
+    ollanet: ollanetSchema,
+  })
+  .strip();
 
 export type DictaConfig = {
   http: {
     host: string;
     port: number;
     corsOrigins: string[];
-    /** Bind API + UI on all interfaces and allow Tailscale MagicDNS / 100.x origins. */
     tailscale: boolean;
   };
   watch: {
@@ -19,7 +76,6 @@ export type DictaConfig = {
     settleMinutes: number;
     browserSettleMs: number;
     recursiveYears: boolean;
-    /** If true, missing watch roots are created as empty folders instead of failing doctor. */
     createMissingRoots: boolean;
   };
   whisper: {
@@ -38,14 +94,15 @@ export type DictaConfig = {
     machine: string;
     cleanModel: string;
     saveChats: boolean;
+    required: boolean;
   };
 };
 
-function readJson(filePath: string): Partial<DictaConfig> {
+function readJson(filePath: string): unknown {
   if (!fs.existsSync(filePath)) return {};
   const raw = fs.readFileSync(filePath, 'utf-8');
   try {
-    return JSON.parse(raw) as Partial<DictaConfig>;
+    return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`config is not valid JSON (${filePath}): ${detail}`);
@@ -56,64 +113,56 @@ function resolveExistingOrPlain(filePath: string): string {
   return path.resolve(filePath);
 }
 
-export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim() || defaultConfigPath): DictaConfig {
-  const file = readJson(configPath);
-  const config: DictaConfig = {
-    http: {
-      host: process.env.HOST?.trim() || file.http?.host || '127.0.0.1',
-      port: Number(process.env.PORT) || file.http?.port || 8008,
-      corsOrigins: file.http?.corsOrigins ?? ['http://localhost:7777', 'http://127.0.0.1:7777'],
-      tailscale:
-        process.env.DICTA_TAILSCALE === '1' ||
-        process.env.DICTA_TAILSCALE === 'true' ||
-        file.http?.tailscale === true,
-    },
-    watch: {
-      roots: (file.watch?.roots ?? []).map((root) => resolveExistingOrPlain(root)),
-      browserDropFolder: resolveExistingOrPlain(file.watch?.browserDropFolder ?? './data/audio-files'),
-      settleMinutes: Number(process.env.VOICE_SETTLE_MINUTES) || file.watch?.settleMinutes || 30,
-      browserSettleMs:
-        process.env.VOICE_BROWSER_SETTLE_MS !== undefined
-          ? Number(process.env.VOICE_BROWSER_SETTLE_MS)
-          : (file.watch?.browserSettleMs ?? 0),
-      recursiveYears: file.watch?.recursiveYears ?? true,
-      createMissingRoots: file.watch?.createMissingRoots ?? false,
-    },
-    whisper: {
-      python: process.env.WHISPER_PYTHON?.trim() || file.whisper?.python || 'python',
-      model: process.env.WHISPER_MODEL?.trim() || file.whisper?.model || 'large-v3',
-      device: process.env.WHISPER_DEVICE?.trim() || file.whisper?.device || 'cuda',
-      computeType: process.env.WHISPER_COMPUTE_TYPE?.trim() || file.whisper?.computeType || 'float16',
-      promptTerms: Array.isArray(file.whisper?.promptTerms)
-        ? file.whisper.promptTerms.map((term) => String(term).trim()).filter(Boolean)
-        : [],
-    },
-    audio: {
-      preprocess: file.audio?.preprocess ?? true,
-    },
-    queues: {
-      transcription: {
-        active: file.queues?.transcription?.active ?? true,
-        concurrency: file.queues?.transcription?.concurrency ?? 1,
-      },
-      processing: {
-        active: file.queues?.processing?.active ?? true,
-        concurrency: file.queues?.processing?.concurrency ?? 1,
-      },
-    },
-    ollanet: {
-      machine: process.env.OLLANET_MACHINE?.trim() || file.ollanet?.machine || '',
-      cleanModel: process.env.OLLANET_CLEAN_MODEL?.trim() || file.ollanet?.cleanModel || '',
-      saveChats: file.ollanet?.saveChats ?? false,
-    },
-  };
-
-  process.env.VOICE_SETTLE_MINUTES = String(config.watch.settleMinutes);
+export function applyConfigToEnv(config: DictaConfig): void {
   process.env.WHISPER_MODEL = config.whisper.model;
   process.env.WHISPER_PYTHON = config.whisper.python;
   process.env.WHISPER_DEVICE = config.whisper.device;
   process.env.WHISPER_COMPUTE_TYPE = config.whisper.computeType;
+}
 
+export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim() || defaultConfigPath): DictaConfig {
+  const parsed = dictaConfigFileSchema.parse(readJson(configPath));
+  const config: DictaConfig = {
+    http: {
+      host: process.env.HOST?.trim() || parsed.http.host,
+      port: Number(process.env.PORT) || parsed.http.port,
+      corsOrigins: parsed.http.corsOrigins,
+      tailscale:
+        process.env.DICTA_TAILSCALE === '1' ||
+        process.env.DICTA_TAILSCALE === 'true' ||
+        parsed.http.tailscale,
+    },
+    watch: {
+      roots: parsed.watch.roots.map((root) => resolveExistingOrPlain(root)),
+      browserDropFolder: resolveExistingOrPlain(parsed.watch.browserDropFolder),
+      settleMinutes: Number(process.env.VOICE_SETTLE_MINUTES) || parsed.watch.settleMinutes,
+      browserSettleMs:
+        process.env.VOICE_BROWSER_SETTLE_MS !== undefined
+          ? Number(process.env.VOICE_BROWSER_SETTLE_MS)
+          : parsed.watch.browserSettleMs,
+      recursiveYears: parsed.watch.recursiveYears,
+      createMissingRoots: parsed.watch.createMissingRoots,
+    },
+    whisper: {
+      python: process.env.WHISPER_PYTHON?.trim() || parsed.whisper.python,
+      model: process.env.WHISPER_MODEL?.trim() || parsed.whisper.model,
+      device: process.env.WHISPER_DEVICE?.trim() || parsed.whisper.device,
+      computeType: process.env.WHISPER_COMPUTE_TYPE?.trim() || parsed.whisper.computeType,
+      promptTerms: parsed.whisper.promptTerms.map((term) => String(term).trim()).filter(Boolean),
+    },
+    audio: {
+      preprocess: parsed.audio.preprocess,
+    },
+    queues: parsed.queues,
+    ollanet: {
+      machine: process.env.OLLANET_MACHINE?.trim() || parsed.ollanet.machine,
+      cleanModel: process.env.OLLANET_CLEAN_MODEL?.trim() || parsed.ollanet.cleanModel,
+      saveChats: parsed.ollanet.saveChats,
+      required: parsed.ollanet.required,
+    },
+  };
+
+  applyConfigToEnv(config);
   return config;
 }
 

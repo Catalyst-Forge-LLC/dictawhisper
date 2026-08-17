@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { audioFileRegex } from './audioLib.ts';
+import { audioFileRegex, findAudioForSidecar } from './audioLib.ts';
 import { isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { confirmFolder, moveFile } from './fsLib.ts';
@@ -127,4 +127,46 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
 
 export function watchAndOrganizeAudioFiles(sourceFolders: string[] = []) {
   initVoiceRootPipeline(sourceFolders);
+}
+
+export type HoldingAction = 'overwrite' | 'rename' | 'unfile';
+
+/** Move a holding/unfiled note into YYYY/MM or _unfiled. */
+export async function resolveHeldFile(filePath: string, action: HoldingAction): Promise<string> {
+  if (!fs.existsSync(filePath)) throw new Error('file not found');
+  if (filePath.toLowerCase().endsWith('.json')) {
+    filePath = findAudioForSidecar(filePath) || filePath;
+  }
+  const resolved = path.resolve(filePath);
+  const root = config.watch.roots.find((candidate) => {
+    const prefix = path.resolve(candidate);
+    return resolved === prefix || resolved.startsWith(`${prefix}${path.sep}`);
+  });
+  if (!root) throw new Error('file is not under a watch root');
+
+  const date = dateFromFilename(filePath);
+  let destFolder: string;
+  if (action === 'unfile' || !date) {
+    destFolder = confirmFolder(path.join(root, '_unfiled'));
+  } else {
+    destFolder = confirmFolder(path.join(root, date.year, date.month));
+  }
+  let destPath = path.join(destFolder, path.basename(filePath));
+  if (action === 'rename' && fs.existsSync(destPath)) {
+    destPath = uniquePath(destPath);
+  }
+  if (action === 'overwrite' && fs.existsSync(destPath) && path.resolve(destPath) !== path.resolve(filePath)) {
+    fs.unlinkSync(destPath);
+    const destJson = getTranscriptionFilename(destPath);
+    if (fs.existsSync(destJson)) fs.unlinkSync(destJson);
+  }
+
+  const srcJson = getTranscriptionFilename(filePath);
+  await moveFile(filePath, destPath);
+  if (fs.existsSync(srcJson)) {
+    const destJson = getTranscriptionFilename(destPath);
+    await moveFile(srcJson, destJson);
+    relocateTranscription(srcJson, destJson);
+  }
+  return destPath;
 }

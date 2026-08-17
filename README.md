@@ -65,7 +65,7 @@ The UI is a journal, not a file manager dump.
 
 - Year / month groups; **Holding** and **Unfiled** stay visible
 - Cleaned text by default; raw segments on a toggle
-- Tag cloud (frequent tags, optional singletons) and filter
+- Search (filename, tags, cleaned and raw text) plus tag-chip AND filter
 - Expand loads the full sidecar (`GET /note`) so a thousand notes do not hit the wire at once
 - Older months load as you scroll
 - Playback follows cleaned paragraphs
@@ -142,11 +142,14 @@ pnpm retranscribe --force                      # rewrite Whisper even if words e
 |---|---|---|
 | GET | `/health` | Shared doctor report, queues, Whisper worker, ollanet reachability (`?fresh=1` to skip cache) |
 | GET | `/status` | pending / raw / done counts |
-| GET | `/notes/index` | Inbox summaries (path, dates, tags, preview) |
+| GET | `/notes/index` | Inbox summaries (path, tags, preview, search body) |
 | GET | `/note?file=` | Full sidecar (allowlisted) |
 | GET | `/audio?file=` | Stream allowlisted audio (sidecar or audio path) |
+| POST | `/audio` | Multipart `file` (or `audio`) + optional `clipName` → drop folder, process immediately |
 | POST | `/transcribe/force` | `{ "file": "..." }` retry transcription |
 | POST | `/process/force` | Re-run cleanup on an existing note |
+| POST | `/process/skip` | Leave the raw transcript; skip later cleanup |
+| POST | `/holding/resolve` | `{ "file", "action": "overwrite" \| "rename" \| "unfile" }` |
 | POST | `/tags/consolidate/preview` | Merge plan (`useModel`, default true) |
 | POST | `/tags/consolidate/apply` | `{ "groups": [{ "keep", "drop" }] }` |
 
@@ -176,6 +179,7 @@ Useful `config.json` knobs (see `config.example.json`):
 - `audio.preprocess` — ffmpeg denoise
 - `queues.*.concurrency` — keep transcription at 1 on a single GPU
 - `http.tailscale` — bind beyond localhost and allow Tailscale origins for the inbox
+- `ollanet.required` — treat missing cleanup host/model as a failure (default false; raw transcripts still work)
 
 ---
 

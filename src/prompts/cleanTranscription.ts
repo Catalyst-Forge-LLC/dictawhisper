@@ -1,3 +1,5 @@
+export { CLEAN_PROMPT_VERSION } from '../types/transcription.ts';
+
 export function buildCleanTranscriptionPrompt(rawText: string, preferredTags: string[] = []): string {
   const preferred =
     preferredTags.length > 0

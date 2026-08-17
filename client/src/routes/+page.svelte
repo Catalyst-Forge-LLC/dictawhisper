@@ -12,7 +12,7 @@
     <h1>DictaWhisper</h1>
   </header>
 
-  <AudioRecorder {socket} />
+  <AudioRecorder />
 
   <Transcriptions {socket} />
 
