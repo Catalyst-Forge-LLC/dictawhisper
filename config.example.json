@@ -15,7 +15,8 @@
     "python": "python",
     "model": "large-v3",
     "device": "cuda",
-    "computeType": "float16"
+    "computeType": "float16",
+    "promptTerms": ["Alex", "Jordan", "place-names-you-say-often"]
   },
   "audio": {
     "preprocess": true

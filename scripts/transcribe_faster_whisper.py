@@ -23,7 +23,8 @@ MODEL_ALIASES = {
 DEFAULT_INITIAL_PROMPT = (
     "This is a personal audio journal spoken in English. "
     "Transcribe the speech accurately with natural punctuation and capitalization. "
-    "Keep filler words, false starts, and repetitions as spoken."
+    "Keep filler words, false starts, and repetitions as spoken. "
+    "Do not paraphrase. Prefer unusual names and terms over common words that sound similar."
 )
 
 

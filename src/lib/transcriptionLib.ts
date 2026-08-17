@@ -91,13 +91,6 @@ export async function cleanTranscription(file: string, callback: (err: Error | n
       return;
     }
 
-    transcriptionJson.text = transcriptionJson.text
-      .replaceAll(/\b(uh|um|umm|hmm|yeah)[,\.]?\s*/gi, ' ')
-      .replaceAll(/(\. ){2,}/gi, ' ')
-      .replace(/(\S+)(?:\s+\1){3,}/g, '$1')
-      .replace(/\s+/g, ' ')
-      .trim();
-
     const { preferredTagsForCleanup } = await import('./tagConsolidateLib.ts');
     const prompt = buildCleanTranscriptionPrompt(transcriptionJson.text, preferredTagsForCleanup());
     console.log(

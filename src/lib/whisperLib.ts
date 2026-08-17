@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../config.ts';
+import { buildWhisperInitialPrompt } from '../prompts/whisperInitial.ts';
 
 const WINDOWS_CUDA_TEARDOWN = 3221226505;
 
@@ -59,6 +60,7 @@ export async function whisperTranscribe(
     '--model', model,
     '--device', device,
     '--compute-type', computeType,
+    '--initial-prompt', buildWhisperInitialPrompt(config.whisper.promptTerms),
   ];
 
   console.log(`[whisper] calling:\n\n${python} ${whisperArgs.map((a) => JSON.stringify(a)).join(' ')}`);

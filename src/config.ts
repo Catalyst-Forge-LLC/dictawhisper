@@ -19,6 +19,7 @@ export type DictaConfig = {
     model: string;
     device: string;
     computeType: string;
+    promptTerms: string[];
   };
   audio: { preprocess: boolean };
   queues: {
@@ -64,6 +65,9 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
       model: process.env.WHISPER_MODEL?.trim() || file.whisper?.model || 'large-v3',
       device: process.env.WHISPER_DEVICE?.trim() || file.whisper?.device || 'cuda',
       computeType: process.env.WHISPER_COMPUTE_TYPE?.trim() || file.whisper?.computeType || 'float16',
+      promptTerms: Array.isArray(file.whisper?.promptTerms)
+        ? file.whisper.promptTerms.map((term) => String(term).trim()).filter(Boolean)
+        : [],
     },
     audio: {
       preprocess: file.audio?.preprocess ?? true,
