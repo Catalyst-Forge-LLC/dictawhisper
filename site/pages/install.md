@@ -33,7 +33,7 @@ On the home computer, set `"http": { "tailscale": true }` and start the app agai
 
 ```bash
 pnpm retranscribe
-pnpm retranscribe --dir="D:\VoiceNotes\2026\08" --limit=5 --reclean
+pnpm retranscribe --dir="./notes/2026/08" --limit=5 --reclean
 ```
 
 That walks existing notes, newest first. Every flag is in the [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).

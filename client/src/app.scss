@@ -27,6 +27,24 @@
     font-weight: normal;
     padding: 0.5rem 0 0 0;
   }
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    padding: 0.65rem 0 0.15rem;
+  }
+
+  .masthead img {
+    width: 3.4rem;
+    height: 3.4rem;
+    object-fit: contain;
+  }
+
+  .masthead h1 {
+    padding: 0;
+  }
   
   
   button {

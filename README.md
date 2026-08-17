@@ -128,7 +128,7 @@ or `DICTA_TAILSCALE=1`. Doctor and startup print the MagicDNS / `100.x` URL. The
 
 ```bash
 pnpm retranscribe                              # newest first, skip notes that already have word times
-pnpm retranscribe --dir="D:\VoiceNotes\2026\08" --limit=5 --reclean
+pnpm retranscribe --dir="./notes/2026/08" --limit=5 --reclean
 pnpm retranscribe --force                      # rewrite Whisper even if words exist
 ```
 

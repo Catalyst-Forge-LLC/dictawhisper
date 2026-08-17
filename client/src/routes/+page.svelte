@@ -8,7 +8,8 @@
 </script>
 
 <div class="wrapper">
-  <header>
+  <header class="masthead">
+    <img src="/logo.png" alt="" width="64" height="64" />
     <h1>DictaWhisper</h1>
   </header>
 

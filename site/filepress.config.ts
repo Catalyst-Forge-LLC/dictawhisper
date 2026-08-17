@@ -10,6 +10,7 @@ export default defineFilepressConfig({
 	lede: 'Speak, keep the note, stay on your machine.',
 	url: 'https://dictawhisper.com',
 	author: 'Catalyst Forge LLC',
+	logo: '/logo.png',
 	homePage: 'about',
 	topics: [
 		{ label: 'Guides', tag: 'guides' },

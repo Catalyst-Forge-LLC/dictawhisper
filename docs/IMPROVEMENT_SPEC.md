@@ -78,7 +78,7 @@ These are the places a user hits resistance. Each one should become invisible or
 | No Python lockfile | `faster-whisper` / CUDA / CTranslate2 version drift | `requirements.txt` or `pyproject.toml` + documented venv; `whisper.python` points at it |
 | ffmpeg “on PATH” is assumed | Denoise fails mid-queue with a shell error | `doctor` checks `ffmpeg -version`; disable preprocess with a clear log if missing |
 | CUDA / VRAM not checked | First note dies after a long model load | `doctor` + startup log: device, compute type, suggested fallback (`cpu` / `int8_float16`) |
-| ollanet host baked in (`YOUR-OLLANET-HOST`, `YOUR-CLEAN-MODEL`) | Clone/setup looks machine-specific | Example placeholders; `doctor` runs `ollanet prompt <machine> <model> --format json "ping"` |
+| ollanet host baked into the example | Clone/setup looks machine-specific | Example placeholders; `doctor` runs `ollanet prompt <machine> <model> --format json "ping"` |
 | `config.json` is committed with real home paths | Repo is not shareable; easy to commit local edits | Gitignore `config.json`; keep only `config.example.json` |
 | README ports ≠ Vite ports | Docs say `:5173`; Vite is `:6173`; CORS allowlist is `:5173` | One port story (see §5.1) |
 
@@ -153,9 +153,9 @@ These are the places a user hits resistance. Each one should become invisible or
 ### 5.1 Ports, CORS, and the socket URL — daily-use break
 
 - README and CORS were `http://localhost:5173`; Vite was **6173**; client hardcoded `localhost:8008`.
-- CORS also allowed `https://example.com` (Chilon host).
+- CORS also allowed a leftover personal host from the extract.
 
-**Locked:** UI origin is **7777**. Vite proxies `/socket.io` and API paths to `127.0.0.1:8008`. Broadcast with `io.emit`. `example.com` is gone from the example.
+**Locked:** UI origin is **7777**. Vite proxies `/socket.io` and API paths to `127.0.0.1:8008`. Broadcast with `io.emit`. Personal hosts are gone from the example.
 
 ### 5.2 Organize is Windows-path and first-root only
 
@@ -227,7 +227,7 @@ The map is filled only when `emitTranscription` runs. Restart + UI connect only 
 
 ### 5.12 Identity leftover in docs and defaults
 
-README ping example, `config.ts` fallbacks, `config.example.json`, and the initial commit message all name `YOUR-OLLANET-HOST` / `YOUR-CLEAN-MODEL` / `example.com`. That is fine as *your* `config.json`. It is wrong as the public example.
+README ping example, `config.ts` fallbacks, and `config.example.json` once named a real cleanup host, model, and personal site. That is fine as *your* `config.json`. It is wrong as the public example.
 
 ---
 
@@ -286,7 +286,7 @@ Startup prints the same summary. Do not start queues until config is valid; olla
 
 - All file APIs: realpath is under an allowed root.
 - `http.host` default `127.0.0.1`.
-- Drop `example.com` from the example.
+- Drop personal hosts from the example.
 
 ### W6 — ffmpeg without the shell (P1, S)
 
