@@ -4,7 +4,7 @@ import { audioFileRegex } from './audioLib.ts';
 import { isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { confirmFolder, moveFile } from './fsLib.ts';
-import { getTranscriptionFilename, process, relocateTranscription } from './transcriptionLib.ts';
+import { checkTranscription, getTranscriptionFilename, process, relocateTranscription } from './transcriptionLib.ts';
 import { config } from '../config.ts';
 
 const DATE_NAME = /^(\d{4})-(\d{2})-\d{2}/;
@@ -28,6 +28,25 @@ function uniquePath(destPath: string): string {
 function topFolder(filePath: string, root: string): string {
   const rel = path.relative(root, filePath).replace(/\\/g, '/');
   return (rel.split('/')[0] || '').toLowerCase();
+}
+
+function plannedDest(filePath: string, sourceRoot: string): string | null {
+  if (!fs.existsSync(filePath)) return null;
+  const top = topFolder(filePath, sourceRoot);
+  if (top === '__inbox') return null;
+  if (top === '_holding' || top === '_unfiled') return filePath;
+  const date = dateFromFilename(filePath);
+  const destFolder = date
+    ? path.join(sourceRoot, date.year, date.month)
+    : path.join(sourceRoot, '_unfiled');
+  return path.join(destFolder, path.basename(filePath));
+}
+
+function pipelineIdle(filePath: string, sourceRoot: string): boolean {
+  const dest = plannedDest(filePath, sourceRoot);
+  if (!dest || path.resolve(dest) !== path.resolve(filePath)) return false;
+  const { isProcessed, transcriptionExists } = checkTranscription(filePath);
+  return transcriptionExists && isProcessed;
 }
 
 export async function organizeAudioFile(filePath: string, sourceRoot: string): Promise<string | null> {
@@ -64,8 +83,11 @@ export async function organizeAudioFile(filePath: string, sourceRoot: string): P
 }
 
 async function runPipeline(filePath: string, root: string) {
+  if (pipelineIdle(filePath, root)) return;
   const dest = await organizeAudioFile(filePath, root);
   if (!dest) return;
+  const { isProcessed, transcriptionExists } = checkTranscription(dest);
+  if (transcriptionExists && isProcessed) return;
   await process(dest, { force: true });
 }
 
@@ -91,9 +113,11 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
         filePath.includes('_clean'),
       fileMatchRegex: audioFileRegex,
       addHandler: async (filePath) => {
+        if (pipelineIdle(filePath, folder)) return;
         requestWhenSettled(filePath, () => runPipeline(filePath, folder), { label: 'voice-pipeline' });
       },
       changeHandler: (filePath) => {
+        if (pipelineIdle(filePath, folder)) return;
         requestWhenSettled(filePath, () => runPipeline(filePath, folder), { label: 'voice-pipeline' });
       },
     });

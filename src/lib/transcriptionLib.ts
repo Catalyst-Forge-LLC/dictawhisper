@@ -272,9 +272,13 @@ export function initTranscriptionWatcher(
     },
     fileMatchRegex: audioFileRegex,
     addHandler: async (filePath) => {
+      const { isProcessed, transcriptionExists } = checkTranscription(filePath);
+      if (transcriptionExists && isProcessed) return;
       await process(filePath, { settleMs: options.settleMs });
     },
     changeHandler: (filePath) => {
+      const { isProcessed, transcriptionExists } = checkTranscription(filePath);
+      if (transcriptionExists && isProcessed) return;
       void process(filePath, { settleMs: options.settleMs });
     },
   });
