@@ -47,9 +47,25 @@ function recleanOne(jsonFile: string): Promise<void> {
   });
 }
 
+function noteSortKey(filePath: string): string {
+  const norm = filePath.replace(/\\/g, '/');
+  const base = path.basename(filePath);
+  const inName = base.match(/^(\d{4}-\d{2}-\d{2}(?:[T_ \s]\d{2}[-.]\d{2}[-.]\d{2})?)/);
+  if (inName) return `${inName[1].replace(/[T_ \s.]/g, '-')}:${base}`;
+  const inPath = norm.match(/\/(\d{4})\/(\d{2})(?:\/|$)/);
+  if (inPath) return `${inPath[1]}-${inPath[2]}-00:${base}`;
+  try {
+    return `${new Date(fs.statSync(filePath).mtimeMs).toISOString()}:${base}`;
+  } catch {
+    return `0000-00-00:${base}`;
+  }
+}
+
 const roots = [...config.watch.roots, config.watch.browserDropFolder];
 const files: string[] = [];
 for (const root of roots) walkJsonFiles(root, files);
+files.sort((a, b) => noteSortKey(b).localeCompare(noteSortKey(a)));
+console.log(`[retranscribe] ${files.length} sidecars, newest first`);
 
 let done = 0;
 let skipped = 0;
