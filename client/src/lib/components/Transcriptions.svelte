@@ -281,9 +281,7 @@
   }
 
   async function hydrateNote(jsonFile) {
-    const item = transcriptions.find((note) => note.jsonFile === jsonFile);
-    if (!item?.transcriptionJson?._partial) return item;
-    const response = await fetch(`/note?file=${encodeURIComponent(jsonFile)}`);
+    const response = await fetch(`/note?file=${encodeURIComponent(jsonFile)}&_=${Date.now()}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'failed to load note');
     const i = transcriptions.findIndex((note) => note.jsonFile === jsonFile);
@@ -373,18 +371,9 @@
   }
 
   socket.on('notes-index', (data) => {
-    const incoming = data?.notes || [];
-    const have = new Map(transcriptions.map((note) => [note.jsonFile, note]));
-    transcriptions = incoming.map((note) => {
-      const prev = have.get(note.jsonFile);
-      if (prev && !prev.transcriptionJson?._partial) {
-        return {
-          ...prev,
-          transcriptionJson: { ...prev.transcriptionJson, tags: note.transcriptionJson?.tags },
-        };
-      }
-      return note;
-    });
+    const open = Object.keys(expanded).filter((key) => expanded[key]);
+    transcriptions = data?.notes || [];
+    for (const jsonFile of open) void hydrateNote(jsonFile);
   });
 
   socket.on('transcription', (data) => {
