@@ -1,7 +1,7 @@
 {
   "name": "dictawhisper",
   "version": "0.1.0",
-  "description": "Watch folders, transcribe voice notes with faster-whisper, and clean them via ollanet",
+  "description": "Local voice journal: watch folders, transcribe with faster-whisper, clean and tag via ollanet",
   "type": "module",
   "main": "src/server.ts",
   "license": "MIT",
