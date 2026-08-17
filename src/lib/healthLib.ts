@@ -3,6 +3,7 @@ import fs from 'fs';
 import net from 'net';
 import { ollamaBaseUrl, ollamaTags, resolveTarget } from 'ollanet';
 import { configPath, type DictaConfig } from '../config.ts';
+import { apiListenHost, discoverTailscale, inboxUrls } from './tailscaleLib.ts';
 import { getWhisperWorkerStatus, resolveWhisperModel } from './whisperLib.ts';
 
 export type HealthLevel = 'ok' | 'warn' | 'fail';
@@ -251,17 +252,28 @@ export async function collectHealth(
     add(checks, 'ollanet', ping.level, ping.message);
   }
 
-  if (options.mode === 'doctor') {
-    const bind = await probePort(config.http.host, config.http.port);
-    if (bind === 'free') {
-      add(checks, 'port', 'ok', `port ${config.http.host}:${config.http.port} free`);
-    } else if (bind === 'in-use') {
-      add(checks, 'port', 'warn', `port ${config.http.host}:${config.http.port} in use (API may already be running)`);
+  if (config.http.tailscale) {
+    const self = discoverTailscale();
+    if (self) {
+      const remote = inboxUrls(config, self).filter((url) => !/localhost|127\.0\.0\.1/.test(url));
+      add(checks, 'tailscale', 'ok', `tailscale inbox ${remote.join(' ')}`);
     } else {
-      add(checks, 'port', 'warn', `could not probe port ${config.http.host}:${config.http.port}`);
+      add(checks, 'tailscale', 'warn', 'http.tailscale is on but the tailscale CLI did not return an IP');
+    }
+  }
+
+  const bindHost = apiListenHost(config);
+  if (options.mode === 'doctor') {
+    const bind = await probePort(bindHost === '0.0.0.0' ? '127.0.0.1' : bindHost, config.http.port);
+    if (bind === 'free') {
+      add(checks, 'port', 'ok', `port ${bindHost}:${config.http.port} free`);
+    } else if (bind === 'in-use') {
+      add(checks, 'port', 'warn', `port ${bindHost}:${config.http.port} in use (API may already be running)`);
+    } else {
+      add(checks, 'port', 'warn', `could not probe port ${bindHost}:${config.http.port}`);
     }
   } else if (options.mode === 'live') {
-    add(checks, 'port', 'ok', `listening on ${config.http.host}:${config.http.port}`);
+    add(checks, 'port', 'ok', `listening on ${bindHost}:${config.http.port}`);
     const worker = getWhisperWorkerStatus();
     add(
       checks,

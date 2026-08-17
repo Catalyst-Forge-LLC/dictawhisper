@@ -18,6 +18,16 @@ import { startWhisperWorker, stopWhisperWorker, whisperTranscribe } from './lib/
 import { initQueues } from './lib/queueLib.ts';
 import { cleanAudioFile } from './lib/audioLib.ts';
 import { collectHealth, printHealthReport } from './lib/healthLib.ts';
+import {
+  apiListenHost,
+  discoverTailscale,
+  inboxUrls,
+  resolvedCorsOrigins,
+} from './lib/tailscaleLib.ts';
+
+const tailscaleSelf = config.http.tailscale ? discoverTailscale() : null;
+const corsOrigins = resolvedCorsOrigins(config, tailscaleSelf);
+const listenHost = apiListenHost(config);
 
 const app = express();
 app.use(express.json());
@@ -26,7 +36,7 @@ const io = new SocketIOServer(server, {
   maxHttpBufferSize: 1e8,
   pingTimeout: 60000,
   cors: {
-    origin: config.http.corsOrigins,
+    origin: corsOrigins,
     methods: ['GET', 'POST'],
   },
 });
@@ -98,11 +108,18 @@ async function main() {
   initVoiceRootPipeline(config.watch.roots);
 
   server.on('error', (error: NodeJS.ErrnoException) => {
-    console.error(`[health] FAIL  port ${config.http.host}:${config.http.port} ${error.message}`);
+    console.error(`[health] FAIL  port ${listenHost}:${config.http.port} ${error.message}`);
     process.exit(1);
   });
-  server.listen(config.http.port, config.http.host, () => {
-    console.log(`listening on ${config.http.host}:${config.http.port}`);
+  server.listen(config.http.port, listenHost, () => {
+    console.log(`listening on ${listenHost}:${config.http.port}`);
+    if (config.http.tailscale) {
+      if (tailscaleSelf) {
+        console.log(`[tailscale] inbox ${inboxUrls(config, tailscaleSelf).filter((url) => !url.includes('127.0.0.1') && !url.includes('localhost')).join('  ')}`);
+      } else {
+        console.warn('[tailscale] enabled but `tailscale` CLI did not return an IP — UI is on 0.0.0.0:7777; add CORS origins by hand if needed');
+      }
+    }
   });
 
   void startWhisperWorker().catch((error: Error) => {

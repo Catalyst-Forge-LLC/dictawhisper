@@ -2,11 +2,11 @@
 
 **[dictawhisper.com](https://dictawhisper.com)** · [GitHub](https://github.com/Catalyst-Forge-LLC/dictawhisper)
 
-**A local voice journal.** Speak into your phone or the browser. DictaWhisper waits until the file is really there, transcribes it on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags on another machine via [ollanet](https://ollanet.dev).
+**A local voice journal.** Speak into your phone or the browser. DictaWhisper waits until the file is really there, transcribes it on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) — localhost or another box, whichever hosts the better cleanup model.
 
 The name is the product: **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on your workstation. The sidecar `.json` next to each recording is the source of truth — no database, no cloud account, no “upload to our servers.”
 
-Open the inbox at [http://localhost:7777](http://localhost:7777).
+Open the inbox at [http://localhost:7777](http://localhost:7777). On Tailscale, the same inbox is reachable from your phone.
 
 ---
 
@@ -18,7 +18,7 @@ Voice notes are easy to *make* and hard to *keep*. Phone recordings pile up as u
 2. **Transcription that is accurate and local** — `large-v3` on CUDA, names you actually say, word times that survive cleanup.
 3. **A note you can use** — cleaned prose, tags, playback that follows the cleaned paragraphs, files you can copy and back up.
 
-DictaWhisper is a **personal workstation service**. The API binds to `127.0.0.1`. File APIs only accept paths under your watch roots. If the cleanup host is asleep, you still get the raw transcript.
+DictaWhisper is a **personal workstation service**. By default the API binds to `127.0.0.1`. Turn on `http.tailscale` and the inbox listens on your tailnet so a phone or laptop on the same Tailscale can open it. File APIs only accept paths under your watch roots. If cleanup is asleep, you still get the raw transcript.
 
 ---
 
@@ -45,7 +45,9 @@ Force / retranscribe ───────────────────�
 
 **Files are the database.** Each note is `audio` + `audio.json`. You can rsync the tree, open a sidecar in an editor, or point `pnpm retranscribe` at one month. Identity is the path. There is nothing to export.
 
-**Local speech, remote language.** Whisper runs here (CUDA, persistent Python worker). Cleanup is *text* over ollanet to a machine that can host a large instruct model. The recording never has to leave the GPU box. If ollanet is down, doctor and `/health` say so; raw mode still works.
+**Whisper here; cleanup wherever it is best.** Faster-whisper stays on this GPU. [ollanet](https://ollanet.dev) finds Ollama on localhost *and* the network — same desk, LAN, or Tailscale. Put the instruct model on this box or on a quieter machine; that is a quality choice, not an architecture requirement. Cleanup sends *text*, not audio. If ollanet is down, doctor and `/health` say so; raw mode still works.
+
+**Inbox on the tailnet.** Default bind is localhost. Set `http.tailscale` (or `DICTA_TAILSCALE=1`) and `pnpm dev` advertises `http://<magicdns>:7777` / `http://<100.x>:7777` so you can read and record from a phone that is on the same Tailscale. Still no public internet, still no auth — the mesh is the door.
 
 **A transcript you can listen through.** Cleanup is allowed to drop fillers and collapse ASR loops, but playback cues are aligned back to Whisper **word timestamps**, not guessed from bag-of-words. Copy uses the same sections the player shows.
 
@@ -77,9 +79,10 @@ The UI is a journal, not a file manager dump.
 - NVIDIA GPU + CUDA for local Whisper (or set `whisper.device` to `cpu` and wait)
 - Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) — point `whisper.python` at that interpreter
 - `ffmpeg` on PATH if denoise is on
-- [ollanet](https://ollanet.dev) able to reach the cleanup host (optional for raw transcripts)
+- [ollanet](https://ollanet.dev) + an Ollama model for cleanup (localhost or another reachable host; optional for raw transcripts)
+- Optional: [Tailscale](https://tailscale.com) on the workstation and the phone, if you want the inbox off-LAN
 
-This is meant to live on a desktop you already leave on. A phone is just a microphone plus Syncthing.
+This is meant to live on a desktop you already leave on. A phone can be a microphone (Syncthing) and, on the tailnet, a browser for the inbox.
 
 ---
 
@@ -93,9 +96,9 @@ pnpm install
 pnpm run doctor
 ```
 
-`config.json` is gitignored. Three things matter on a new machine: where audio lands, which Python has CUDA Whisper, and which ollanet host/model cleans the text.
+`config.json` is gitignored. Three things matter on a new machine: where audio lands, which Python has CUDA Whisper, and which Ollama (local or remote) ollanet should use for cleanup.
 
-Optional sanity check of the cleanup host (use the values from your config):
+Optional sanity check (machine can be this computer or another name ollanet already sees):
 
 ```bash
 ollanet prompt YOUR-OLLANET-HOST YOUR-CLEAN-MODEL --format json "ping"
@@ -112,7 +115,15 @@ pnpm ui      # UI only
 pnpm turbo   # API with large-v3-turbo (bash)
 ```
 
-The UI proxies `/socket.io` and API paths, so open **7777** only. API stays on `127.0.0.1:8008`.
+The UI proxies `/socket.io` and API paths, so open **7777** only. API defaults to `127.0.0.1:8008`.
+
+To reach the inbox from a phone on your Tailscale:
+
+```json
+"http": { "tailscale": true }
+```
+
+or `DICTA_TAILSCALE=1`. Doctor and startup print the MagicDNS / `100.x` URL. There is still no login — only devices on that tailnet should be able to open it.
 
 ```bash
 pnpm retranscribe                              # newest first, skip notes that already have word times
@@ -146,7 +157,8 @@ Force/delete/read only accept realpaths under configured watch roots.
 
 | Env | Meaning |
 |---|---|
-| `HOST` / `PORT` | API bind (default `127.0.0.1:8008`) |
+| `HOST` / `PORT` | API bind (default `127.0.0.1:8008`; Tailscale mode listens on `0.0.0.0`) |
+| `DICTA_TAILSCALE` | `1` / `true` — expose UI + API on the tailnet |
 | `WHISPER_MODEL` | `large-v3` or `turbo` |
 | `WHISPER_PYTHON` | Interpreter with faster-whisper |
 | `WHISPER_DEVICE` | `cuda` or `cpu` |
@@ -162,8 +174,13 @@ Useful `config.json` knobs (see `config.example.json`):
 - `whisper.computeType` — `float16`, or `int8_float16` if VRAM is tight
 - `audio.preprocess` — ffmpeg denoise
 - `queues.*.concurrency` — keep transcription at 1 on a single GPU
+- `http.tailscale` — bind beyond localhost and allow Tailscale origins for the inbox
 
 ---
+
+## Site
+
+Marketing site (FilePress): [`site/`](site/). `pnpm site:dev` / `pnpm site:build` / `pnpm ship`. Live: [dictawhisper.com](https://dictawhisper.com).
 
 ## License
 

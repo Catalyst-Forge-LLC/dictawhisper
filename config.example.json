@@ -2,7 +2,8 @@
   "http": {
     "host": "127.0.0.1",
     "port": 8008,
-    "corsOrigins": ["http://localhost:7777", "http://127.0.0.1:7777"]
+    "corsOrigins": ["http://localhost:7777", "http://127.0.0.1:7777"],
+    "tailscale": false
   },
   "watch": {
     "roots": ["C:\\Users\\YOU\\VoiceNotes"],

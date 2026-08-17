@@ -1,0 +1,14 @@
+{
+	// Cloudflare Pages — static output only (no Worker script).
+	// Deploy:  pnpm ship   (= build + wrangler pages deploy build --project-name=dictawhisper)
+	//
+	// Prefer one pipeline. Git-connected Pages can build this folder
+	// (root directory `site`, output `build`).
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "dictawhisper",
+	"compatibility_date": "2026-08-17",
+	"pages_build_output_dir": "build",
+	"observability": {
+		"enabled": true
+	}
+}

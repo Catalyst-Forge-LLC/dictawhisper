@@ -6,7 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const defaultConfigPath = path.resolve(__dirname, '../config.json');
 
 export type DictaConfig = {
-  http: { host: string; port: number; corsOrigins: string[] };
+  http: {
+    host: string;
+    port: number;
+    corsOrigins: string[];
+    /** Bind API + UI on all interfaces and allow Tailscale MagicDNS / 100.x origins. */
+    tailscale: boolean;
+  };
   watch: {
     roots: string[];
     browserDropFolder: string;
@@ -57,6 +63,10 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
       host: process.env.HOST?.trim() || file.http?.host || '127.0.0.1',
       port: Number(process.env.PORT) || file.http?.port || 8008,
       corsOrigins: file.http?.corsOrigins ?? ['http://localhost:7777', 'http://127.0.0.1:7777'],
+      tailscale:
+        process.env.DICTA_TAILSCALE === '1' ||
+        process.env.DICTA_TAILSCALE === 'true' ||
+        file.http?.tailscale === true,
     },
     watch: {
       roots: (file.watch?.roots ?? []).map((root) => resolveExistingOrPlain(root)),
