@@ -1,6 +1,7 @@
 {
   "name": "dictawhisper",
   "version": "0.1.0",
+  "private": false,
   "description": "Local voice journal: watch folders, transcribe with faster-whisper, clean and tag via ollanet",
   "homepage": "https://dictawhisper.com",
   "repository": {
@@ -10,9 +11,28 @@
   "bugs": {
     "url": "https://github.com/Catalyst-Forge-LLC/dictawhisper/issues"
   },
+  "author": "Catalyst Forge LLC",
+  "keywords": [
+    "whisper",
+    "faster-whisper",
+    "transcription",
+    "voice-journal",
+    "local",
+    "ollama",
+    "ollanet"
+  ],
   "type": "module",
   "main": "src/server.ts",
   "license": "MIT",
+  "files": [
+    "src",
+    "scripts/*.ts",
+    "scripts/*.py",
+    "client",
+    "config.example.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "dev": "node --experimental-strip-types src/dev.ts",
@@ -25,7 +45,8 @@
     "site:dev": "pnpm --dir site dev",
     "site:build": "pnpm --dir site build",
     "site:deploy": "pnpm --dir site run ship",
-    "ship": "pnpm --dir site run ship"
+    "ship": "pnpm --dir site run ship",
+    "prepublishOnly": "pnpm test && pnpm typecheck"
   },
   "engines": {
     "node": ">=20"

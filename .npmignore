@@ -1,0 +1,15 @@
+config.json
+.env
+.env.*
+site/
+docs/
+.cursor/
+**/.svelte-kit/
+**/node_modules/
+**/build/
+__pycache__
+*.pyc
+*.pyo
+scripts/__pycache__
+client/.svelte-kit/
+client/node_modules/
