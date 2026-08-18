@@ -43,7 +43,7 @@ Files arriving via folder sync wait 30 minutes after the last write before organ
 
 If you want to open the inbox from a phone or laptop away from your desk, install [Tailscale](https://tailscale.com) on both devices.
 
-Set `"http": { "tailscale": true }` in `config.json` (or `DICTA_TAILSCALE=1`) and start the app. The checkup and startup logs print your private link. Open that from any device on the same Tailscale. There is no login on the app: access is limited to your tailnet.
+Set `"http": { "tailscale": true }` in `config.json` (or `DICTA_TAILSCALE=1`) and start the app. The checkup and startup logs print a link on this machine's Tailscale address. Open that from a device on the same tailnet. The API stays on `127.0.0.1`. The inbox is not published on your LAN. There is no login on the app.
 
 ### Already have a pile of recordings?
 

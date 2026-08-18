@@ -40,8 +40,16 @@ export function discoverTailscale(): TailscaleSelf | null {
   return { ip, dnsName };
 }
 
+export function isUnspecifiedAddress(host: string): boolean {
+  const value = host.trim().toLowerCase();
+  return value === '0.0.0.0' || value === '::' || value === '[::]' || value === '*';
+}
+
+/** API stays on loopback. Tailscale publishes the inbox (7777), not this port. */
 export function apiListenHost(config: DictaConfig): string {
-  return config.http.tailscale ? '0.0.0.0' : config.http.host;
+  const host = (config.http.host || '127.0.0.1').trim() || '127.0.0.1';
+  if (config.http.tailscale && isUnspecifiedAddress(host)) return '127.0.0.1';
+  return host;
 }
 
 export function tailscaleOrigins(self: TailscaleSelf, uiPort = UI_PORT): string[] {

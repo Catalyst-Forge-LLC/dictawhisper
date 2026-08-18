@@ -99,7 +99,7 @@ function listen(): Promise<void> {
           );
         } else {
           console.warn(
-            '[tailscale] enabled but `tailscale` CLI did not return an IP — UI is on 0.0.0.0:7777; add CORS origins by hand if needed'
+            '[tailscale] enabled but `tailscale` CLI did not return an IP — inbox stays on 127.0.0.1:7777'
           );
         }
       }

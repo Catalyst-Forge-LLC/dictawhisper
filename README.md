@@ -24,7 +24,7 @@ Voice notes are easy to make and hard to keep. Phone recordings pile up as undat
 2. **Accurate, local transcription:** `large-v3` on CUDA, a prompt seeded with your own vocabulary, word times that survive cleanup.
 3. **Usable notes:** cleaned prose, tags, playback that follows the cleaned paragraphs, files you can copy and back up.
 
-By default the API binds to `127.0.0.1`. Turn on `http.tailscale` and the UI listens on your tailnet so a phone or laptop on the same Tailscale can open it. File APIs only accept paths under your watch roots. If cleanup is unavailable, you still get the raw transcript.
+By default the API binds to `127.0.0.1`. Turn on `http.tailscale` and the inbox also listens on this machine's Tailscale address (`100.x`, plus MagicDNS when you have it) so a phone on the same tailnet can open it. The API stays on loopback; Vite proxies to it. File APIs only accept paths under your watch roots. If cleanup is unavailable, you still get the raw transcript.
 
 ---
 
@@ -53,7 +53,7 @@ Force / retranscribe ───────────────────�
 
 **Audio never leaves this computer.** Faster-whisper runs here. If you point ollanet at Ollama on another machine on your own network, only the transcript text crosses the network. If ollanet is unreachable, doctor and `/health` report it and you still have the raw words.
 
-**UI on the tailnet.** Default bind is localhost. Set `http.tailscale` (or `DICTA_TAILSCALE=1`) and `pnpm dev` advertises `http://<magicdns>:7777` / `http://<100.x>:7777` so you can read and record from a phone on the same Tailscale. Nothing is published to the public internet, and the app adds no login of its own; tailnet membership is the access control.
+**UI on the tailnet.** Default bind is localhost. Set `http.tailscale` (or `DICTA_TAILSCALE=1`) and `pnpm dev` listens on this machine's Tailscale IPv4 (`100.64.0.0/10`) and advertises `http://<magicdns>:7777` / `http://<100.x>:7777`. localhost:7777 still works. The inbox is not bound to `0.0.0.0` or your LAN. The app adds no login of its own.
 
 **Playback aligned to word timestamps.** Cleanup drops fillers and collapses repeated phrases, but playback cues map back to Whisper word timestamps rather than being inferred from the cleaned wording. Copy uses the same sections the player shows.
 
@@ -66,7 +66,7 @@ Force / retranscribe ───────────────────�
 - **No telemetry.** Nothing contacts an external analytics or telemetry service.
 - **Audio stays here.** Faster-whisper processes files on this GPU or CPU.
 - **Text only, and only on your network.** If cleanup runs on another machine you already use, only the transcript text is sent there.
-- **Loopback by default.** API (`8008`) and UI (`7777`) bind to `127.0.0.1`. They listen on `0.0.0.0` only if you turn on `http.tailscale`.
+- **Loopback by default.** API (`8008`) and UI (`7777`) bind to `127.0.0.1`. With `http.tailscale`, the inbox also binds to this machine's Tailscale address, not to every interface.
 - **Path allowlisting.** File routes resolve realpaths and reject anything outside `watch.roots` and `browserDropFolder` with a `403`.
 
 ---
@@ -163,8 +163,8 @@ Force/delete/read only accept realpaths under configured watch roots.
 
 | Env | Meaning |
 |---|---|
-| `HOST` / `PORT` | API bind (default `127.0.0.1:8008`; Tailscale mode listens on `0.0.0.0`) |
-| `DICTA_TAILSCALE` | `1` / `true`: expose UI + API on the tailnet |
+| `HOST` / `PORT` | API bind (default `127.0.0.1:8008`; Tailscale mode does not change this) |
+| `DICTA_TAILSCALE` | `1` / `true`: also bind the inbox to this machine's Tailscale address |
 | `WHISPER_MODEL` | `large-v3` or `turbo` |
 | `WHISPER_PYTHON` | Interpreter with faster-whisper |
 | `WHISPER_DEVICE` | `cuda` or `cpu` |
@@ -180,7 +180,7 @@ Useful `config.json` knobs (see `config.example.json`):
 - `whisper.computeType`: `float16`, or `int8_float16` if VRAM is tight
 - `audio.preprocess`: ffmpeg denoise
 - `queues.*.concurrency`: keep transcription at 1 on a single GPU
-- `http.tailscale`: bind beyond localhost and allow Tailscale origins for the UI
+- `http.tailscale`: bind the inbox to this machine's Tailscale address and allow those origins for the UI
 - `ollanet.required`: treat missing cleanup host/model as a failure (default false; raw transcripts still work)
 
 ---

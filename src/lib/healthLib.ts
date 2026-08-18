@@ -256,9 +256,9 @@ export async function collectHealth(
     const self = discoverTailscale();
     if (self) {
       const remote = inboxUrls(config, self).filter((url) => !/localhost|127\.0\.0\.1/.test(url));
-      add(checks, 'tailscale', 'ok', `tailscale inbox ${remote.join(' ')}`);
+      add(checks, 'tailscale', 'ok', `inbox ${remote.join(' ')}; API stays ${apiListenHost(config)}:${config.http.port}`);
     } else {
-      add(checks, 'tailscale', 'warn', 'http.tailscale is on but the tailscale CLI did not return an IP');
+      add(checks, 'tailscale', 'warn', 'http.tailscale is on but the tailscale CLI did not return an IP; inbox stays on 127.0.0.1');
     }
   }
 
