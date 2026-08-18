@@ -1,84 +1,459 @@
-/* Write your global styles here, in SCSS syntax. Variables and mixins from the src/variables.scss file are available here without importing */
-
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --dw-bg: #030305;
+  --dw-bg-elevated: rgb(24 24 27 / 0.7);
+  --dw-bg-hover: rgb(255 255 255 / 0.06);
+  --dw-border: rgb(255 255 255 / 0.08);
+  --dw-text: rgb(244 244 245);
+  --dw-text-muted: rgb(161 161 170);
+  --dw-accent: #f59e0b;
+  --dw-accent-bright: #fcd34d;
+  --dw-accent-deep: #ea580c;
+  --dw-danger: #f87171;
+  --dw-radius: 1rem;
+  --dw-radius-sm: 0.75rem;
+  --dw-max: 52rem;
+  --dw-header-h: 3.5rem;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  color: var(--dw-text);
+  background: var(--dw-bg);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-feature-settings: 'ss01', 'ss02';
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(251 191 36 / 0.35);
+  color: #fff;
+}
+
+mark {
+  background: rgb(251 191 36 / 0.28);
+  color: #fde68a;
+  border-radius: 0.25rem;
+  padding: 0.05em 0.25em;
+  box-decoration-break: clone;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(113 113 122 / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(113 113 122 / 0.5);
+}
+
+@keyframes dw-msg-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0.55);
+    background-color: rgb(245 158 11 / 0.14);
   }
-  
-  html, body {
-    height: 100%;
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background-color: transparent;
   }
-  
-  body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 0.8rem;
+}
+
+.dw-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  color-scheme: dark;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% -5%, rgb(245 158 11 / 0.14), transparent),
+    radial-gradient(ellipse 60% 40% at 85% 95%, rgb(34 211 238 / 0.08), transparent),
+    radial-gradient(ellipse 50% 35% at 50% 50%, rgb(24 24 27 / 0.6), transparent),
+    #030305;
+}
+
+.dw-app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+.dw-app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dw-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  max-width: var(--dw-max);
+  margin: 0 auto;
+  padding: 0.75rem 0.85rem 2rem;
+}
+
+@media (min-width: 800px) {
+  .dw-main {
+    padding: 1rem 1rem 2.5rem;
   }
-  
-  .wrapper {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  h1, h2 {
-    font-size: 2rem;
-    text-align: center;
-    font-weight: normal;
-    padding: 0.5rem 0 0 0;
+}
+
+.dw-card {
+  border-radius: var(--dw-radius);
+  border: 1px solid var(--dw-border);
+  background: linear-gradient(165deg, rgb(39 39 42 / 0.55) 0%, rgb(24 24 27 / 0.7) 100%);
+  backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.08),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.04),
+    0 25px 60px -12px rgb(0 0 0 / 0.55),
+    0 8px 24px -4px rgb(0 0 0 / 0.3);
+}
+
+.dw-card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.dw-card-hover:hover {
+  border-color: rgb(251 191 36 / 0.2);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 0.5px rgb(251 191 36 / 0.08),
+    0 25px 60px -12px rgb(0 0 0 / 0.55),
+    0 8px 24px -4px rgb(0 0 0 / 0.3),
+    0 0 20px -4px rgb(251 146 60 / 0.12);
+  transform: translateY(-1px);
+}
+
+.dw-card-elevated {
+  border-radius: var(--dw-radius);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  background: linear-gradient(
+    170deg,
+    rgb(63 63 70 / 0.4) 0%,
+    rgb(39 39 42 / 0.6) 40%,
+    rgb(24 24 27 / 0.75) 100%
+  );
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.06),
+    0 30px 80px -16px rgb(0 0 0 / 0.6),
+    0 12px 32px -4px rgb(0 0 0 / 0.35);
+}
+
+.dw-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: rgb(250 250 250 / 0.12);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+    inset 0 2px 6px rgb(0 0 0 / 0.18);
+  color: rgb(250 250 250);
+  font: inherit;
+  outline: none;
+  padding: 0.7rem 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.dw-input::placeholder {
+  color: rgb(212 212 216 / 0.8);
+}
+
+.dw-input:focus {
+  border-color: rgb(251 191 36 / 0.55);
+  background: rgb(250 250 250 / 0.14);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.08),
+    inset 0 2px 4px rgb(0 0 0 / 0.12),
+    0 0 0 3px rgb(251 191 36 / 0.14),
+    0 0 20px -2px rgb(251 146 60 / 0.2);
+}
+
+.dw-btn-primary,
+.dw-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+  transition: transform 0.2s ease, filter 0.2s ease, background 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dw-btn-primary {
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.15rem;
+  font-weight: 600;
+  color: rgb(9 9 11);
+  background: linear-gradient(165deg, #fcd34d 0%, #f59e0b 50%, #ea580c 100%);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.4),
+    0 6px 24px -4px rgb(245 158 11 / 0.5),
+    0 2px 8px -2px rgb(234 88 12 / 0.3);
+}
+
+.dw-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.5),
+    0 8px 32px -4px rgb(245 158 11 / 0.6),
+    0 2px 12px -2px rgb(234 88 12 / 0.35);
+  transform: translateY(-1px);
+}
+
+.dw-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.95);
+}
+
+.dw-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dw-btn-primary.is-recording {
+  color: #fff;
+  background: linear-gradient(165deg, #f87171 0%, #ef4444 60%, #b91c1c 100%);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.25),
+    0 6px 24px -4px rgb(248 113 113 / 0.45);
+}
+
+.dw-btn-secondary {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(228 228 231);
+  background: rgb(255 255 255 / 0.05);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+}
+
+.dw-btn-secondary:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.08);
+}
+
+.dw-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dw-btn-secondary.is-danger {
+  color: var(--dw-danger);
+}
+
+.dw-btn-compact {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 0.55rem;
+}
+
+.dw-text-btn {
+  border: 0;
+  background: transparent;
+  color: rgb(161 161 170);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+.dw-text-btn:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: rgb(244 244 245);
+}
+
+.dw-text-btn-accent {
+  color: rgb(253 230 138 / 0.8);
+}
+
+.dw-text-btn-accent:hover {
+  background: rgb(245 158 11 / 0.15);
+  color: rgb(254 243 199);
+}
+
+.dw-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(113 113 122);
+}
+
+.dw-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(0 0 0 / 0.3);
+  color: rgb(161 161 170);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+}
+
+.dw-pill.is-fail {
+  border-color: rgb(248 113 113 / 0.3);
+  color: var(--dw-danger);
+}
+
+.dw-pill.is-warn {
+  border-color: rgb(251 191 36 / 0.25);
+  color: rgb(253 230 138);
+}
+
+.dw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(63 63 70 / 0.8);
+  background: rgb(24 24 27 / 0.6);
+  color: rgb(161 161 170);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  padding: 0.2rem 0.5rem;
+}
+
+.dw-chip:hover {
+  border-color: rgb(245 158 11 / 0.3);
+  background: rgb(245 158 11 / 0.1);
+  color: rgb(254 243 199 / 0.9);
+}
+
+.dw-chip.is-active {
+  border-color: rgb(245 158 11 / 0.4);
+  background: rgb(245 158 11 / 0.15);
+  color: rgb(254 243 199);
+}
+
+.dw-chip-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+.dw-error {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(239 68 68 / 0.25);
+  background: rgb(69 10 10 / 0.3);
+  color: rgb(252 165 165);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+}
+
+.dw-empty {
+  border-radius: var(--dw-radius);
+  border: 1px solid var(--dw-border);
+  background: rgb(24 24 27 / 0.4);
+  color: rgb(161 161 170);
+  font-size: 0.875rem;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+}
+
+.dw-muted {
+  color: var(--dw-text-muted);
+  font-size: 0.8125rem;
+}
+
+.dw-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(0 0 0 / 0.3);
+  padding: 0.15rem;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+.dw-segmented button {
+  border: 0;
+  background: transparent;
+  color: rgb(161 161 170);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.375rem;
+}
+
+.dw-segmented button.is-on {
+  background: rgb(245 158 11 / 0.15);
+  color: rgb(255 251 235);
+  box-shadow: 0 1px 4px rgb(120 53 15 / 0.2);
+  outline: 1px solid rgb(251 191 36 / 0.3);
+}
+
+.dw-focus-ring:focus-visible,
+.dw-btn-primary:focus-visible,
+.dw-btn-secondary:focus-visible,
+.dw-input:focus-visible,
+.dw-chip:focus-visible,
+.dw-text-btn:focus-visible,
+.dw-segmented button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgb(251 191 36 / 0.14),
+    0 0 0 1px var(--dw-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-card-hover,
+  .dw-btn-primary,
+  .dw-btn-secondary {
+    transition: none;
   }
 
-  .masthead {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.7rem;
-    padding: 0.65rem 0 0.15rem;
+  .dw-card-hover:hover,
+  .dw-btn-primary:hover:not(:disabled) {
+    transform: none;
   }
 
-  .masthead img {
-    width: 3.4rem;
-    height: 3.4rem;
-    object-fit: contain;
+  .dw-cue-pulse {
+    animation: none;
   }
-
-  .masthead h1 {
-    padding: 0;
-  }
-  
-  
-  button {
-    font-size: 1rem;
-    background: #0088cc;
-    text-align: center;
-    color: white;
-    border: none;
-    transition: all 0.2s;
-    padding: 0.5rem;
-  }
-  
-  button:hover, button:focus {
-    box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 1);
-    background: #0ae;
-  }
-  
-  button:active {
-    box-shadow: inset 0px 0px 20px rgba(0,0,0,0.5);
-    transform: translateY(2px);
-  }
-  
-  section, article {
-    display: block;
-  }
-  
-  /* Adjustments for wider screens */
-  @media all and (min-width: 800px) {
-    /* Don't take all the space as readability is lost when line length
-       goes past a certain size */
-    .wrapper {
-      width: 90%;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-  }
-  
+}

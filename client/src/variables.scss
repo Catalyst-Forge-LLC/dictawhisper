@@ -1,1 +1,2 @@
-/* Variables and mixins declared here will be available in all other SCSS files */
+/* Design tokens live in app.scss :root as --dw-*. This file is prepended
+   by svelte-preprocess; keep it free of emitted CSS so it is not duplicated. */

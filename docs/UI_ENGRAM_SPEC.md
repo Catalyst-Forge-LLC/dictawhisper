@@ -1,6 +1,6 @@
 # Inbox restyle: Engram chrome, DictaWhisper object
 
-**Status:** plan, not started  
+**Status:** implemented in `client/` (U0–U5). Marketing site unchanged.  
 **Surface:** the local inbox at port 7777 (`client/`). Not the FilePress marketing site.  
 **Reference:** `z:/workspace/engram` (`src/app.css`, `AppHeader.svelte`, `search/+page.svelte`, `ThreadMonthGroups.svelte`, `TagChip.svelte`, `SegmentedControl.svelte`, `SearchHitCard.svelte`).
 

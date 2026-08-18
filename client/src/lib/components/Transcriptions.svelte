@@ -21,7 +21,7 @@
 
   let expanded = {};
   let showRaw = {};
-  let openGroups = {};
+  let yearOpen = {};
   let selectedTags = [];
   let showSingletons = false;
   let showAllFrequent = false;
@@ -313,17 +313,74 @@
     ? groups
     : [...specialGroups, ...datedGroups.slice(0, monthPage)];
   $: hiddenMonths = selectedTags.length ? 0 : Math.max(0, datedGroups.length - monthPage);
-  $: newestKey = datedGroups[0]?.key;
+  $: newestDatedYear = datedGroups[0]?.year;
+  $: yearSections = nestByYear(pagedGroups);
+  $: datedYearCount = yearSections.filter((section) => section.kind === 'year').length;
 
-  function isOpen(key) {
-    if (Object.prototype.hasOwnProperty.call(openGroups, key)) return openGroups[key];
-    if (selectedTags.length) return true;
-    return true;
+  function nestByYear(monthGroups) {
+    const sections = [];
+    const yearMap = new Map();
+    for (const group of monthGroups) {
+      if (group.key === 'holding' || group.key === 'unfiled' || group.key === 'other') {
+        sections.push({
+          kind: 'special',
+          key: group.key,
+          label: groupLabel(group),
+          months: [group],
+          count: group.items.length,
+        });
+        continue;
+      }
+      if (!yearMap.has(group.year)) {
+        const section = {
+          kind: 'year',
+          key: group.year,
+          label: group.year,
+          months: [],
+          count: 0,
+        };
+        yearMap.set(group.year, section);
+        sections.push(section);
+      }
+      const section = yearMap.get(group.year);
+      section.months.push(group);
+      section.count += group.items.length;
+    }
+    return sections;
   }
 
-  function onToggle(key, event) {
-    openGroups[key] = event.currentTarget.open;
-    openGroups = openGroups;
+  function defaultYearOpen(key, kind) {
+    if (kind === 'special') return true;
+    if (selectedTags.length || searchQuery.trim()) return true;
+    const currentYear = String(new Date().getFullYear());
+    return key === currentYear || key === newestDatedYear;
+  }
+
+  function isYearOpen(section) {
+    if (selectedTags.length || searchQuery.trim()) return true;
+    if (Object.prototype.hasOwnProperty.call(yearOpen, section.key)) return yearOpen[section.key];
+    return defaultYearOpen(section.key, section.kind);
+  }
+
+  function toggleYear(section) {
+    yearOpen[section.key] = !isYearOpen(section);
+    yearOpen = yearOpen;
+  }
+
+  function focusRecentYears() {
+    const currentYear = String(new Date().getFullYear());
+    const next = {};
+    for (const section of yearSections) {
+      next[section.key] =
+        section.kind === 'special' || section.key === currentYear || section.key === newestDatedYear;
+    }
+    yearOpen = next;
+  }
+
+  function expandAllYears() {
+    const next = {};
+    for (const section of yearSections) next[section.key] = true;
+    yearOpen = next;
   }
 
   async function hydrateNote(jsonFile) {
@@ -490,34 +547,41 @@
 </script>
 
 <section class="transcriptions">
-  <div class="search">
-    <input
-      type="search"
-      bind:value={searchQuery}
-      placeholder="Search notes, tags, filenames…"
-      aria-label="Search notes"
-    />
-    {#if searchQuery}
-      <button type="button" class="clear" on:click={() => (searchQuery = '')}>Clear</button>
-    {/if}
+  <div class="dw-card search-card">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </span>
+      <input
+        class="dw-input"
+        type="search"
+        bind:value={searchQuery}
+        placeholder="Search notes, tags, filenames…"
+        aria-label="Search notes"
+      />
+      {#if searchQuery}
+        <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (searchQuery = '')}>
+          Clear
+        </button>
+      {/if}
+    </div>
   </div>
 
   {#if inboxError}
-    <p class="empty">{inboxError}</p>
+    <p class="dw-error">{inboxError}</p>
   {/if}
 
   {#if !transcriptions.length}
-    <p class="empty">
-      No notes yet. Record or drop a file above. If setup looks wrong, run
-      <code>pnpm run doctor</code>.
-    </p>
+    <p class="dw-empty">No notes yet. Record or drop a file above.</p>
   {/if}
 
   {#if tagCloud.length}
-    <details class="tag-cloud" open>
-      <summary>
-        <span>Tags</span>
-        <span class="folder-count">
+    <section class="dw-card tags-card">
+      <div class="tags-head">
+        <p class="dw-eyebrow">Tags</p>
+        <p class="dw-muted">
           {visibleTags.length} shown
           {#if !showSingletons && singletonTags.length}
             · {singletonTags.length} single-use hidden
@@ -525,38 +589,39 @@
           {#if !showAllFrequent && (showSingletons ? tagCloud : frequentTags).length > TAG_CLOUD_CAP}
             · {(showSingletons ? tagCloud : frequentTags).length - TAG_CLOUD_CAP} more
           {/if}
-        </span>
-      </summary>
+        </p>
+      </div>
       {#if selectedTags.length}
-        <div class="tag-cloud-head">
-          <span class="muted">
+        <div class="tags-filter">
+          <span class="dw-muted">
             {visible.length} note{visible.length === 1 ? '' : 's'} with {selectedTags.join(' + ')}
           </span>
-          <button type="button" class="clear" on:click={() => (selectedTags = [])}>Clear filter</button>
+          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (selectedTags = [])}>
+            Clear filter
+          </button>
         </div>
       {/if}
       <div class="tag-cloud-body">
         {#each visibleTags as item}
           <button
             type="button"
-            class="tag"
-            class:active={selectedTags.includes(item.tag)}
-            style="font-size: {item.size}"
+            class="dw-chip"
+            class:is-active={selectedTags.includes(item.tag)}
             on:click={() => toggleTag(item.tag)}
           >
             {item.tag}
-            <span class="tag-count">{item.count}</span>
+            <span class="dw-chip-count">{item.count}</span>
           </button>
         {/each}
       </div>
       <div class="tag-cloud-more">
         {#if !showAllFrequent && (showSingletons ? tagCloud : frequentTags).length > TAG_CLOUD_CAP}
-          <button type="button" class="clear" on:click={() => (showAllFrequent = true)}>
+          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (showAllFrequent = true)}>
             Show all {(showSingletons ? tagCloud : frequentTags).length} listed tags
           </button>
         {/if}
         {#if singletonTags.length}
-          <button type="button" class="clear" on:click={() => (showSingletons = !showSingletons)}>
+          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (showSingletons = !showSingletons)}>
             {showSingletons ? 'Hide single-use tags' : `Show ${singletonTags.length} single-use tags`}
           </button>
         {/if}
@@ -566,7 +631,7 @@
         </label>
         <button
           type="button"
-          class="clear"
+          class="dw-btn-secondary dw-btn-compact"
           disabled={consolidateBusy || applyBusy}
           on:click={previewConsolidate}
         >
@@ -574,16 +639,16 @@
         </button>
       </div>
       {#if consolidateError}
-        <p class="empty">{consolidateError}</p>
+        <p class="dw-error">{consolidateError}</p>
       {/if}
       {#if applyResult}
-        <p class="muted">
+        <p class="dw-muted">
           Merged tags on {applyResult.filesChanged} notes
           ({applyResult.uniqueBefore} → {applyResult.uniqueAfter} unique).
         </p>
       {/if}
       {#if consolidatePlan}
-        <div class="consolidate">
+        <div class="dw-card consolidate">
           <div class="consolidate-head">
             <strong>
               {consolidatePlan.groups.length
@@ -591,13 +656,13 @@
                 : `No close duplicates in ${consolidatePlan.unique} tags`}
             </strong>
             {#if consolidatePhase}
-              <span class="muted">{consolidatePhase}</span>
+              <span class="dw-muted">{consolidatePhase}</span>
             {:else if consolidatePlan.modelError}
-              <span class="muted">Model skipped: {consolidatePlan.modelError}</span>
+              <span class="dw-muted">Model skipped: {consolidatePlan.modelError}</span>
             {:else if consolidatePlan.modelUsed}
-              <span class="muted">Includes model suggestions</span>
+              <span class="dw-muted">Includes model suggestions</span>
             {:else}
-              <span class="muted">Spelling pass only</span>
+              <span class="dw-muted">Spelling pass only</span>
             {/if}
           </div>
           {#if consolidatePlan.groups.length}
@@ -608,7 +673,7 @@
                     <input type="checkbox" bind:checked={consolidateSelected[index]} />
                     <span>
                       <strong>{group.keep}</strong>
-                      <span class="tag-count">{group.counts?.[group.keep] || ''}</span>
+                      <span class="dw-chip-count">{group.counts?.[group.keep] || ''}</span>
                       ←
                       {group.drop
                         .map((tag) => `${tag}${group.counts?.[tag] ? ` (${group.counts[tag]})` : ''}`)
@@ -620,27 +685,27 @@
               {/each}
             </ul>
             <div class="tag-cloud-more">
-              <button type="button" class="clear" disabled={applyBusy} on:click={applyConsolidate}>
+              <button type="button" class="dw-btn-primary dw-btn-compact" disabled={applyBusy} on:click={applyConsolidate}>
                 {applyBusy
                   ? 'Applying…'
                   : `Apply ${selectedConsolidateGroups().length} merge${selectedConsolidateGroups().length === 1 ? '' : 's'}`}
               </button>
-              <button type="button" class="clear" disabled={applyBusy} on:click={dismissConsolidate}>
+              <button type="button" class="dw-btn-secondary dw-btn-compact" disabled={applyBusy} on:click={dismissConsolidate}>
                 Cancel
               </button>
             </div>
           {:else}
             <div class="tag-cloud-more">
-              <button type="button" class="clear" on:click={dismissConsolidate}>Dismiss</button>
+              <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={dismissConsolidate}>Dismiss</button>
             </div>
           {/if}
         </div>
       {/if}
-    </details>
+    </section>
   {/if}
 
   {#if transcriptions.length && !visible.length}
-    <p class="empty">
+    <p class="dw-empty">
       No notes match
       {#if searchQuery.trim()}
         “{searchQuery.trim()}”
@@ -654,168 +719,230 @@
     </p>
   {/if}
 
-  {#each pagedGroups as group}
-    <details class="folder" open={isOpen(group.key)} on:toggle={(event) => onToggle(group.key, event)}>
-      <summary>
-        <span class="folder-name">{groupLabel(group)}</span>
-        <span class="folder-count">{group.items.length}</span>
-      </summary>
-      {#if isOpen(group.key)}
-      {#each group.items as transcription}
-        {@const cleaned = cleanedOf(transcription)}
-        {@const tags = tagsOf(transcription)}
-        <article class="note" class:expanded={expanded[transcription.jsonFile]}>
-          <header
-            title={transcription.jsonFile}
-            tabindex="0"
-            on:click={() => toggleExpanded(transcription.jsonFile)}
-            on:keydown={(event) => event.key === 'Enter' && toggleExpanded(transcription.jsonFile)}
-          >
-            <div class="note-title">
-              <span class="name">{displayName(transcription.jsonFile)}</span>
-              {#if transcription.transcriptionJson?.elapsed}
-                <span class="elapsed">{transcription.transcriptionJson.elapsed}</span>
-              {/if}
-              {#if transcription.transcriptionJson?.cleanupSkipped}
-                <span class="status">cleanup skipped</span>
-              {:else if !cleaned}
-                <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
-              {/if}
-            </div>
-            {#if expanded[transcription.jsonFile] && tags.length}
-              <div class="note-tags">
-                {#each tags as tag}
-                  <button
-                    type="button"
-                    class="tag small"
-                    class:active={selectedTags.includes(tag)}
-                    on:click|stopPropagation={() => toggleTag(tag)}
-                  >
-                    {tag}
-                  </button>
-                {/each}
-              </div>
-            {/if}
-            {#if !expanded[transcription.jsonFile]}
-              <p class="preview">
-                {preview(
-                  cleaned ||
-                    transcription.transcriptionJson?.preview ||
-                    transcription.transcriptionJson?.text ||
-                    ''
-                )}
-              </p>
-            {/if}
-          </header>
-          <div class="actions">
-            <button type="button" on:click={() => deleteTranscription(transcription.jsonFile)}>DEL</button>
-            <button type="button" on:click={() => copyTranscription(transcription)}>COPY</button>
-            {#if !cleaned || transcription.transcriptionJson?.cleanupError}
-              <button
-                type="button"
-                disabled={noteBusy[transcription.jsonFile]}
-                on:click={() => retryCleanup(transcription.jsonFile)}
-              >
-                Retry
-              </button>
-            {/if}
-            {#if !cleaned && !transcription.transcriptionJson?.cleanupSkipped}
-              <button
-                type="button"
-                disabled={noteBusy[transcription.jsonFile]}
-                on:click={() => skipNoteCleanup(transcription.jsonFile)}
-              >
-                Skip
-              </button>
-            {/if}
-            {#if isHolding(transcription.jsonFile) || (folderOf(transcription.jsonFile).key === 'unfiled' && hasDateName(transcription.jsonFile))}
-              {#if hasDateName(transcription.jsonFile)}
-                <button
-                  type="button"
-                  disabled={noteBusy[transcription.jsonFile]}
-                  on:click={() => resolveHolding(transcription.jsonFile, 'overwrite')}
-                >
-                  File
-                </button>
-                <button
-                  type="button"
-                  disabled={noteBusy[transcription.jsonFile]}
-                  on:click={() => resolveHolding(transcription.jsonFile, 'rename')}
-                >
-                  File as copy
-                </button>
-              {/if}
-              {#if isHolding(transcription.jsonFile)}
-                <button
-                  type="button"
-                  disabled={noteBusy[transcription.jsonFile]}
-                  on:click={() => resolveHolding(transcription.jsonFile, 'unfile')}
-                >
-                  Unfile
-                </button>
-              {/if}
-            {/if}
-          </div>
-          {#if expanded[transcription.jsonFile]}
-            <div class="note-body">
-              <audio
-                controls
-                preload="metadata"
-                src={audioUrl(transcription.jsonFile)}
-                on:timeupdate={(event) => onAudioTime(transcription, event)}
-              ></audio>
-              {#if cleaned}
-                {#if transcription.transcriptionJson?.playbackCuesSource !== 'words'}
-                  <p class="muted">
-                    Section times need a re-transcribe for word timestamps. Raw segments below still have Whisper times.
-                  </p>
-                {/if}
-                {#each cuesOf(transcription) as cue, index}
-                  <button
-                    type="button"
-                    class="cue"
-                    class:active={cueActive(transcription, cue, index)}
-                    class:untimed={!cueHasTime(cue)}
-                    on:click={(event) => playCue(event, cue)}
-                  >
-                    <span class="cue-time">{cueHasTime(cue) ? formatTime(cue.start) : '—'}</span>
-                    <span class="cue-text">{cue.text}</span>
-                  </button>
-                {/each}
-              {:else}
-                <p class="muted">No cleaned text yet. Raw transcript below.</p>
-              {/if}
-              {#if (transcription.transcriptionJson?.segments || []).length}
-                <button
-                  type="button"
-                  class="raw-toggle"
-                  on:click={() => {
-                    showRaw[transcription.jsonFile] = !showRaw[transcription.jsonFile];
-                    showRaw = showRaw;
-                  }}
-                >
-                  {showRaw[transcription.jsonFile] ? 'Hide raw segments' : 'Show raw segments'}
-                </button>
-              {/if}
-              {#if showRaw[transcription.jsonFile]}
-                <div class="segments">
-                  {#each transcription.transcriptionJson.segments as segment}
-                    <p>
-                      <span class="times">{segment.start}–{segment.end}</span>
-                      {segment.text}
-                    </p>
-                  {/each}
+  {#if datedYearCount > 1}
+    <div class="archive-tools">
+      <p class="dw-eyebrow">Notes</p>
+      <div>
+        <button type="button" class="dw-text-btn dw-text-btn-accent" on:click={focusRecentYears}>Focus</button>
+        <button type="button" class="dw-text-btn" on:click={expandAllYears}>All years</button>
+      </div>
+    </div>
+  {/if}
+
+  {#each yearSections as section (section.key)}
+    <section class="year-block">
+      <button
+        type="button"
+        class="year-head"
+        aria-expanded={isYearOpen(section)}
+        on:click={() => toggleYear(section)}
+      >
+        <svg class="chevron" class:is-closed={!isYearOpen(section)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+        <span class="year-label">{section.label}</span>
+        <span class="year-count">{section.count} note{section.count === 1 ? '' : 's'}</span>
+      </button>
+      {#if isYearOpen(section)}
+        <div class="year-body">
+          {#each section.months as group (group.key)}
+            <div class="month-block">
+              {#if section.kind === 'year'}
+                <div class="month-rail">
+                  <span>{groupLabel(group)}</span>
+                  <span>{group.items.length}</span>
                 </div>
               {/if}
+              <div class="notes">
+                {#each group.items as transcription (transcription.jsonFile)}
+                  {@const cleaned = cleanedOf(transcription)}
+                  {@const tags = tagsOf(transcription)}
+                  {@const isOpen = expanded[transcription.jsonFile]}
+                  {@const playing = isOpen && typeof transcription.transcriptionJson?._currentTime === 'number'}
+                  <article class="note dw-card dw-card-hover" class:is-open={isOpen} class:is-playing={playing}>
+                    <button
+                      type="button"
+                      class="note-head"
+                      title={transcription.jsonFile}
+                      on:click={() => toggleExpanded(transcription.jsonFile)}
+                    >
+                      <span class="note-title">
+                        <span class="name">{displayName(transcription.jsonFile)}</span>
+                        {#if transcription.transcriptionJson?.elapsed}
+                          <span class="elapsed">{transcription.transcriptionJson.elapsed}</span>
+                        {/if}
+                        {#if transcription.transcriptionJson?.cleanupSkipped}
+                          <span class="status">cleanup skipped</span>
+                        {:else if !cleaned}
+                          <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
+                        {/if}
+                      </span>
+                      {#if !isOpen}
+                        <span class="preview">
+                          {preview(
+                            cleaned ||
+                              transcription.transcriptionJson?.preview ||
+                              transcription.transcriptionJson?.text ||
+                              ''
+                          )}
+                        </span>
+                      {/if}
+                    </button>
+                    {#if tags.length}
+                      <div class="note-tags">
+                        {#each tags as tag}
+                          <button
+                            type="button"
+                            class="dw-chip"
+                            class:is-active={selectedTags.includes(tag)}
+                            on:click={() => toggleTag(tag)}
+                          >
+                            {tag}
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
+                    {#if isOpen}
+                      <div class="note-body">
+                        <audio
+                          controls
+                          preload="metadata"
+                          src={audioUrl(transcription.jsonFile)}
+                          on:timeupdate={(event) => onAudioTime(transcription, event)}
+                        ></audio>
+                        {#if cleaned}
+                          {#if transcription.transcriptionJson?.playbackCuesSource !== 'words'}
+                            <p class="dw-muted">
+                              Section times need a re-transcribe for word timestamps. Raw segments below still have Whisper times.
+                            </p>
+                          {/if}
+                          {#if !showRaw[transcription.jsonFile]}
+                            {#each cuesOf(transcription) as cue, index}
+                              <button
+                                type="button"
+                                class="cue"
+                                class:is-active={cueActive(transcription, cue, index)}
+                                class:untimed={!cueHasTime(cue)}
+                                class:dw-cue-pulse={cueActive(transcription, cue, index)}
+                                on:click={(event) => playCue(event, cue)}
+                              >
+                                <span class="cue-time">{cueHasTime(cue) ? formatTime(cue.start) : '—'}</span>
+                                <span class="cue-text">{cue.text}</span>
+                              </button>
+                            {/each}
+                          {/if}
+                        {:else}
+                          <p class="dw-muted">No cleaned text yet. Raw transcript below.</p>
+                        {/if}
+                        {#if (transcription.transcriptionJson?.segments || []).length}
+                          <div class="dw-segmented" role="group" aria-label="Transcript view">
+                            <button
+                              type="button"
+                              class:is-on={!showRaw[transcription.jsonFile]}
+                              on:click={() => {
+                                showRaw[transcription.jsonFile] = false;
+                                showRaw = showRaw;
+                              }}
+                            >
+                              Readable
+                            </button>
+                            <button
+                              type="button"
+                              class:is-on={!!showRaw[transcription.jsonFile]}
+                              on:click={() => {
+                                showRaw[transcription.jsonFile] = true;
+                                showRaw = showRaw;
+                              }}
+                            >
+                              Raw
+                            </button>
+                          </div>
+                        {/if}
+                        {#if showRaw[transcription.jsonFile]}
+                          <div class="segments">
+                            {#each transcription.transcriptionJson.segments as segment}
+                              <p>
+                                <span class="times">{segment.start}–{segment.end}</span>
+                                {segment.text}
+                              </p>
+                            {/each}
+                          </div>
+                        {/if}
+                        <div class="actions">
+                          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => copyTranscription(transcription)}>
+                            Copy
+                          </button>
+                          {#if !cleaned || transcription.transcriptionJson?.cleanupError}
+                            <button
+                              type="button"
+                              class="dw-btn-secondary dw-btn-compact"
+                              disabled={noteBusy[transcription.jsonFile]}
+                              on:click={() => retryCleanup(transcription.jsonFile)}
+                            >
+                              Retry
+                            </button>
+                          {/if}
+                          {#if !cleaned && !transcription.transcriptionJson?.cleanupSkipped}
+                            <button
+                              type="button"
+                              class="dw-btn-secondary dw-btn-compact"
+                              disabled={noteBusy[transcription.jsonFile]}
+                              on:click={() => skipNoteCleanup(transcription.jsonFile)}
+                            >
+                              Skip
+                            </button>
+                          {/if}
+                          {#if isHolding(transcription.jsonFile) || (folderOf(transcription.jsonFile).key === 'unfiled' && hasDateName(transcription.jsonFile))}
+                            {#if hasDateName(transcription.jsonFile)}
+                              <button
+                                type="button"
+                                class="dw-btn-secondary dw-btn-compact"
+                                disabled={noteBusy[transcription.jsonFile]}
+                                on:click={() => resolveHolding(transcription.jsonFile, 'overwrite')}
+                              >
+                                File
+                              </button>
+                              <button
+                                type="button"
+                                class="dw-btn-secondary dw-btn-compact"
+                                disabled={noteBusy[transcription.jsonFile]}
+                                on:click={() => resolveHolding(transcription.jsonFile, 'rename')}
+                              >
+                                File as copy
+                              </button>
+                            {/if}
+                            {#if isHolding(transcription.jsonFile)}
+                              <button
+                                type="button"
+                                class="dw-btn-secondary dw-btn-compact"
+                                disabled={noteBusy[transcription.jsonFile]}
+                                on:click={() => resolveHolding(transcription.jsonFile, 'unfile')}
+                              >
+                                Unfile
+                              </button>
+                            {/if}
+                          {/if}
+                          <button
+                            type="button"
+                            class="dw-btn-secondary dw-btn-compact is-danger"
+                            on:click={() => deleteTranscription(transcription.jsonFile)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    {/if}
+                  </article>
+                {/each}
+              </div>
             </div>
-          {/if}
-        </article>
-      {/each}
+          {/each}
+        </div>
       {/if}
-    </details>
+    </section>
   {/each}
   {#if hiddenMonths > 0}
-    <p class="muted" use:lazyMore={hiddenMonths}>
+    <p class="dw-muted load-more" use:lazyMore={hiddenMonths}>
       {hiddenMonths} older month{hiddenMonths === 1 ? '' : 's'} — scroll to load
     </p>
   {/if}
@@ -823,98 +950,85 @@
 
 <style lang="scss">
   .transcriptions {
-    padding: 0.5rem 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 0.85rem;
+  }
+
+  .search-card,
+  .tags-card {
+    padding: 0.85rem;
   }
 
   .search {
     display: flex;
-    gap: 0.4rem;
     align-items: center;
-    margin: 0.25rem 0 0.75rem;
+    gap: 0.5rem;
+    position: relative;
   }
 
-  .search input {
-    flex: 1;
-    min-width: 0;
-    padding: 0.45rem 0.55rem;
-    border: 1px solid #ccc;
-    font: inherit;
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    width: 1.0625rem;
+    height: 1.0625rem;
+    color: rgb(251 191 36 / 0.7);
+    transform: translateY(-50%);
+    pointer-events: none;
   }
 
-  .tag-cloud {
-    margin: 0.75rem 0 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #ddd;
+  .search-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
-  .tag-cloud-head {
+  .search .dw-input {
+    padding-left: 2.4rem;
+  }
+
+  .tags-head,
+  .tags-filter,
+  .archive-tools {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    margin-bottom: 0.4rem;
-    font-weight: 600;
+    gap: 0.4rem 0.75rem;
+    margin-bottom: 0.55rem;
   }
 
   .tag-cloud-body {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem 0.5rem;
+    gap: 0.35rem;
   }
 
   .tag-cloud-more {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.4rem;
-    margin-top: 0.55rem;
-  }
-
-  .tag {
-    border: 1px solid #c5d8e6;
-    background: #f4f8fb;
-    color: #135;
-    padding: 0.15rem 0.45rem;
-    line-height: 1.3;
-    cursor: pointer;
-  }
-
-  .tag.small {
-    font-size: 0.7rem;
-    padding: 0.1rem 0.35rem;
-  }
-
-  .tag.active {
-    background: #0088cc;
-    border-color: #0088cc;
-    color: #fff;
-  }
-
-  .tag-count {
-    opacity: 0.65;
-    margin-left: 0.2rem;
-    font-size: 0.75em;
-  }
-
-  .clear,
-  .raw-toggle {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.45rem;
-    background: #666;
+    margin-top: 0.65rem;
   }
 
   .model-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.35rem;
     font-size: 0.75rem;
-    color: #444;
+    color: rgb(161 161 170);
+  }
+
+  .model-toggle input {
+    accent-color: var(--dw-accent);
   }
 
   .consolidate {
     margin-top: 0.7rem;
-    padding: 0.55rem 0.6rem 0.65rem;
-    background: #f7f4ee;
-    border: 1px solid #e2d8c4;
+    padding: 0.7rem 0.8rem;
   }
 
   .consolidate-head {
@@ -922,7 +1036,7 @@
     flex-wrap: wrap;
     gap: 0.35rem 0.75rem;
     align-items: baseline;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.45rem;
   }
 
   .consolidate-list {
@@ -934,132 +1048,204 @@
   }
 
   .consolidate-list li {
-    margin: 0.2rem 0;
+    margin: 0.25rem 0;
   }
 
   .consolidate-list label {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.45rem;
     align-items: flex-start;
-    font-size: 0.8rem;
-    line-height: 1.35;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .consolidate-list input {
+    accent-color: var(--dw-accent);
+    margin-top: 0.15rem;
   }
 
   .consolidate-list em {
-    color: #666;
+    color: rgb(161 161 170);
     font-style: normal;
     margin-left: 0.35rem;
   }
 
-  .empty,
-  .muted {
-    color: #666;
-    padding: 0.5rem 0;
+  .year-block {
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid rgb(255 255 255 / 0.06);
+    background: rgb(0 0 0 / 0.15);
   }
 
-  .folder {
-    margin: 0.5rem 0;
-    border-top: 1px solid #ddd;
-  }
-
-  summary {
+  .year-head {
     display: flex;
-    align-items: baseline;
+    width: 100%;
+    align-items: center;
     gap: 0.5rem;
-    padding: 0.6rem 0.15rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
     cursor: pointer;
-    list-style: none;
-    font-size: 1rem;
+    font: inherit;
+    padding: 0.65rem 0.85rem;
+    text-align: left;
   }
 
-  summary::-webkit-details-marker {
-    display: none;
+  .year-head:hover {
+    background: rgb(255 255 255 / 0.04);
   }
 
-  .folder-name {
+  .chevron {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: rgb(113 113 122);
+    transition: transform 0.2s ease;
+  }
+
+  .chevron.is-closed {
+    transform: rotate(-90deg);
+  }
+
+  .year-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875rem;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
-  .folder-count {
-    color: #666;
-    font-size: 0.8rem;
+  .year-count {
+    margin-left: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: rgb(113 113 122);
+  }
+
+  .year-body {
+    border-top: 1px solid rgb(255 255 255 / 0.05);
+    padding: 0.5rem 0.55rem 0.75rem;
+  }
+
+  .month-block + .month-block {
+    margin-top: 0.75rem;
+  }
+
+  .month-rail {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.375rem;
+    background: rgb(9 9 11 / 0.85);
+    backdrop-filter: blur(8px);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgb(161 161 170);
+  }
+
+  .month-rail span:last-child {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    text-transform: none;
+    color: rgb(82 82 91);
+  }
+
+  .notes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .note {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.35rem 0.5rem;
-    padding: 0.55rem 0.15rem 0.7rem;
-    border-top: 1px solid #eee;
+    position: relative;
+    padding: 0.85rem 1rem;
   }
 
-  .note.expanded {
-    background: #faf6f6;
+  .note.is-open {
+    padding-bottom: 1rem;
   }
 
-  .note header {
-    cursor: pointer;
+  .note.is-playing::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7rem;
+    bottom: 0.7rem;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, #fcd34d, #f59e0b, #ea580c);
+  }
+
+  .note-head {
+    display: block;
+    width: 100%;
     min-width: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-align: left;
   }
 
   .note-title {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 0.4rem;
+    gap: 0.45rem 0.6rem;
   }
 
   .name {
-    font-weight: 600;
+    font-weight: 500;
+    color: rgb(250 250 250);
+    overflow-wrap: anywhere;
   }
 
   .elapsed,
   .status {
-    color: #666;
-    font-weight: 400;
     font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: rgb(113 113 122);
+  }
+
+  .preview {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin-top: 0.35rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: rgb(161 161 170);
   }
 
   .note-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-top: 0.3rem;
-  }
-
-  .preview {
-    margin-top: 0.3rem;
-    color: #333;
-    line-height: 1.4;
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 0.2rem;
-    max-width: 14rem;
-  }
-
-  .actions button {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.45rem;
+    gap: 0.3rem;
+    margin-top: 0.45rem;
   }
 
   .note-body {
-    grid-column: 1 / -1;
-    padding: 0.25rem 0 0.15rem;
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
-
-  .note-body p {
-    margin: 0 0 0.7rem;
+    margin-top: 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.55;
   }
 
   .note-body audio {
     width: 100%;
     margin: 0 0 0.75rem;
+    color-scheme: dark;
   }
 
   .cue {
@@ -1067,58 +1253,79 @@
     grid-template-columns: 3.2rem 1fr;
     gap: 0.6rem;
     width: 100%;
-    text-align: left;
-    background: transparent;
-    color: inherit;
-    padding: 0.45rem 0.35rem;
-    margin: 0 0 0.35rem;
+    margin: 0 0 0.25rem;
+    padding: 0.45rem 0.5rem;
     border: 0;
     border-left: 3px solid transparent;
+    border-radius: 0 0.5rem 0.5rem 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
   }
 
-  .cue:hover,
-  .cue:focus {
-    background: #eef6fb;
-    box-shadow: none;
+  .cue:hover {
+    background: rgb(255 255 255 / 0.04);
   }
 
-  .cue.active {
-    background: #e8f4fa;
-    border-left-color: #0088cc;
+  .cue.is-active {
+    background: rgb(245 158 11 / 0.1);
+    border-left-color: var(--dw-accent);
+  }
+
+  .cue.dw-cue-pulse {
+    animation: dw-msg-highlight-pulse 2s ease-out 1;
   }
 
   .cue.untimed {
     cursor: default;
   }
 
-  .cue.untimed:hover,
-  .cue.untimed:focus {
+  .cue.untimed:hover {
     background: transparent;
   }
 
   .cue-time {
-    color: #0088cc;
-    font-variant-numeric: tabular-nums;
-    font-size: 0.75rem;
     padding-top: 0.15rem;
+    color: var(--dw-accent);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .cue-text {
-    font-weight: 400;
-    line-height: 1.5;
     white-space: pre-wrap;
+  }
+
+  .dw-segmented {
+    margin: 0.65rem 0 0.5rem;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+  }
+
+  .segments {
+    margin-top: 0.5rem;
   }
 
   .segments p {
     margin: 0 0 0.35rem;
-    color: #444;
-    font-size: 0.8rem;
+    color: rgb(161 161 170);
+    font-size: 0.8125rem;
   }
 
   .times {
     display: inline-block;
     min-width: 6rem;
-    color: #666;
+    color: rgb(113 113 122);
     font-variant-numeric: tabular-nums;
+  }
+
+  .load-more {
+    padding: 0.35rem 0.15rem 0.15rem;
   }
 </style>
