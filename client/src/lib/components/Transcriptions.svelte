@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import Fuse from 'fuse.js';
 
   export let transcriptions = [];
@@ -525,25 +526,33 @@
     for (const jsonFile of open) void hydrateNote(jsonFile);
   }
 
-  socket.on('notes-index', (data) => {
+  function onNotesIndex(data) {
     applyIndex(data?.notes);
-  });
+  }
 
-  socket.on('transcription', (data) => {
+  function onTranscription(data) {
     upsertNote(data);
-  });
+  }
 
-  void fetch('/notes/index')
-    .then((res) => {
-      if (!res.ok) throw new Error(`index ${res.status}`);
-      return res.json();
-    })
-    .then((data) => {
-      if ((data?.notes || []).length >= transcriptions.length) applyIndex(data.notes);
-    })
-    .catch((error) => {
-      if (!transcriptions.length) inboxError = error.message || String(error);
-    });
+  onMount(() => {
+    socket.on('notes-index', onNotesIndex);
+    socket.on('transcription', onTranscription);
+    void fetch('/notes/index')
+      .then((res) => {
+        if (!res.ok) throw new Error(`index ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if ((data?.notes || []).length >= transcriptions.length) applyIndex(data.notes);
+      })
+      .catch((error) => {
+        if (!transcriptions.length) inboxError = error.message || String(error);
+      });
+    return () => {
+      socket.off('notes-index', onNotesIndex);
+      socket.off('transcription', onTranscription);
+    };
+  });
 </script>
 
 <section class="transcriptions">
