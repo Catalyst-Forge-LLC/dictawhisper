@@ -21,6 +21,16 @@ export type PlaybackCue = {
   text: string;
 };
 
+/** How one cleanup pass was produced. Current text is also in `cleanedTranscription`. */
+export type CleanupRecord = {
+  text: string;
+  createdAt?: string;
+  model?: string;
+  host?: string;
+  promptVersion?: number;
+  dictawhisperVersion?: string;
+};
+
 /** Sidecar JSON next to a recording. Disk is the source of truth. */
 export type TranscriptionDocument = {
   text?: string;
@@ -34,6 +44,8 @@ export type TranscriptionDocument = {
   whisper?: Record<string, unknown>;
   playbackCues?: PlaybackCue[];
   playbackCuesSource?: string;
+  cleanup?: CleanupRecord;
+  cleanupHistory?: CleanupRecord[];
   cleanupError?: string;
   cleanupAttempts?: number;
   cleanupSkipped?: boolean;

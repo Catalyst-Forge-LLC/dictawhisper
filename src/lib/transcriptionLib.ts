@@ -15,6 +15,7 @@ import { collapseSpeechLoops } from './speechCleanupLib.ts';
 import { config } from '../config.ts';
 import { ollanetIsConfigured } from './ollanetReadyLib.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
+import { applyCleanupProvenance, dictawhisperVersion } from './cleanupProvenanceLib.ts';
 
 export const transcriptions: Record<string, any> = {};
 
@@ -178,9 +179,14 @@ export async function cleanTranscription(
       return;
     }
 
-    transcriptionJson.cleanedTranscription = jsonCompletion.cleanedTranscription;
+    applyCleanupProvenance(transcriptionJson, {
+      text: jsonCompletion.cleanedTranscription,
+      model: String(meta?.model || config.ollanet.cleanModel || '').trim(),
+      host: String(meta?.machine || config.ollanet.machine || '').trim(),
+      promptVersion: CLEAN_PROMPT_VERSION,
+      dictawhisperVersion: dictawhisperVersion(),
+    });
     transcriptionJson.tags = jsonCompletion.tags || [];
-    transcriptionJson.promptVersion = CLEAN_PROMPT_VERSION;
     if (thinking) transcriptionJson.thinking = thinking;
     if (meta) transcriptionJson.meta = meta;
     delete transcriptionJson.cleanupError;

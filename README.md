@@ -134,7 +134,7 @@ pnpm retranscribe --dir="./notes/2026/08" --limit=5 --reclean
 pnpm retranscribe --force
 ```
 
-`--reclean` runs ollanet again after the new transcript. Without it, cleaned text and tags are kept; only words/times/raw text update.
+`--reclean` runs ollanet again after the new transcript. Without it, cleaned text and tags are kept; only words/times/raw text update. Each successful cleanup writes a `cleanup` record (text, time, model, host, prompt version, app version). The previous record, if any, is prepended to `cleanupHistory` (capped). `cleanedTranscription` remains the current text.
 
 ---
 

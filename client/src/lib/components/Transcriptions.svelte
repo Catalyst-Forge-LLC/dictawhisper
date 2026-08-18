@@ -132,6 +132,18 @@
     return `/audio?file=${encodeURIComponent(jsonFile)}`;
   }
 
+  function cleanupLabel(json) {
+    const row = json?.cleanup;
+    if (!row || typeof row !== 'object') return '';
+    const parts = [];
+    if (row.createdAt) parts.push(String(row.createdAt).slice(0, 10));
+    if (row.model) parts.push(row.model);
+    if (row.host) parts.push(row.host);
+    const earlier = Array.isArray(json.cleanupHistory) ? json.cleanupHistory.length : 0;
+    if (earlier) parts.push(`${earlier} earlier`);
+    return parts.join(' · ');
+  }
+
   function formatTime(seconds) {
     const total = Math.max(0, Math.floor(Number(seconds) || 0));
     const minutes = Math.floor(total / 60);
@@ -846,6 +858,10 @@
                           on:timeupdate={(event) => onAudioTime(transcription, event)}
                         ></audio>
                         {#if cleaned}
+                          {@const cleanedBy = cleanupLabel(transcription.transcriptionJson)}
+                          {#if cleanedBy}
+                            <p class="dw-muted">Cleaned {cleanedBy}</p>
+                          {/if}
                           {#if transcription.transcriptionJson?.playbackCuesSource !== 'words'}
                             <p class="dw-muted">
                               Section times need a re-transcribe for word timestamps. Raw segments below still have Whisper times.
