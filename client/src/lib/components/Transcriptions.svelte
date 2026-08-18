@@ -462,15 +462,31 @@
     }
   }
 
-  socket.on('notes-index', (data) => {
+  function applyIndex(notes) {
     const open = Object.keys(expanded).filter((key) => expanded[key]);
-    transcriptions = data?.notes || [];
+    transcriptions = notes || [];
     for (const jsonFile of open) void hydrateNote(jsonFile);
+  }
+
+  socket.on('notes-index', (data) => {
+    applyIndex(data?.notes);
   });
 
   socket.on('transcription', (data) => {
     upsertNote(data);
   });
+
+  void fetch('/notes/index')
+    .then((res) => {
+      if (!res.ok) throw new Error(`index ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      if ((data?.notes || []).length >= transcriptions.length) applyIndex(data.notes);
+    })
+    .catch((error) => {
+      if (!transcriptions.length) inboxError = error.message || String(error);
+    });
 </script>
 
 <section class="transcriptions">

@@ -8,6 +8,7 @@ import { socketConnect, socketEvents } from './socketEvents.ts';
 import {
   cleanTranscription,
   initTranscriptionWatcher,
+  emitNotesIndex,
   loadExistingTranscriptions,
   setTranscriptionIo,
   transcriptions,
@@ -135,6 +136,7 @@ async function main() {
 
   fs.mkdirSync(config.watch.browserDropFolder, { recursive: true });
   loadExistingTranscriptions([...config.watch.roots, config.watch.browserDropFolder]);
+  emitNotesIndex();
 
   initTranscriptionWatcher(config.watch.browserDropFolder, {
     watchDepth: 2,
