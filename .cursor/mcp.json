@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dictawhisper": {
+      "command": "node",
+      "args": ["--experimental-strip-types", "src/mcp.ts"]
+    }
+  }
+}

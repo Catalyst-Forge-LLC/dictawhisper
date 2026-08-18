@@ -138,6 +138,28 @@ pnpm retranscribe --force
 
 ---
 
+## MCP (read-only)
+
+Agents can search the journal without managing it. `pnpm mcp` is a stdio server over the same sidecar files. No writes. The API does not need to be running.
+
+Tools: `dictawhisper_search`, `dictawhisper_get_note`, `dictawhisper_list_tags`, `dictawhisper_recent`.
+
+This repo ships `.cursor/mcp.json`. Elsewhere:
+
+```json
+{
+  "mcpServers": {
+    "dictawhisper": {
+      "command": "node",
+      "args": ["--experimental-strip-types", "src/mcp.ts"],
+      "cwd": "/absolute/path/to/dictawhisper"
+    }
+  }
+}
+```
+
+---
+
 ## HTTP
 
 | Method | Path | Purpose |
