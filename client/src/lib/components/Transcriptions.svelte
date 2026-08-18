@@ -315,8 +315,14 @@
     : [...specialGroups, ...datedGroups.slice(0, monthPage)];
   $: hiddenMonths = selectedTags.length ? 0 : Math.max(0, datedGroups.length - monthPage);
   $: newestDatedYear = datedGroups[0]?.year;
-  $: yearSections = nestByYear(pagedGroups);
+  $: yearSections = nestByYear(groups);
   $: datedYearCount = yearSections.filter((section) => section.kind === 'year').length;
+  $: pagedKeys = new Set(pagedGroups.map((group) => group.key));
+  let pagedYearInit = false;
+  $: if (!pagedYearInit && newestDatedYear) {
+    pagedYearInit = true;
+    pageThroughYear(newestDatedYear);
+  }
 
   function nestByYear(monthGroups) {
     const sections = [];
@@ -363,9 +369,25 @@
     return defaultYearOpen(section.key, section.kind);
   }
 
+  function monthsToShow(section) {
+    if (selectedTags.length || searchQuery.trim()) return section.months;
+    return section.months.filter((group) => pagedKeys.has(group.key));
+  }
+
+  function pageThroughYear(year) {
+    if (!year) return;
+    let lastIndex = -1;
+    for (let i = 0; i < datedGroups.length; i++) {
+      if (datedGroups[i].year === year) lastIndex = i;
+    }
+    if (lastIndex >= 0 && monthPage < lastIndex + 1) monthPage = lastIndex + 1;
+  }
+
   function toggleYear(section) {
-    yearOpen[section.key] = !isYearOpen(section);
+    const nextOpen = !isYearOpen(section);
+    yearOpen[section.key] = nextOpen;
     yearOpen = yearOpen;
+    if (nextOpen && section.kind === 'year') pageThroughYear(section.key);
   }
 
   function focusRecentYears() {
@@ -382,6 +404,7 @@
     const next = {};
     for (const section of yearSections) next[section.key] = true;
     yearOpen = next;
+    if (datedGroups.length) monthPage = datedGroups.length;
   }
 
   async function hydrateNote(jsonFile) {
@@ -415,17 +438,20 @@
     const bump = (left) => {
       if (left > 0) monthPage += 1;
     };
+    const root = node.closest('.dw-main');
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) bump(remaining);
       },
-      { rootMargin: '800px' }
+      { root: root || null, rootMargin: '800px' }
     );
     observer.observe(node);
     return {
       update(left) {
         remaining = left;
-        if (left > 0 && node.getBoundingClientRect().top < window.innerHeight + 800) bump(left);
+        const top = node.getBoundingClientRect().top;
+        const limit = (root?.clientHeight || window.innerHeight) + 800;
+        if (left > 0 && top < limit) bump(left);
       },
       destroy() {
         observer.disconnect();
@@ -754,7 +780,7 @@
       </button>
       {#if isYearOpen(section)}
         <div class="year-body">
-          {#each section.months as group (group.key)}
+          {#each monthsToShow(section) as group (group.key)}
             <div class="month-block">
               {#if section.kind === 'year'}
                 <div class="month-rail">
