@@ -2,11 +2,11 @@ import { spawn, type ChildProcess } from 'child_process';
 
 const children: ChildProcess[] = [];
 
-function run(command: string, args: string[]) {
+function run(command: string, args: string[], hide = true) {
   const child = spawn(command, args, {
     stdio: 'inherit',
     env: process.env,
-    windowsHide: true,
+    windowsHide: hide,
   });
   children.push(child);
   child.on('error', (error) => {
@@ -19,7 +19,8 @@ function run(command: string, args: string[]) {
   });
 }
 
-run(process.execPath, ['--experimental-strip-types', 'src/server.ts']);
+// windowsHide hides Node stdout in Git Bash; the API child must stay visible.
+run(process.execPath, ['--experimental-strip-types', 'src/server.ts'], false);
 
 if (process.platform === 'win32') {
   // pnpm is a .cmd on PATH; CreateProcess cannot run it without cmd.exe.

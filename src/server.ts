@@ -82,7 +82,41 @@ io.on('connection', (socket) => {
   }
 });
 
+function listen(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.once('error', (error: NodeJS.ErrnoException) => {
+      reject(error);
+    });
+    server.listen(config.http.port, listenHost, () => {
+      console.log(`listening on ${listenHost}:${config.http.port}`);
+      if (config.http.tailscale) {
+        if (tailscaleSelf) {
+          console.log(
+            `[tailscale] inbox ${inboxUrls(config, tailscaleSelf)
+              .filter((url) => !url.includes('127.0.0.1') && !url.includes('localhost'))
+              .join('  ')}`
+          );
+        } else {
+          console.warn(
+            '[tailscale] enabled but `tailscale` CLI did not return an IP — UI is on 0.0.0.0:7777; add CORS origins by hand if needed'
+          );
+        }
+      }
+      resolve();
+    });
+  });
+}
+
 async function main() {
+  console.log('[health] probing (python / CUDA / ffmpeg / ollanet); UI can connect once the port is up');
+  try {
+    await listen();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[health] FAIL  port ${listenHost}:${config.http.port} ${detail}`);
+    process.exit(1);
+  }
+
   const report = await collectHealth(config, { mode: 'startup' });
   printHealthReport(report, 'health');
   if (!report.ok) {
@@ -107,21 +141,6 @@ async function main() {
     settleMs: config.watch.browserSettleMs,
   });
   initVoiceRootPipeline(config.watch.roots);
-
-  server.on('error', (error: NodeJS.ErrnoException) => {
-    console.error(`[health] FAIL  port ${listenHost}:${config.http.port} ${error.message}`);
-    process.exit(1);
-  });
-  server.listen(config.http.port, listenHost, () => {
-    console.log(`listening on ${listenHost}:${config.http.port}`);
-    if (config.http.tailscale) {
-      if (tailscaleSelf) {
-        console.log(`[tailscale] inbox ${inboxUrls(config, tailscaleSelf).filter((url) => !url.includes('127.0.0.1') && !url.includes('localhost')).join('  ')}`);
-      } else {
-        console.warn('[tailscale] enabled but `tailscale` CLI did not return an IP — UI is on 0.0.0.0:7777; add CORS origins by hand if needed');
-      }
-    }
-  });
 
   void startWhisperWorker().catch((error: Error) => {
     console.warn(`[whisper] worker did not start (${error.message}); one-shot fallback until it recovers`);
