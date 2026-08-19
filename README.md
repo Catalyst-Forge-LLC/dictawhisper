@@ -12,7 +12,7 @@ The npm package is a name hold. Clone this repo to run it.
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on this computer. The `.json` next to each recording is the note: no database, no account.
 
-Open the UI at [http://localhost:7777](http://localhost:7777). On Tailscale, the same page is reachable from your phone.
+Open the UI at [http://localhost:7777](http://localhost:7777). On Tailscale, the same page is reachable from your phone. If [LocalBerth](https://www.npmjs.com/package/localberth) is installed, 7777 is the `dictawhisper` slip and 8008 is `dictawhisper-api` (loopback; not `--lan`).
 
 ---
 

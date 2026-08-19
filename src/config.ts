@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+import { localberthGet } from './lib/localberthGet.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const defaultConfigPath = path.resolve(__dirname, '../config.json');
@@ -125,7 +126,7 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
   const config: DictaConfig = {
     http: {
       host: process.env.HOST?.trim() || parsed.http.host,
-      port: Number(process.env.PORT) || parsed.http.port,
+      port: Number(process.env.PORT) || localberthGet('dictawhisper-api') || parsed.http.port,
       corsOrigins: parsed.http.corsOrigins,
       tailscale:
         process.env.DICTA_TAILSCALE === '1' ||

@@ -7,7 +7,20 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const UI_PORT = 7777;
+
+function localberthGet(name) {
+  const result = spawnSync("localberth", ["get", name], {
+    encoding: "utf8",
+    timeout: 5000,
+    windowsHide: true,
+    shell: process.platform === "win32",
+  });
+  if (result.status !== 0) return undefined;
+  const n = Number((result.stdout || "").trim());
+  return Number.isInteger(n) && n > 0 && n <= 65535 ? n : undefined;
+}
+
+const UI_PORT = localberthGet("dictawhisper") ?? 7777;
 
 function readHttp() {
   try {

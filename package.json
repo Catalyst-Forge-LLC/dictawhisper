@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
-    "dev": "node --experimental-strip-types src/dev.ts",
+    "dev": "node scripts/ensure-lease.mjs dictawhisper 7777 && node scripts/ensure-lease.mjs dictawhisper-api 8008 && node --experimental-strip-types src/dev.ts",
     "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
     "ui": "pnpm --dir client dev",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -37,7 +37,7 @@
     "doctor": "node --experimental-strip-types src/doctor.ts",
     "mcp": "node --experimental-strip-types src/mcp.ts",
     "retranscribe": "node --experimental-strip-types scripts/retranscribe.ts",
-    "site:dev": "pnpm --dir site dev",
+    "site:dev": "node scripts/ensure-lease.mjs dictawhisper-site 5186 && pnpm --dir site dev",
     "site:build": "pnpm --dir site build",
     "site:deploy": "pnpm --dir site run ship",
     "ship": "pnpm --dir site run ship",
