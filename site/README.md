@@ -11,6 +11,8 @@ pnpm build        # → build/
 
 From the package root: `pnpm site:dev` / `pnpm site:build` / `pnpm ship`. Live target: [dictawhisper.com](https://dictawhisper.com).
 
+If [LocalBerth](https://www.npmjs.com/package/localberth) is installed, this site stays on **5186** as `dictawhisper-site`.
+
 Optional: edit `theme.css` next to `filepress.config.ts`.
 
 ## Deploy (Cloudflare Pages)
