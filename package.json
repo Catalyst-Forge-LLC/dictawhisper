@@ -37,7 +37,7 @@
     "doctor": "node --experimental-strip-types src/doctor.ts",
     "mcp": "node --experimental-strip-types src/mcp.ts",
     "retranscribe": "node --experimental-strip-types scripts/retranscribe.ts",
-    "site:dev": "node scripts/ensure-lease.mjs dictawhisper-site 5186 && pnpm --dir site dev",
+    "site:dev": "node scripts/ensure-lease.mjs dictawhisper-site 5186 && pnpm --dir site dev -- --host",
     "site:build": "pnpm --dir site build",
     "site:deploy": "pnpm --dir site run ship",
     "ship": "pnpm --dir site run ship",
