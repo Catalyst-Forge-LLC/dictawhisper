@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "node ../scripts/ensure-lease.mjs dictawhisper-site 5186 && filepress dev",
+		"dev": "node ../scripts/ensure-lease.mjs dictawhisper-site 5186 && filepress dev --host",
 		"build": "filepress build",
 		"preview": "filepress preview",
 		"check": "filepress check",
