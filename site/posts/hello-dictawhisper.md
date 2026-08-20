@@ -5,7 +5,7 @@ description: The public home for DictaWhisper. Speak, keep the note, stay on you
 tags: [meta, releases]
 ---
 
-This site is the public face of DictaWhisper. The [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme) still has the flags.
+This site is the public face of DictaWhisper. Flags live in the [docs](/docs).
 
 What it does today:
 

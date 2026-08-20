@@ -4,8 +4,9 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "node ../scripts/ensure-lease.mjs dictawhisper-site 5186 && filepress dev --host 0.0.0.0",
-		"build": "filepress build",
+		"docs:build": "node scripts/build-docs.mjs",
+		"dev": "pnpm docs:build && node ../scripts/ensure-lease.mjs dictawhisper-site 5186 && filepress dev --host 0.0.0.0",
+		"build": "pnpm docs:build && filepress build",
 		"preview": "filepress preview",
 		"check": "filepress check",
 		"ship": "pnpm build && wrangler pages deploy build --project-name=dictawhisper",

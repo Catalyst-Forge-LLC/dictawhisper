@@ -1,0 +1,26 @@
+{
+	"sections": [
+		{
+			"title": "Getting started",
+			"items": [
+				{ "id": "introduction", "title": "Introduction" },
+				{ "id": "install", "title": "Install" },
+				{ "id": "quick-start", "title": "Quick start" }
+			]
+		},
+		{
+			"title": "Using DictaWhisper",
+			"items": [
+				{ "id": "run", "title": "Run" },
+				{ "id": "mcp", "title": "MCP" }
+			]
+		},
+		{
+			"title": "Reference",
+			"items": [
+				{ "id": "http", "title": "HTTP" },
+				{ "id": "config", "title": "Config" }
+			]
+		}
+	]
+}

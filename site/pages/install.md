@@ -52,8 +52,8 @@ pnpm retranscribe
 pnpm retranscribe --dir="./notes/2026/08" --limit=5 --reclean
 ```
 
-That walks existing notes, newest first. Every flag is in the [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).
+That walks existing notes, newest first. Flags are in the [docs](/docs/run).
 
 ### Optional: agents, read-only
 
-`pnpm mcp` is a stdio MCP server over the notes files. Search, fetch a note, list tags, list recent. It does not write. Point a client at `src/mcp.ts` as in the GitHub README.
+`pnpm mcp` is a stdio MCP server over the notes files. Search, fetch a note, list tags, list recent. It does not write. See [MCP](/docs/mcp).

@@ -38,11 +38,11 @@ Then attach **dictawhisper.com** in the Cloudflare dashboard.
 Dependency is the public npm package:
 
 ```json
-"getfilepress": "^0.1.3"
+"getfilepress": "^0.1.8"
 ```
 
 ## Content sync
 
-**Site** = product narrative (home, Install, posts). **Root README** = flags, HTTP, env. Same facts in both; the site stays plainer. When behavior changes, update README + `site/pages/*`.
+**Site** = product narrative (home, Install, posts). **`site/docs/`** = flags, HTTP, env, MCP (FilePress mount at `/docs`). **Root README** stays short and points at the docs. When behavior changes, update `site/docs/*` and the matching product page.
 
 Site copy follows [aiBreze](https://aibreze.com): `landing.md` plus [`docs/aibreze-overlay.md`](../docs/aibreze-overlay.md).

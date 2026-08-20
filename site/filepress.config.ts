@@ -18,13 +18,16 @@ export default defineFilepressConfig({
 	],
 	nav: [
 		{ label: 'Home', href: '/' },
+		{ label: 'Docs', href: '/docs' },
 		{ label: 'Posts', href: '/writing' },
 		{ label: 'Install', href: '/install' },
 		{ label: 'GitHub', href: github, icon: 'github' }
 	],
 	footerLinks: [
+		{ label: 'Docs', href: '/docs' },
 		{ label: 'RSS', href: '/rss.xml' },
 		{ label: 'Topics', href: '/topics' },
 		{ label: 'GitHub', href: github, icon: 'github' }
-	]
+	],
+	paths: [{ url: '/docs', dir: 'docs/dist' }]
 });

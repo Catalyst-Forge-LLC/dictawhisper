@@ -49,7 +49,7 @@ pnpm run doctor
 pnpm dev
 ```
 
-Then open [http://localhost:7777](http://localhost:7777). Setup is on [Install](/install). Flags live in the [GitHub README](https://github.com/Catalyst-Forge-LLC/dictawhisper#readme).
+Then open [http://localhost:7777](http://localhost:7777). Setup is on [Install](/install). Flags live in the [docs](/docs).
 
 <div class="cta-row">
   <a class="cta cta-primary" href="/install">Get started →</a>

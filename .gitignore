@@ -1,5 +1,6 @@
 node_modules/
 dist/
+site/docs/dist/
 data/audio-files/*
 !data/audio-files/.gitkeep
 *.log
