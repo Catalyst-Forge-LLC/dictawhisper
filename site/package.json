@@ -12,7 +12,7 @@
 		"deploy": "pnpm ship"
 	},
 	"devDependencies": {
-		"getfilepress": "^0.1.7",
+		"getfilepress": "^0.1.8",
 		"wrangler": "^4.28.0"
 	},
 	"pnpm": {
