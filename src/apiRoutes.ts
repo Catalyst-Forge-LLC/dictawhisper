@@ -106,7 +106,13 @@ export const apiRoutes = [
     path: '/notes/index',
     method: 'GET',
     handler: (_req: express.Request, res: express.Response) => {
-      res.json({ notes: listNoteSummaries() });
+      try {
+        res.json({ notes: listNoteSummaries() });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        console.error(`[notes-index] failed: ${detail}`);
+        res.status(500).json({ error: 'failed to build notes index' });
+      }
     },
   },
   {

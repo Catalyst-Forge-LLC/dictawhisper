@@ -5,7 +5,7 @@
   import CollapsibleAside from '../lib/components/CollapsibleAside.svelte';
   import Transcriptions from '../lib/components/Transcriptions.svelte';
 
-  const socket = io({ path: '/socket.io' });
+  const socket = io({ path: '/socket.io', maxHttpBufferSize: 32e6 });
   let helpOpen = false;
 </script>
 

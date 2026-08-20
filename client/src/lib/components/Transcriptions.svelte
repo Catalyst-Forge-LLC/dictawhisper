@@ -36,6 +36,7 @@
   let applyResult = null;
   let searchQuery = '';
   let inboxError = '';
+  let indexReady = false;
   let noteBusy = {};
   const TAG_CLOUD_CAP = 40;
   const FUSE_OPTS = {
@@ -585,6 +586,9 @@
       })
       .catch((error) => {
         if (!transcriptions.length) inboxError = error.message || String(error);
+      })
+      .finally(() => {
+        indexReady = true;
       });
     return () => {
       socket.off('notes-index', onNotesIndex);
@@ -620,7 +624,9 @@
     <p class="dw-error">{inboxError}</p>
   {/if}
 
-  {#if !transcriptions.length}
+  {#if !transcriptions.length && !indexReady}
+    <p class="dw-empty">Loading notes…</p>
+  {:else if !transcriptions.length}
     <p class="dw-empty">No notes yet. Record or drop a file above.</p>
   {/if}
 

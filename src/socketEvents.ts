@@ -7,7 +7,12 @@ import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 export function socketConnect(socket: Socket, transcriptions: Record<string, any>) {
   const notes = listNoteSummaries();
   console.log(`[socket-connection] A user connected, emitting ${notes.length} note summaries (${Object.keys(transcriptions).length} cached).`);
-  socket.emit('notes-index', { notes });
+  try {
+    socket.emit('notes-index', { notes });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[socket-connection] notes-index emit failed: ${detail}`);
+  }
 }
 
 export const socketEvents = [

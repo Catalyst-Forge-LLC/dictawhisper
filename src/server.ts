@@ -35,7 +35,8 @@ const app = express();
 app.use(express.json());
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  maxHttpBufferSize: 1e6,
+  // Inbox index is ~10MB with a full VoiceNotes tree; 1MB dropped the packet.
+  maxHttpBufferSize: 32e6,
   pingTimeout: 60000,
   cors: {
     origin: corsOrigins,
@@ -118,10 +119,14 @@ async function main() {
     process.exit(1);
   }
 
+  fs.mkdirSync(config.watch.browserDropFolder, { recursive: true });
+  loadExistingTranscriptions([...config.watch.roots, config.watch.browserDropFolder]);
+  emitNotesIndex();
+
   const report = await collectHealth(config, { mode: 'startup' });
   printHealthReport(report, 'health');
   if (!report.ok) {
-    process.exit(1);
+    console.error('[health] startup checks failed; inbox will still serve notes already on disk');
   }
 
   startQueues();
@@ -133,10 +138,6 @@ async function main() {
         : `${formatDuration(config.watch.browserSettleMs)} after last write`
     }`
   );
-
-  fs.mkdirSync(config.watch.browserDropFolder, { recursive: true });
-  loadExistingTranscriptions([...config.watch.roots, config.watch.browserDropFolder]);
-  emitNotesIndex();
 
   initTranscriptionWatcher(config.watch.browserDropFolder, {
     watchDepth: 2,

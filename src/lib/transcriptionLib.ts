@@ -357,7 +357,10 @@ export function loadExistingTranscriptions(roots: string[]) {
   };
 
   for (const root of roots) walk(root);
-  console.log(`[load-transcriptions] loaded ${loaded} sidecar notes from disk`);
+  const indexBytes = Buffer.byteLength(JSON.stringify({ notes: listNoteSummaries() }));
+  console.log(
+    `[load-transcriptions] loaded ${loaded} sidecar notes from disk (~${(indexBytes / 1024 / 1024).toFixed(1)}MB index)`
+  );
 }
 
 export function initTranscriptionForSourceFolders(sourceFolders: string[] = []) {
