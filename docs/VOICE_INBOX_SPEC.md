@@ -1,9 +1,11 @@
 # Voice inbox: file, convert, stamp
 
-**Status:** draft for review — no implementation until this is locked  
+**Status:** first pass in progress (organize + convert inside `__inbox` only)  
 **Date:** 2026-08-20  
 **Surface:** watch-root filing, not a new UI route  
 **Sources:** `E:\archives\old-webroot\sandbox\tools\voicenote_sanity.php`; live tree `C:\Users\acmegeek\VoiceNotes`; sibling [mediatuna](https://github.com/Catalyst-Forge-LLC/mediatuna)
+
+**First pass (locked):** work only under `VoiceNotes/__inbox`. File into `__inbox/YYYY/MM/` (not the live `2021/`–`2026/` journal). Convert non-MP3 → MP3 with MediaTuna. No transcription, no denoise, no sidecars. Older `.txt` / subtitle transcriptions stay put. Commands: `pnpm inbox:organize --dry-run` then `--apply`; `node scripts/inbox-convert-non-mp3.mjs`.
 
 The UI spec said do not grow an ingest page. This is a **folder pipeline** (CLI + the existing voice watcher). The Engram inbox stays a reader.
 
@@ -104,7 +106,7 @@ mediatuna "__inbox" --audio-only --recursive --prefer-mtime
 mediatuna "__inbox" --stamp-dates --prefer-mtime --backup "__inbox/_originals"
 ```
 
-Then DictaWhisper files the resulting MP3s into `YYYY/MM/`.
+Then file the resulting MP3s into `__inbox/YYYY/MM/` for this pass (live `VoiceNotes/YYYY/MM/` later).
 
 If `mediatuna` is not on PATH, doctor warns; inbox convert is skipped; already-MP3 files can still file.
 
