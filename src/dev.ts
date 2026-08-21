@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { execSync, spawn, type ChildProcess } from 'child_process';
 
 const children: ChildProcess[] = [];
 
@@ -30,9 +30,22 @@ if (process.platform === 'win32') {
   run('pnpm', ['--dir', 'client', 'dev']);
 }
 
+function killTree(child: ChildProcess) {
+  if (!child.pid) return;
+  if (process.platform === 'win32') {
+    try {
+      execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' });
+    } catch {
+      child.kill();
+    }
+    return;
+  }
+  child.kill();
+}
+
 function shutdown(code = 0) {
   for (const child of children) {
-    if (!child.killed) child.kill();
+    killTree(child);
   }
   process.exit(code);
 }

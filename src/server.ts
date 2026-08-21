@@ -10,6 +10,7 @@ import {
   initTranscriptionWatcher,
   emitNotesIndex,
   loadExistingTranscriptions,
+  recordAudioFailure,
   setTranscriptionIo,
   transcriptions,
 } from './lib/transcriptionLib.ts';
@@ -50,12 +51,24 @@ function startQueues(): void {
   initQueues({
     transcription: {
       processor: async (task, callback) => {
-        console.log(`[queue-transcription] Cleaning file: ${task.file}`);
-        const working = config.audio.preprocess ? await cleanAudioFile(task.file, false) : task.file;
-        console.log(
-          `[queue-transcription] Transcribing file: ${working} -> ${task.transcriptionFile}`
-        );
-        await whisperTranscribe(working, task.transcriptionFile, callback as any);
+        try {
+          console.log(`[queue-transcription] Cleaning file: ${task.file}`);
+          let working = task.file;
+          if (config.audio.preprocess) {
+            working = await cleanAudioFile(task.file, false);
+          }
+          console.log(
+            `[queue-transcription] Transcribing file: ${working} -> ${task.transcriptionFile}`
+          );
+          await whisperTranscribe(working, task.transcriptionFile, callback as any);
+        } catch (error) {
+          console.error(
+            `[queue-transcription] skip unreadable audio ${task.file}:`,
+            error instanceof Error ? error.message : error,
+          );
+          recordAudioFailure(task.transcriptionFile, error);
+          callback(error instanceof Error ? error : new Error(String(error)));
+        }
       },
       concurrency: config.queues.transcription.concurrency,
       active: config.queues.transcription.active,

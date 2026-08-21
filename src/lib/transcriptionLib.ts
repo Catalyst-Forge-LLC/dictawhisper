@@ -49,8 +49,11 @@ export function summarizeTranscription(jsonFile: string, json: any = transcripti
   const raw = String(json?.text || '').trim();
   const source = cleaned || raw;
   const compact = source.replace(/\s+/g, ' ').trim();
-  const preview =
-    compact.length > PREVIEW_LIMIT ? `${compact.slice(0, PREVIEW_LIMIT)}…` : compact;
+  const preview = json?.audioError && !compact
+    ? '[unreadable audio]'
+    : compact.length > PREVIEW_LIMIT
+      ? `${compact.slice(0, PREVIEW_LIMIT)}…`
+      : compact;
   return {
     jsonFile,
     basename: path.basename(jsonFile),
@@ -119,7 +122,11 @@ export function checkTranscription(file: string): {
   const transcriptionExists = fs.existsSync(transcriptionFile);
   if (transcriptionExists) {
     const transcriptionJson = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
-    return { isProcessed: !!transcriptionJson.cleanedTranscription, transcriptionFile, transcriptionExists };
+    return {
+      isProcessed: Boolean(transcriptionJson.cleanedTranscription || transcriptionJson.audioError),
+      transcriptionFile,
+      transcriptionExists,
+    };
   }
   return { isProcessed: false, transcriptionFile, transcriptionExists };
 }
@@ -215,6 +222,15 @@ function recordCleanupFailure(transcriptionFile: string, error: unknown) {
   }
 }
 
+export function recordAudioFailure(transcriptionFile: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const json = (readSidecar(transcriptionFile) || {}) as TranscriptionDocument;
+  json.audioError = message.slice(0, 500);
+  json.cleanupSkipped = true;
+  fs.writeFileSync(transcriptionFile, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
+  transcriptions[transcriptionFile] = json;
+}
+
 export type ProcessOptions = {
   force?: boolean;
   retry?: boolean;
@@ -295,7 +311,9 @@ function enqueueTranscription(file: string, options: ProcessOptions = {}) {
   enqueue(
     { file, transcriptionFile, transcriptionFolder: path.dirname(transcriptionFile) },
     (_err: any, result?: any) => {
-      const elapsed = result?.elapsed ?? result?.result?.elapsed;
+      if (_err instanceof Error) return;
+      if (_err?.err) return;
+      const elapsed = result?.elapsed ?? result?.result?.elapsed ?? _err?.result?.elapsed;
       enqueueProcessing(file, elapsed);
     }
   );

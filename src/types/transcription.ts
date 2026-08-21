@@ -49,5 +49,7 @@ export type TranscriptionDocument = {
   cleanupError?: string;
   cleanupAttempts?: number;
   cleanupSkipped?: boolean;
+  /** ffmpeg/preprocess could not read the audio. Do not retry until force. */
+  audioError?: string;
   promptVersion?: number;
 };

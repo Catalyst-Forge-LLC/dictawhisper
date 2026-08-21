@@ -24,18 +24,19 @@ export class Queue {
 
   init(): async.QueueObject<any> {
     const queue = async.queue((task, callback) => {
-      // Check your custom condition here
-      // if (/* your condition to pause processing */) {
-      //   // Wait until the external event/condition is resolved
-      //   await new Promise<void>((resolve) => {
-      //     // You need to trigger resolve() from outside when ready
-      //     // For example, expose a method or use an event emitter
-      //     task._resume = resolve;
-      //   });
-      // }
-      // Now call the original processor
+      let settled = false;
+      const done: QueueCallback = (err, result) => {
+        if (settled) return;
+        settled = true;
+        (callback as QueueCallback)(err, result);
+      };
       console.log(`[queue-${this.name}] Processing task (${this.queue.length() + 1} remain in queue):`, task);
-      this.config.processor(task, callback);
+      try {
+        const ret = this.config.processor(task, done);
+        Promise.resolve(ret).catch((err) => done(err));
+      } catch (err) {
+        done(err);
+      }
     }, this.config.concurrency);
 
     // Default or custom drain handler
