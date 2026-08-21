@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { test } from 'node:test';
+import { parseFilenameDate } from '../../mediatuna/lib/filename-dates.js';
 import { planFile, parseEmbeddedUnderscoreDate } from '../scripts/inbox-organize.mjs';
 import { isPhoneDumpName, stampedNameFromMtime } from '../scripts/inbox-stamp-mtime.mjs';
 import { plannedMtime } from '../scripts/inbox-fix-mtime.mjs';
@@ -64,6 +65,13 @@ test('stamps phone dumps with MTIME_ from local mtime', () => {
   assert.equal(isPhoneDumpName('VOICE_057.mp3'), false);
   const name = stampedNameFromMtime('Record000.mp3', new Date(2006, 2, 21, 12, 29, 14));
   assert.equal(name, 'MTIME_2006-03-21_12-29-14_Record000.mp3');
+});
+
+test('mtime fix treats a Z stamp as UTC', () => {
+  const parsed = parseFilenameDate('2011-07-10_10-56-21Z_Memo.m4a');
+  assert.equal(parsed.hasZ, true);
+  const next = plannedMtime(parsed, new Date(2015, 7, 23, 17, 42, 0));
+  assert.equal(next.toISOString(), '2011-07-10T10:56:21.000Z');
 });
 
 test('mtime fix keeps the clock and changes only the calendar date', () => {

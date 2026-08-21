@@ -25,10 +25,10 @@ function parseNameDate(basename) {
 }
 
 export function plannedMtime(parsed, currentMtime) {
-  const hour = parsed.hasTime ? Number(parsed.parsed.hour) : currentMtime.getHours();
-  const minute = parsed.hasTime ? Number(parsed.parsed.minute) : currentMtime.getMinutes();
-  const second = parsed.hasTime ? Number(parsed.parsed.second) : currentMtime.getSeconds();
-  return new Date(
+  const hour = parsed.parsed.hasTime ? Number(parsed.parsed.hour) : currentMtime.getHours();
+  const minute = parsed.parsed.hasTime ? Number(parsed.parsed.minute) : currentMtime.getMinutes();
+  const second = parsed.parsed.hasTime ? Number(parsed.parsed.second) : currentMtime.getSeconds();
+  const args = [
     Number(parsed.parsed.year),
     Number(parsed.parsed.month) - 1,
     Number(parsed.parsed.day),
@@ -36,7 +36,8 @@ export function plannedMtime(parsed, currentMtime) {
     minute,
     second,
     currentMtime.getMilliseconds(),
-  );
+  ];
+  return parsed.hasZ ? new Date(Date.UTC(...args)) : new Date(...args);
 }
 
 function walkMedia(inboxRoot) {
