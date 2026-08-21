@@ -19,7 +19,7 @@ import { closeAllWatchers } from './classes/Watcher.ts';
 import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
 import { startWhisperWorker, stopWhisperWorker, whisperTranscribe } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
-import { cleanAudioFile } from './lib/audioLib.ts';
+import { cleanAudioFile, probeAudioFile } from './lib/audioLib.ts';
 import { collectHealth, printHealthReport } from './lib/healthLib.ts';
 import {
   apiListenHost,
@@ -52,6 +52,10 @@ function startQueues(): void {
     transcription: {
       processor: async (task, callback) => {
         try {
+          const probe = probeAudioFile(task.file);
+          if (!probe.ok) {
+            throw new Error(`unreadable audio: ${probe.reason}`);
+          }
           console.log(`[queue-transcription] Cleaning file: ${task.file}`);
           let working = task.file;
           if (config.audio.preprocess) {

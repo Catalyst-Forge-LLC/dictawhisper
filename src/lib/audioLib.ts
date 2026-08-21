@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -89,6 +89,44 @@ export function saveUploadedAudio(buffer: Buffer, originalName: string, clipName
   return filePath;
 }
 
+export type AudioProbe = {
+  ok: boolean;
+  reason: string;
+  durationSec?: number;
+  size: number;
+};
+
+const MIN_AUDIO_BYTES = 512;
+
+/** Cheap ffprobe: reject stubs, empty files, and containers with no duration. */
+export function probeAudioFile(filePath: string): AudioProbe {
+  if (!fs.existsSync(filePath)) return { ok: false, reason: 'missing', size: 0 };
+  const size = fs.statSync(filePath).size;
+  if (size < MIN_AUDIO_BYTES) return { ok: false, reason: `too small (${size} bytes)`, size };
+  const result = spawnSync(
+    'ffprobe',
+    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'json', filePath],
+    { encoding: 'utf8', timeout: 15_000, windowsHide: true },
+  );
+  if (result.status !== 0) {
+    const line = String(result.stderr || result.stdout || 'ffprobe failed')
+      .trim()
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .pop();
+    return { ok: false, reason: line || 'ffprobe failed', size };
+  }
+  try {
+    const duration = Number(JSON.parse(result.stdout || '{}')?.format?.duration);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return { ok: false, reason: 'no duration', size };
+    }
+    return { ok: true, reason: `${duration.toFixed(1)}s`, durationSec: duration, size };
+  } catch {
+    return { ok: false, reason: 'ffprobe json', size };
+  }
+}
+
 function unlinkIfExists(filePath: string): void {
   try {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -134,6 +172,10 @@ export async function cleanAudioFile(file: string, cleanAgain = false): Promise<
   }
 
   const source = fs.existsSync(originalFile) && cleanAgain ? originalFile : file;
+  const probe = probeAudioFile(source);
+  if (!probe.ok) {
+    throw new Error(`unreadable audio: ${probe.reason}`);
+  }
   await runFfmpeg([
     '-y',
     '-i',
