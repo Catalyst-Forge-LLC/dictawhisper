@@ -3,6 +3,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { planFile, parseEmbeddedUnderscoreDate } from '../scripts/inbox-organize.mjs';
 import { isPhoneDumpName, stampedNameFromMtime } from '../scripts/inbox-stamp-mtime.mjs';
+import { plannedMtime } from '../scripts/inbox-fix-mtime.mjs';
 
 const inbox = 'C:\\Users\\acmegeek\\VoiceNotes\\__inbox';
 
@@ -63,6 +64,16 @@ test('stamps phone dumps with MTIME_ from local mtime', () => {
   assert.equal(isPhoneDumpName('VOICE_057.mp3'), false);
   const name = stampedNameFromMtime('Record000.mp3', new Date(2006, 2, 21, 12, 29, 14));
   assert.equal(name, 'MTIME_2006-03-21_12-29-14_Record000.mp3');
+});
+
+test('mtime fix keeps the clock and changes only the calendar date', () => {
+  const parsed = parseEmbeddedUnderscoreDate('001_A_001_Sam Douglas_2007_08_07.mp3');
+  const next = plannedMtime(parsed, new Date(2015, 7, 23, 17, 42, 17));
+  assert.equal(next.getFullYear(), 2007);
+  assert.equal(next.getMonth(), 7);
+  assert.equal(next.getDate(), 7);
+  assert.equal(next.getHours(), 17);
+  assert.equal(next.getMinutes(), 42);
 });
 
 test('files MTIME_ names into __inbox/YYYY/MM', () => {
