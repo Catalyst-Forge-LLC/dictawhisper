@@ -9,6 +9,10 @@ test('reads year and month from a dated basename', () => {
     year: '2026',
     month: '01',
   });
+  assert.deepEqual(dateFromFilename('MTIME_2006-03-21_12-29-14_Record000.mp3'), {
+    year: '2006',
+    month: '03',
+  });
 });
 
 test('returns null when the basename is not dated', () => {

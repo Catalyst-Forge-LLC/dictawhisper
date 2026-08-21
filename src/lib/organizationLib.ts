@@ -7,7 +7,7 @@ import { confirmFolder, moveFile } from './fsLib.ts';
 import { checkTranscription, getTranscriptionFilename, process, relocateTranscription } from './transcriptionLib.ts';
 import { config } from '../config.ts';
 
-const DATE_NAME = /^(\d{4})-(\d{2})-\d{2}/;
+const DATE_NAME = /^(?:MTIME_)?(\d{4})-(\d{2})-\d{2}/;
 
 export function dateFromFilename(filePath: string): { year: string; month: string } | null {
   const match = path.basename(filePath).match(DATE_NAME);

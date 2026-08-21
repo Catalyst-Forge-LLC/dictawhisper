@@ -40,7 +40,7 @@ export function isInboxMedia(filePath) {
   return AUDIO_EXTS.has(ext) || EXTRA_MEDIA.has(ext);
 }
 
-function monthFromFolder(dir, inboxRoot) {
+export function monthFromFolder(dir, inboxRoot) {
   const rel = path.relative(inboxRoot, dir).replace(/\\/g, '/');
   const nested = rel.match(/(?:^|\/)(\d{4})\/(\d{2})(?:\/|$)/);
   if (nested) return { year: nested[1], month: nested[2], source: 'folder:YYYY/MM' };
@@ -177,7 +177,6 @@ function movePreservingTimes(src, dest, inboxRoot) {
 }
 
 function removeEmptyDirs(dir, inboxRoot) {
-  if (path.resolve(dir) === path.resolve(inboxRoot)) return;
   let entries;
   try {
     entries = fs.readdirSync(dir);
@@ -192,6 +191,7 @@ function removeEmptyDirs(dir, inboxRoot) {
       // gone
     }
   }
+  if (path.resolve(dir) === path.resolve(inboxRoot)) return;
   try {
     entries = fs.readdirSync(dir);
     if (entries.length === 0) fs.rmdirSync(dir);

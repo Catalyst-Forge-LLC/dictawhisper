@@ -3,6 +3,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { parseFilenameDate } from '../../mediatuna/lib/filename-dates.js';
 import { planFile, parseEmbeddedUnderscoreDate } from '../scripts/inbox-organize.mjs';
+import { planLiveFile } from '../scripts/inbox-file-live.mjs';
 import { isPhoneDumpName, stampedNameFromMtime } from '../scripts/inbox-stamp-mtime.mjs';
 import { plannedMtime } from '../scripts/inbox-fix-mtime.mjs';
 
@@ -93,6 +94,24 @@ test('mtime fix keeps the clock and changes only the calendar date', () => {
   assert.equal(next.getDate(), 7);
   assert.equal(next.getHours(), 17);
   assert.equal(next.getMinutes(), 42);
+});
+
+test('files live MP3s into the watch-root YYYY/MM, not __inbox', () => {
+  const plan = planLiveFile(
+    path.join(inbox, '2006', '03', 'MTIME_2006-03-21_12-29-14_Record000.mp3'),
+    inbox,
+  );
+  assert.equal(plan.action, 'move');
+  assert.equal(plan.year, '2006');
+  assert.equal(plan.month, '03');
+  assert.match(plan.dest.replace(/\\/g, '/'), /\/VoiceNotes\/2006\/03\/MTIME_2006-03-21_12-29-14_Record000\.mp3$/);
+  assert.ok(!plan.dest.replace(/\\/g, '/').includes('/__inbox/'));
+});
+
+test('skips undated inbox MP3s when filing live', () => {
+  const src = path.join(inbox, '2011', '2011 - Grace Voice Recordings 2nd Grade (and Hope)', 'VOICE_001.mp3');
+  const plan = planLiveFile(src, inbox);
+  assert.equal(plan.action, 'skip');
 });
 
 test('files MTIME_ names into __inbox/YYYY/MM', () => {

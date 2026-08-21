@@ -38,6 +38,7 @@
     "mcp": "node --experimental-strip-types src/mcp.ts",
     "retranscribe": "node --experimental-strip-types scripts/retranscribe.ts",
     "inbox:organize": "node scripts/inbox-organize.mjs",
+    "inbox:file-live": "node scripts/inbox-file-live.mjs",
     "inbox:convert": "node scripts/inbox-convert-non-mp3.mjs",
     "inbox:stamp-mtime": "node scripts/inbox-stamp-mtime.mjs",
     "inbox:fix-mtime": "node scripts/inbox-fix-mtime.mjs",
