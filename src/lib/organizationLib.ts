@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import { audioFileRegex, findAudioForSidecar } from './audioLib.ts';
-import { isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
+import { getSettleMs, inspectFileReadiness, isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
 import { Watcher } from '../classes/Watcher.ts';
 import { confirmFolder, moveFile } from './fsLib.ts';
 import { checkTranscription, getTranscriptionFilename, process, relocateTranscription } from './transcriptionLib.ts';
@@ -82,13 +82,13 @@ export async function organizeAudioFile(filePath: string, sourceRoot: string): P
   return destPath;
 }
 
-async function runPipeline(filePath: string, root: string) {
+async function runPipeline(filePath: string, root: string, options: { front?: boolean } = {}) {
   if (pipelineIdle(filePath, root)) return;
   const dest = await organizeAudioFile(filePath, root);
   if (!dest) return;
   const { isProcessed, transcriptionExists } = checkTranscription(dest);
   if (transcriptionExists && isProcessed) return;
-  await process(dest, { force: true });
+  await process(dest, { force: true, front: options.front });
 }
 
 /** One watcher per root: settle → organize onto the final path → transcribe that path. */
@@ -103,6 +103,7 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
       console.error(`[voice-pipeline] Source folder does not exist: ${folder}`);
       continue;
     }
+    let liveAdds = false;
     new Watcher({
       watchFolder: folder,
       watchDepth: depth,
@@ -114,11 +115,22 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
       fileMatchRegex: audioFileRegex,
       addHandler: async (filePath) => {
         if (pipelineIdle(filePath, folder)) return;
-        requestWhenSettled(filePath, () => runPipeline(filePath, folder), { label: 'voice-pipeline' });
+        if (inspectFileReadiness(filePath, getSettleMs()).ready) {
+          await runPipeline(filePath, folder, { front: liveAdds });
+          return;
+        }
+        requestWhenSettled(filePath, () => runPipeline(filePath, folder, { front: true }), {
+          label: 'voice-pipeline',
+        });
       },
       changeHandler: (filePath) => {
         if (pipelineIdle(filePath, folder)) return;
-        requestWhenSettled(filePath, () => runPipeline(filePath, folder), { label: 'voice-pipeline' });
+        requestWhenSettled(filePath, () => runPipeline(filePath, folder, { front: true }), {
+          label: 'voice-pipeline',
+        });
+      },
+      readyHandler: () => {
+        liveAdds = true;
       },
     });
   }

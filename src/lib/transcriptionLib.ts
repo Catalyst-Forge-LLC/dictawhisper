@@ -219,6 +219,8 @@ export type ProcessOptions = {
   force?: boolean;
   retry?: boolean;
   settleMs?: number;
+  /** Put this job ahead of the remaining backlog. */
+  front?: boolean;
 };
 
 export async function process(file: string, options: ProcessOptions = {}) {
@@ -289,7 +291,8 @@ function enqueueTranscription(file: string, options: ProcessOptions = {}) {
   }
 
   console.log(`[process] Adding file to transcription queue: ${file}`);
-  q['transcription'].push(
+  const enqueue = options.front ? q['transcription'].unshift.bind(q['transcription']) : q['transcription'].push.bind(q['transcription']);
+  enqueue(
     { file, transcriptionFile, transcriptionFolder: path.dirname(transcriptionFile) },
     (_err: any, result?: any) => {
       const elapsed = result?.elapsed ?? result?.result?.elapsed;

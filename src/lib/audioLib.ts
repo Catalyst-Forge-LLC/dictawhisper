@@ -8,6 +8,34 @@ export const audioExtensions = ['webm', 'mp3', 'm4a', 'wav', 'ogg'];
 
 export const audioFileRegex = new RegExp(`\\.(${audioExtensions.join('|')})$`, 'i');
 
+const AUDIO_STAMP =
+  /^(?:MTIME_)?(\d{4})-(\d{2})-(\d{2})(?:[_ T](\d{2})[-:](\d{2})[-:](\d{2}))?(Z)?/;
+
+/** Recording time from the basename, or mtime if the name is not dated. */
+export function audioRecencyMs(filePath: string): number {
+  const match = path.basename(filePath).match(AUDIO_STAMP);
+  if (match) {
+    const [, year, month, day, hour, minute, second, z] = match;
+    const y = Number(year);
+    const mo = Number(month) - 1;
+    const d = Number(day);
+    const h = Number(hour || 0);
+    const mi = Number(minute || 0);
+    const s = Number(second || 0);
+    const ms = z ? Date.UTC(y, mo, d, h, mi, s) : new Date(y, mo, d, h, mi, s).getTime();
+    if (!Number.isNaN(ms)) return ms;
+  }
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+export function compareAudioNewestFirst(a: string, b: string): number {
+  return audioRecencyMs(b) - audioRecencyMs(a);
+}
+
 const AUDIO_TYPES: Record<string, string> = {
   '.mp3': 'audio/mpeg',
   '.webm': 'audio/webm',

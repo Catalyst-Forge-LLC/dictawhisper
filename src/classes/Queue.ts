@@ -58,6 +58,10 @@ export class Queue {
     this.queue.push(task, callback as any);
   }
 
+  unshift(task: any, callback?: QueueCallback): void {
+    this.queue.unshift(task, callback as any);
+  }
+
   length(): number {
     return this.queue.length();
   }

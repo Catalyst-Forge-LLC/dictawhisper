@@ -1,5 +1,6 @@
 import chokidar, { FSWatcher } from 'chokidar';
 import fs from 'fs';
+import { compareAudioNewestFirst } from '../lib/audioLib.ts';
 
 type WatcherConfig = {
   watchFolder: string,
@@ -25,6 +26,8 @@ export async function closeAllWatchers(): Promise<void> {
 
 export class Watcher {
   private watcher: FSWatcher;
+  private holdingInitial = true;
+  private pendingAdds: string[] = [];
   logEvents: boolean = false;
 
   constructor(config: WatcherConfig = {watchFolder: '', watchDepth: 0, logEvents: false, ignoreCheck: () => false, fileMatchRegex: new RegExp(''), addHandler: async () => {}}) {
@@ -34,12 +37,15 @@ export class Watcher {
     this.watcher
       .on('add', async (filePath) => {
         const match = filePath.match(config.fileMatchRegex);
-        if (match) {
-          if (this.logEvents) {
-            console.log(`[watcher] File ${filePath} has been added`);
-          }
-          await config.addHandler(filePath, match, config.watchFolder);
+        if (!match) return;
+        if (this.logEvents) {
+          console.log(`[watcher] File ${filePath} has been added`);
         }
+        if (this.holdingInitial) {
+          this.pendingAdds.push(filePath);
+          return;
+        }
+        await config.addHandler(filePath, match, config.watchFolder);
       })
       .on('change', (filePath) => {
         const match = filePath.match(config.fileMatchRegex);
@@ -75,9 +81,21 @@ export class Watcher {
         config.errorHandler?.(error);
       })
       .on('ready', () => {
-        console.log(`[watcher] Initial scan complete of ${config.watchFolder}. Ready for changes`);
-        config.readyHandler?.();
+        void this.flushInitialAdds(config);
       });
+  }
+
+  private async flushInitialAdds(config: WatcherConfig) {
+    this.holdingInitial = false;
+    const files = this.pendingAdds.splice(0).sort(compareAudioNewestFirst);
+    console.log(
+      `[watcher] Initial scan complete of ${config.watchFolder} (${files.length} files, newest first). Ready for changes`,
+    );
+    for (const filePath of files) {
+      const match = filePath.match(config.fileMatchRegex);
+      if (match) await config.addHandler(filePath, match, config.watchFolder);
+    }
+    config.readyHandler?.();
   }
 
   close() {
