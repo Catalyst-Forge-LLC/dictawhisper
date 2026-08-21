@@ -43,6 +43,19 @@ test('parses call-recording underscore clocks', () => {
   assert.equal(parsed.parsed.month, '12');
 });
 
+test('files Sam Douglas tape labels into YYYY/MM from the name date', () => {
+  const parsed = parseEmbeddedUnderscoreDate('001_A_001_Sam Douglas_2007_08_07.mp3');
+  assert.ok(parsed);
+  assert.equal(parsed.parsed.year, '2007');
+  assert.equal(parsed.parsed.month, '08');
+  assert.equal(parsed.parsed.hasTime, false);
+  const plan = planFile(path.join(inbox, '_unfiled', '001_A_001_Sam Douglas_2007_08_07.mp3'), inbox);
+  assert.equal(plan.action, 'move');
+  assert.equal(plan.year, '2007');
+  assert.equal(plan.month, '08');
+  assert.match(path.basename(plan.dest), /^2007-08-07_001_A_001_Sam Douglas\.mp3$/);
+});
+
 test('stamps phone dumps with MTIME_ from local mtime', () => {
   assert.equal(isPhoneDumpName('Record000.mp3'), true);
   assert.equal(isPhoneDumpName('Record017-3.qcp'), true);

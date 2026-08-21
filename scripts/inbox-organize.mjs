@@ -51,12 +51,22 @@ function monthFromFolder(dir, inboxRoot) {
   return null;
 }
 
-/** Call dumps: …_2019_12_03_18_59_40_in */
+/** Call dumps: …_2019_12_03_18_59_40_in. Tape labels: …_2007_08_07 */
 export function parseEmbeddedUnderscoreDate(basename) {
-  const stem = path.basename(basename, path.extname(basename));
-  const m = stem.match(/(?:^|_)(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})(?:_|$)/);
-  if (!m) return null;
-  return parseFilenameDate(`${m[1]}-${m[2]}-${m[3]}_${m[4]}-${m[5]}-${m[6]}${path.extname(basename)}`);
+  const ext = path.extname(basename);
+  const stem = path.basename(basename, ext);
+  const clock = stem.match(/^(.*?)(?:^|_)(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})(?:_|$)/);
+  if (clock) {
+    const rest = (clock[1] || '').replace(/_+$/, '');
+    const rewritten = `${clock[2]}-${clock[3]}-${clock[4]}_${clock[5]}-${clock[6]}-${clock[7]}${rest ? `_${rest}` : ''}${ext}`;
+    return parseFilenameDate(rewritten);
+  }
+  const day = stem.match(/^(.*)_(\d{4})_(\d{2})_(\d{2})$/);
+  if (day) {
+    const rest = day[1].replace(/_+$/, '');
+    return parseFilenameDate(`${day[2]}-${day[3]}-${day[4]}_${rest}${ext}`);
+  }
+  return null;
 }
 
 export function planFile(filePath, inboxRoot) {
@@ -87,9 +97,12 @@ export function planFile(filePath, inboxRoot) {
   }
 
   const destDir = path.join(inbox, year, month);
+  const embedded = parseEmbeddedUnderscoreDate(path.basename(src));
   let destName = parsed ? normalizeDatedBasename(path.basename(src)) : path.basename(src);
-  if (parseEmbeddedUnderscoreDate(path.basename(src)) && !parseFilenameDate(path.basename(src))) {
-    destName = path.basename(src);
+  if (embedded && !parseFilenameDate(path.basename(src))) {
+    destName = normalizeDatedBasename(
+      `${embedded.parsed.year}-${embedded.parsed.month}-${embedded.parsed.day}${embedded.parsed.hasTime ? `_${embedded.parsed.hour}-${embedded.parsed.minute}-${embedded.parsed.second}` : ''}${embedded.rest ? `_${embedded.rest}` : ''}${path.extname(src)}`,
+    );
   }
   let dest = path.join(destDir, destName);
   if (path.resolve(dest) === src) {
@@ -185,11 +198,13 @@ function parseArgs(argv) {
   const limitArg = argv.find((a) => a.startsWith('--limit='));
   const limit = limitArg ? Number(limitArg.slice('--limit='.length)) : Infinity;
   const dirArg = argv.find((a) => a.startsWith('--dir='));
+  const onlyArg = argv.find((a) => a.startsWith('--only='));
+  const only = onlyArg ? onlyArg.slice('--only='.length).toLowerCase() : '';
   const inboxRoot = path.resolve(dirArg ? dirArg.slice('--dir='.length) : DEFAULT_INBOX);
-  return { apply, dryRun, limit, inboxRoot };
+  return { apply, dryRun, limit, only, inboxRoot };
 }
 
-export function planInbox(inboxRoot) {
+export function planInbox(inboxRoot, { only = '' } = {}) {
   assertInsideInbox(inboxRoot, inboxRoot);
   if (path.basename(inboxRoot) !== '__inbox') {
     throw new Error(`expected an __inbox folder, got ${inboxRoot}`);
@@ -197,6 +212,7 @@ export function planInbox(inboxRoot) {
   const taken = new Set();
   const plans = [];
   for (const src of walkMedia(inboxRoot)) {
+    if (only && !path.basename(src).toLowerCase().includes(only)) continue;
     let plan = planFile(src, inboxRoot);
     if (plan.action === 'move' || plan.action === 'unfiled') {
       const dest = uniqueDest(plan.dest, taken, plan.src);
@@ -209,9 +225,9 @@ export function planInbox(inboxRoot) {
 }
 
 function main() {
-  const { apply, limit, inboxRoot } = parseArgs(process.argv.slice(2));
-  console.log(`[inbox-organize] root ${inboxRoot} ${apply ? 'APPLY' : 'dry-run'}`);
-  const plans = planInbox(inboxRoot);
+  const { apply, limit, only, inboxRoot } = parseArgs(process.argv.slice(2));
+  console.log(`[inbox-organize] root ${inboxRoot} ${apply ? 'APPLY' : 'dry-run'}${only ? ` only=${only}` : ''}`);
+  const plans = planInbox(inboxRoot, { only });
   const counts = { move: 0, already: 0, unfiled: 0, collision: 0 };
   let applied = 0;
   for (const plan of plans) {
