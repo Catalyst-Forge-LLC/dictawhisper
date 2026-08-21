@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFilenameDate, normalizeDatedBasename } from '../../mediatuna/lib/filename-dates.js';
-import { copyAndRepairTimestamps } from '../../mediatuna/lib/timestamps.js';
+import { copyAndRepairTimestamps, repairCreatedIfMoved } from '../../mediatuna/lib/timestamps.js';
 import { AUDIO_EXTS } from '../../mediatuna/lib/constants.js';
 
 const DEFAULT_INBOX = 'C:\\Users\\acmegeek\\VoiceNotes\\__inbox';
@@ -79,12 +79,11 @@ export function planFile(filePath, inboxRoot) {
     month = folder.month;
     dateSource = folder.source;
   } else {
-    return {
-      src,
-      dest: path.join(inbox, '_unfiled', path.basename(src)),
-      action: 'unfiled',
-      dateSource: 'none',
-    };
+    const dest = path.join(inbox, '_unfiled', path.basename(src));
+    if (path.resolve(dest) === src) {
+      return { src, dest, action: 'already', dateSource: 'none' };
+    }
+    return { src, dest, action: 'unfiled', dateSource: 'none' };
   }
 
   const destDir = path.join(inbox, year, month);
@@ -99,7 +98,8 @@ export function planFile(filePath, inboxRoot) {
   return { src, dest, action: 'move', dateSource, year, month };
 }
 
-export function uniqueDest(destPath, taken) {
+export function uniqueDest(destPath, taken, srcPath) {
+  if (srcPath && path.resolve(destPath) === path.resolve(srcPath)) return destPath;
   if (!fs.existsSync(destPath) && !taken.has(destPath.toLowerCase())) return destPath;
   const parsed = path.parse(destPath);
   for (let i = 2; i < 10000; i += 1) {
@@ -144,9 +144,15 @@ function movePreservingTimes(src, dest, inboxRoot) {
   assertInsideInbox(src, inboxRoot);
   assertInsideInbox(dest, inboxRoot);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
-  copyAndRepairTimestamps(src, dest);
-  fs.unlinkSync(src);
+  try {
+    fs.renameSync(src, dest);
+    repairCreatedIfMoved(dest);
+    return;
+  } catch {
+    fs.copyFileSync(src, dest);
+    copyAndRepairTimestamps(src, dest);
+    fs.unlinkSync(src);
+  }
 }
 
 function removeEmptyDirs(dir, inboxRoot) {
@@ -193,7 +199,7 @@ export function planInbox(inboxRoot) {
   for (const src of walkMedia(inboxRoot)) {
     let plan = planFile(src, inboxRoot);
     if (plan.action === 'move' || plan.action === 'unfiled') {
-      const dest = uniqueDest(plan.dest, taken);
+      const dest = uniqueDest(plan.dest, taken, plan.src);
       if (dest !== plan.dest) plan = { ...plan, dest, collision: true };
       taken.add(plan.dest.toLowerCase());
     }

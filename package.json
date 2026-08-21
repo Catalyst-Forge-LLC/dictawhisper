@@ -39,6 +39,7 @@
     "retranscribe": "node --experimental-strip-types scripts/retranscribe.ts",
     "inbox:organize": "node scripts/inbox-organize.mjs",
     "inbox:convert": "node scripts/inbox-convert-non-mp3.mjs",
+    "inbox:stamp-mtime": "node scripts/inbox-stamp-mtime.mjs",
     "site:dev": "node scripts/ensure-lease.mjs dictawhisper-site 5186 && pnpm --dir site dev",
     "site:build": "pnpm --dir site build",
     "site:deploy": "pnpm --dir site run ship",
