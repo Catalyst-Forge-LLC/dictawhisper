@@ -66,6 +66,14 @@ export function parseEmbeddedUnderscoreDate(basename) {
     const rest = day[1].replace(/_+$/, '');
     return parseFilenameDate(`${day[2]}-${day[3]}-${day[4]}_${rest}${ext}`);
   }
+  const compact = stem.match(/^recording-(\d{8})-(\d{6})$/i);
+  if (compact) {
+    const day8 = compact[1];
+    const hms = compact[2];
+    return parseFilenameDate(
+      `${day8.slice(0, 4)}-${day8.slice(4, 6)}-${day8.slice(6, 8)}_${hms.slice(0, 2)}-${hms.slice(2, 4)}-${hms.slice(4, 6)}_recording${ext}`,
+    );
+  }
   return null;
 }
 

@@ -45,6 +45,17 @@ test('parses call-recording underscore clocks', () => {
   assert.equal(parsed.parsed.month, '12');
 });
 
+test('files recording-YYYYMMDD-HHMMSS into YYYY/MM', () => {
+  const parsed = parseEmbeddedUnderscoreDate('recording-20110918-090134.mp3');
+  assert.ok(parsed);
+  assert.equal(parsed.parsed.year, '2011');
+  assert.equal(parsed.parsed.month, '09');
+  assert.equal(parsed.parsed.day, '18');
+  const plan = planFile(path.join(inbox, '_unfiled', 'recording-20110918-090134.mp3'), inbox);
+  assert.equal(plan.action, 'move');
+  assert.match(plan.dest.replace(/\\/g, '/'), /__inbox\/2011\/09\/2011-09-18_09-01-34_recording\.mp3$/);
+});
+
 test('files Sam Douglas tape labels into YYYY/MM from the name date', () => {
   const parsed = parseEmbeddedUnderscoreDate('001_A_001_Sam Douglas_2007_08_07.mp3');
   assert.ok(parsed);

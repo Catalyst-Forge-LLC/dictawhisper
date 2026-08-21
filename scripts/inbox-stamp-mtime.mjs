@@ -39,11 +39,14 @@ export function stampedNameFromMtime(basename, mtime) {
   return buildStampedName(basename, prefix) || basename;
 }
 
-export function collectPhoneDumpFiles(unfiledDir) {
+export function collectStampFiles(unfiledDir, { only = '' } = {}) {
   return fs.readdirSync(unfiledDir)
     .filter((name) => {
+      if (name.startsWith('.')) return false;
       const ext = path.extname(name).toLowerCase();
-      return STAMP_EXT.has(ext) && isPhoneDumpName(name) && !name.startsWith('.');
+      if (!STAMP_EXT.has(ext)) return false;
+      if (only) return name.toLowerCase().includes(only);
+      return isPhoneDumpName(name);
     })
     .map((name) => path.join(unfiledDir, name));
 }
@@ -91,18 +94,20 @@ export function planMtimeStamps(files) {
 function parseArgs(argv) {
   const apply = argv.includes('--apply');
   const dirArg = argv.find((a) => a.startsWith('--dir='));
+  const onlyArg = argv.find((a) => a.startsWith('--only='));
+  const only = onlyArg ? onlyArg.slice('--only='.length).toLowerCase() : '';
   const inboxRoot = path.resolve(dirArg ? dirArg.slice('--dir='.length) : DEFAULT_INBOX);
-  return { apply, inboxRoot };
+  return { apply, only, inboxRoot };
 }
 
 function main() {
-  const { apply, inboxRoot } = parseArgs(process.argv.slice(2));
+  const { apply, only, inboxRoot } = parseArgs(process.argv.slice(2));
   if (path.basename(inboxRoot) !== '__inbox') {
     throw new Error(`expected an __inbox folder, got ${inboxRoot}`);
   }
   const unfiled = path.join(inboxRoot, '_unfiled');
   assertInsideInbox(unfiled, inboxRoot);
-  const files = collectPhoneDumpFiles(unfiled);
+  const files = collectStampFiles(unfiled, { only });
   const plans = planMtimeStamps(files);
   console.log(`[inbox-stamp-mtime] ${unfiled} ${apply ? 'APPLY' : 'dry-run'} files=${files.length}`);
   for (const plan of plans) {
