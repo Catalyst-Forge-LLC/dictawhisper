@@ -16,6 +16,7 @@ import { config } from '../config.ts';
 import { ollanetIsConfigured } from './ollanetReadyLib.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
 import { applyCleanupProvenance, dictawhisperVersion } from './cleanupProvenanceLib.ts';
+import { dropSidecar, indexSidecar, notesIndexPayload } from './journalService.ts';
 
 export const transcriptions: Record<string, any> = {};
 
@@ -27,11 +28,12 @@ export function setTranscriptionIo(io: SocketIOServer | null) {
 
 export function emitNotesIndex(target: Socket | SocketIOServer | null = null) {
   const dest = target ?? liveIo;
-  dest?.emit('notes-index', { notes: listNoteSummaries() });
+  dest?.emit('notes-index', notesIndexPayload(listNoteSummaries));
 }
 
 export function forgetTranscription(jsonFile: string) {
   delete transcriptions[jsonFile];
+  dropSidecar(jsonFile);
 }
 
 export function relocateTranscription(oldJson: string, newJson: string) {
@@ -40,6 +42,8 @@ export function relocateTranscription(oldJson: string, newJson: string) {
     transcriptions[newJson] = transcriptions[oldJson];
     delete transcriptions[oldJson];
   }
+  dropSidecar(oldJson);
+  if (fs.existsSync(newJson)) indexSidecar(newJson);
 }
 
 const PREVIEW_LIMIT = 200;
@@ -64,8 +68,6 @@ export function summarizeTranscription(jsonFile: string, json: any = transcripti
       cleanupAttempts: json?.cleanupAttempts ?? 0,
       cleanupSkipped: Boolean(json?.cleanupSkipped),
       preview,
-      searchBody: source,
-      searchRaw: raw,
       hasCleaned: Boolean(cleaned),
       audioError: json?.audioError ? String(json.audioError) : null,
       _partial: true,
@@ -105,6 +107,7 @@ export function emitTranscription(target: Socket | SocketIOServer | null = null,
     fs.writeFileSync(jsonFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
   }
   transcriptions[jsonFile] = transcriptionJson;
+  indexSidecar(jsonFile);
   const dest = target ?? liveIo;
   dest?.emit('transcription', { jsonFile, transcriptionJson });
 }
@@ -230,6 +233,7 @@ export function recordAudioFailure(transcriptionFile: string, error: unknown): v
   json.cleanupSkipped = true;
   fs.writeFileSync(transcriptionFile, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
   transcriptions[transcriptionFile] = json;
+  indexSidecar(transcriptionFile);
 }
 
 export type ProcessOptions = {

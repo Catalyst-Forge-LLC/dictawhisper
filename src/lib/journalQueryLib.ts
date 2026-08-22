@@ -52,7 +52,7 @@ function previewOf(text: string): string {
   return `${oneLine.slice(0, PREVIEW_LIMIT)}…`;
 }
 
-function dayOf(jsonFile: string, basename: string, mtimeMs: number): string {
+export function dayOf(jsonFile: string, basename: string, mtimeMs: number): string {
   const named = basename.match(/^(\d{4}-\d{2}-\d{2})/);
   if (named) return named[1];
   const folded = jsonFile.replace(/\\/g, '/').match(/\/(\d{4})\/(\d{2})(?:\/|$)/);
@@ -67,7 +67,7 @@ function isSidecarName(name: string): boolean {
 function looksLikeNote(json: unknown): json is Record<string, unknown> {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return false;
   const row = json as Record<string, unknown>;
-  return Boolean(row.text || row.cleanedTranscription || Array.isArray(row.segments));
+  return Boolean(row.text || row.cleanedTranscription || row.audioError || Array.isArray(row.segments));
 }
 
 export function loadJournalNotes(roots: string[]): JournalNote[] {

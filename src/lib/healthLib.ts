@@ -5,6 +5,7 @@ import { ollamaBaseUrl, ollamaTags, resolveTarget } from 'ollanet';
 import { configPath, type DictaConfig } from '../config.ts';
 import { apiListenHost, discoverTailscale, inboxUrls } from './tailscaleLib.ts';
 import { getWhisperWorkerStatus, resolveWhisperModel } from './whisperLib.ts';
+import { getJournalIndex, openJournalIndex } from './journalIndexLib.ts';
 
 export type HealthLevel = 'ok' | 'warn' | 'fail';
 
@@ -250,6 +251,37 @@ export async function collectHealth(
     const ping = await probeOllanet(machine, model);
     ollanetReachable = ping.reachable;
     add(checks, 'ollanet', ping.level, ping.message);
+  }
+
+  const journalPath = config.journal.index;
+  if (!fs.existsSync(journalPath)) {
+    add(checks, 'journal-index', 'warn', `journal index missing (${journalPath}); run pnpm journal:index`);
+  } else {
+    let opened = getJournalIndex();
+    let closeAfter = false;
+    try {
+      if (!opened) {
+        opened = openJournalIndex(journalPath);
+        closeAfter = true;
+      }
+      const stats = opened.stats();
+      const vec = opened.hasVec()
+        ? `, ${stats.embedded} embedded${stats.embedModel ? ` (${stats.embedModel})` : ''}`
+        : ', FTS only';
+      add(
+        checks,
+        'journal-index',
+        stats.notes > 0 ? 'ok' : 'warn',
+        stats.notes > 0
+          ? `${stats.notes} notes in SQLite${vec}`
+          : `journal index empty (${journalPath})`,
+      );
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      add(checks, 'journal-index', 'fail', `journal index unreadable (${detail})`);
+    } finally {
+      if (closeAfter) opened?.close();
+    }
   }
 
   if (config.http.tailscale) {

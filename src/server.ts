@@ -21,6 +21,7 @@ import { startWhisperWorker, stopWhisperWorker, whisperTranscribe } from './lib/
 import { initQueues } from './lib/queueLib.ts';
 import { cleanAudioFile, probeAudioFile } from './lib/audioLib.ts';
 import { collectHealth, printHealthReport } from './lib/healthLib.ts';
+import { initJournalIndex, startJournalIndex } from './lib/journalService.ts';
 import {
   apiListenHost,
   discoverTailscale,
@@ -137,8 +138,11 @@ async function main() {
   }
 
   fs.mkdirSync(config.watch.browserDropFolder, { recursive: true });
+  initJournalIndex();
   loadExistingTranscriptions([...config.watch.roots, config.watch.browserDropFolder]);
   emitNotesIndex();
+  const journalRoots = [...config.watch.roots, config.watch.browserDropFolder];
+  void startJournalIndex(journalRoots).then(() => emitNotesIndex());
 
   const report = await collectHealth(config, { mode: 'startup' });
   printHealthReport(report, 'health');

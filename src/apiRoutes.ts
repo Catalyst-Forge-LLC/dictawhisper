@@ -2,6 +2,15 @@ import path from 'path';
 import express from 'express';
 import multer from 'multer';
 import { process, cleanTranscription, countStatus, listNoteSummaries, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
+import {
+  journalStats,
+  journalTags,
+  journalYears,
+  listInboxNotes,
+  notesIndexPayload,
+  searchJournalIndex,
+} from './lib/journalService.ts';
+import type { SearchMode } from './lib/journalIndexLib.ts';
 import { q } from './lib/queueLib.ts';
 import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
@@ -16,6 +25,16 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 80 * 1024 * 1024 },
 });
+
+function queryList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap((item) => queryList(item));
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+}
+
+function queryFlag(value: unknown): boolean {
+  return value === '1' || value === 'true' || value === true;
+}
 
 function requireAllowedFile(req: express.Request, res: express.Response): string | null {
   const file = typeof req.body?.file === 'string' ? req.body.file.trim() : '';
@@ -106,13 +125,100 @@ export const apiRoutes = [
   {
     path: '/notes/index',
     method: 'GET',
-    handler: (_req: express.Request, res: express.Response) => {
+    handler: (req: express.Request, res: express.Response) => {
       try {
-        res.json({ notes: listNoteSummaries() });
+        const year = typeof req.query.year === 'string' ? req.query.year.trim() : '';
+        const month = typeof req.query.month === 'string' ? req.query.month.trim() : '';
+        const unreadable = queryFlag(req.query.unreadable);
+        const all = queryFlag(req.query.all);
+        if (year || month || unreadable || all) {
+          res.json({
+            notes: listInboxNotes({
+              year: year || undefined,
+              month: month || undefined,
+              unreadable: unreadable || undefined,
+              all: all || undefined,
+            }),
+            paged: !all,
+            indexing: journalStats().indexing,
+          });
+          return;
+        }
+        res.json(notesIndexPayload(listNoteSummaries));
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         console.error(`[notes-index] failed: ${detail}`);
         res.status(500).json({ error: 'failed to build notes index' });
+      }
+    },
+  },
+  {
+    path: '/notes/search',
+    method: 'GET',
+    handler: async (req: express.Request, res: express.Response) => {
+      try {
+        const query = typeof req.query.q === 'string' ? req.query.q : '';
+        const tags = queryList(req.query.tag);
+        const since = typeof req.query.since === 'string' ? req.query.since.trim() : '';
+        const until = typeof req.query.until === 'string' ? req.query.until.trim() : '';
+        const modeRaw = typeof req.query.mode === 'string' ? req.query.mode.trim() : '';
+        const mode = modeRaw === 'lex' || modeRaw === 'semantic' || modeRaw === 'hybrid' ? (modeRaw as SearchMode) : undefined;
+        const limit = Number(req.query.limit);
+        const hits = await searchJournalIndex({
+          query,
+          tags,
+          since: since || undefined,
+          until: until || undefined,
+          mode,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          unreadable: queryFlag(req.query.unreadable),
+        });
+        res.json({ hits, count: hits.length });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        console.error(`[notes-search] failed: ${detail}`);
+        res.status(500).json({ error: 'search failed' });
+      }
+    },
+  },
+  {
+    path: '/notes/years',
+    method: 'GET',
+    handler: (_req: express.Request, res: express.Response) => {
+      try {
+        res.json({ years: journalYears() });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ error: detail });
+      }
+    },
+  },
+  {
+    path: '/notes/tags',
+    method: 'GET',
+    handler: (req: express.Request, res: express.Response) => {
+      try {
+        res.json({
+          tags: journalTags({
+            includeSingletons: queryFlag(req.query.includeSingletons),
+            limit: Number(req.query.limit) || undefined,
+          }),
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ error: detail });
+      }
+    },
+  },
+  {
+    path: '/notes/stats',
+    method: 'GET',
+    handler: (_req: express.Request, res: express.Response) => {
+      try {
+        res.json(journalStats());
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ error: detail });
       }
     },
   },

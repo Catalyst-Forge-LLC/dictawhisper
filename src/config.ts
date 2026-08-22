@@ -53,6 +53,14 @@ const ollanetSchema = z
   })
   .default({});
 
+const journalSchema = z
+  .object({
+    index: z.string().default('./data/journal.sqlite'),
+    search: z.enum(['lex', 'semantic', 'hybrid']).default('hybrid'),
+    embedModel: z.string().default(''),
+  })
+  .default({});
+
 export const dictaConfigFileSchema = z
   .object({
     http: httpSchema,
@@ -61,6 +69,7 @@ export const dictaConfigFileSchema = z
     audio: z.object({ preprocess: z.boolean().default(true) }).default({}),
     queues: queuesSchema,
     ollanet: ollanetSchema,
+    journal: journalSchema,
   })
   .strip();
 
@@ -96,6 +105,11 @@ export type DictaConfig = {
     cleanModel: string;
     saveChats: boolean;
     required: boolean;
+  };
+  journal: {
+    index: string;
+    search: 'lex' | 'semantic' | 'hybrid';
+    embedModel: string;
   };
 };
 
@@ -160,6 +174,11 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
       cleanModel: process.env.OLLANET_CLEAN_MODEL?.trim() || parsed.ollanet.cleanModel,
       saveChats: parsed.ollanet.saveChats,
       required: parsed.ollanet.required,
+    },
+    journal: {
+      index: resolveExistingOrPlain(parsed.journal.index),
+      search: parsed.journal.search,
+      embedModel: process.env.DICTA_EMBED_MODEL?.trim() || parsed.journal.embedModel,
     },
   };
 

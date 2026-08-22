@@ -2,7 +2,7 @@
 title: MCP
 ---
 
-Agents can search the journal without managing it. `pnpm mcp` is a stdio server over the same sidecar files. No writes. The API does not need to be running.
+Agents can search the journal without managing it. `pnpm mcp` is a stdio server. Search and tags use `data/journal.sqlite` (FTS5 + sqlite-vec) when that file has rows; otherwise it walks sidecars. No writes. The API does not need to be running. Rebuild with `pnpm journal:index`.
 
 ## Tools
 

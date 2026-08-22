@@ -7,6 +7,7 @@
   let health = null;
   let status = null;
   let probe = null;
+  let journal = null;
   let error = '';
   let timer;
 
@@ -35,14 +36,16 @@
   async function refresh() {
     error = '';
     try {
-      const [healthRes, statusRes, probeRes] = await Promise.all([
+      const [healthRes, statusRes, probeRes, journalRes] = await Promise.all([
         fetch('/health'),
         fetch('/status'),
         fetch('/tools/probe'),
+        fetch('/notes/stats'),
       ]);
       health = await healthRes.json().catch(() => null);
       status = statusRes.ok ? await statusRes.json() : null;
       probe = probeRes.ok || probeRes.status === 409 ? await probeRes.json() : null;
+      journal = journalRes.ok ? await journalRes.json() : null;
     } catch (err) {
       error = err.message || String(err);
     }
@@ -106,6 +109,27 @@
       {status
         ? `${status.done || 0} cleaned · ${status.rawOnly || 0} raw · ${status.pendingAudio || 0} pending · ${status.unreadable || 0} unreadable`
         : '…'}
+    </p>
+    <p class="dw-eyebrow">Index</p>
+    <p class="line">
+      {#if journal?.indexing}
+        Indexing…
+      {:else if journal}
+        {journal.notes || 0} notes
+        {#if journal.unreadable}
+          · {journal.unreadable} unreadable
+        {/if}
+        {#if journal.embedded}
+          · {journal.embedded} embedded{journal.embedModel ? ` (${journal.embedModel})` : ''}
+        {:else}
+          · FTS only
+        {/if}
+        {#if journal.lastRebuild}
+          · rebuilt {String(journal.lastRebuild).slice(0, 16).replace('T', ' ')}
+        {/if}
+      {:else}
+        …
+      {/if}
     </p>
     <div class="row">
       <button

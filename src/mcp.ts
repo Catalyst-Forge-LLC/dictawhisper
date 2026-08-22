@@ -11,6 +11,13 @@ import {
   recentJournal,
   searchJournal,
 } from './lib/journalQueryLib.ts';
+import {
+  getJournalIndex,
+  initJournalIndex,
+  journalTags,
+  recentJournalIndex,
+  searchJournalIndex,
+} from './lib/journalService.ts';
 
 const readOnly = {
   readOnlyHint: true,
@@ -24,6 +31,15 @@ function jsonText(value: unknown) {
 
 function loadNotes() {
   return loadJournalNotes(allowedRoots());
+}
+
+function readyIndex() {
+  try {
+    const index = getJournalIndex() || initJournalIndex();
+    return index.stats().notes > 0 ? index : null;
+  } catch {
+    return null;
+  }
 }
 
 function createServer(): McpServer {
@@ -45,14 +61,17 @@ function createServer(): McpServer {
         since: z.string().optional().describe('Inclusive start day YYYY-MM-DD'),
         until: z.string().optional().describe('Inclusive end day YYYY-MM-DD'),
         limit: z.number().int().min(1).max(50).optional().describe('Max hits (default 10)'),
+        mode: z.enum(['lex', 'semantic', 'hybrid']).optional().describe('Search mode (default from config)'),
       },
       annotations: readOnly,
     },
-    async ({ query, tags, since, until, limit }) => {
+    async ({ query, tags, since, until, limit, mode }) => {
       if (!String(query || '').trim() && !(tags && tags.length)) {
         return jsonText({ error: 'provide query and/or tags' });
       }
-      const hits = searchJournal(loadNotes(), { query, tags, since, until, limit });
+      const hits = readyIndex()
+        ? await searchJournalIndex({ query, tags, since, until, limit, mode })
+        : searchJournal(loadNotes(), { query, tags, since, until, limit });
       return jsonText({ count: hits.length, hits });
     }
   );
@@ -69,7 +88,8 @@ function createServer(): McpServer {
       annotations: readOnly,
     },
     async ({ file, includeRaw }) => {
-      const result = getJournalNote(loadNotes(), file, { includeRaw });
+      const resolved = readyIndex()?.findJsonFile(file) || file;
+      const result = getJournalNote(loadNotes(), resolved, { includeRaw });
       if (!result.ok) return jsonText({ error: result.error });
       return jsonText(result.note);
     }
@@ -86,7 +106,9 @@ function createServer(): McpServer {
       annotations: readOnly,
     },
     async ({ includeSingletons, limit }) => {
-      const tags = listJournalTags(loadNotes(), { includeSingletons, limit });
+      const tags = readyIndex()
+        ? journalTags({ includeSingletons, limit })
+        : listJournalTags(loadNotes(), { includeSingletons, limit });
       return jsonText({ count: tags.length, tags });
     }
   );
@@ -104,7 +126,9 @@ function createServer(): McpServer {
       annotations: readOnly,
     },
     async ({ limit, tags, since, until }) => {
-      const hits = recentJournal(loadNotes(), { limit, tags, since, until });
+      const hits = readyIndex()
+        ? recentJournalIndex({ limit, tags, since, until })
+        : recentJournal(loadNotes(), { limit, tags, since, until });
       return jsonText({ count: hits.length, hits });
     }
   );

@@ -1,14 +1,15 @@
 import fs from 'fs';
 import { audioExtensions, saveAudioFile } from './lib/audioLib.ts';
 import { Socket } from 'socket.io';
-import { forgetTranscription, listNoteSummaries, process } from './lib/transcriptionLib.ts';
+import { emitNotesIndex, forgetTranscription, process } from './lib/transcriptionLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 
 export function socketConnect(socket: Socket, transcriptions: Record<string, any>) {
-  const notes = listNoteSummaries();
-  console.log(`[socket-connection] A user connected, emitting ${notes.length} note summaries (${Object.keys(transcriptions).length} cached).`);
+  console.log(
+    `[socket-connection] A user connected (${Object.keys(transcriptions).length} sidecars cached).`,
+  );
   try {
-    socket.emit('notes-index', { notes });
+    emitNotesIndex(socket);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.error(`[socket-connection] notes-index emit failed: ${detail}`);

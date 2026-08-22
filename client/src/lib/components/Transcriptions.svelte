@@ -1,6 +1,5 @@
 <script>
   import { onMount } from 'svelte';
-  import Fuse from 'fuse.js';
 
   export let transcriptions = [];
   export let socket;
@@ -38,36 +37,16 @@
   let searchQuery = '';
   let inboxError = '';
   let indexReady = false;
+  let indexing = false;
+  let pagedIndex = false;
+  let remoteHits = null;
+  let searchTimer;
+  let lastSearchKey = '';
+  let tagRows = [];
+  let yearCounts = [];
+  let loadedYears = {};
   let noteBusy = {};
   const TAG_CLOUD_CAP = 40;
-  const FUSE_OPTS = {
-    keys: [
-      { name: 'transcriptionJson.tags', weight: 2 },
-      {
-        name: 'searchBody',
-        weight: 1.5,
-        getFn: (item) =>
-          item.transcriptionJson?.searchBody ||
-          item.transcriptionJson?.cleanedTranscription ||
-          item.transcriptionJson?.text ||
-          item.transcriptionJson?.preview ||
-          '',
-      },
-      {
-        name: 'basename',
-        weight: 1,
-        getFn: (item) => item.basename || displayName(item.jsonFile),
-      },
-      {
-        name: 'searchRaw',
-        weight: 0.6,
-        getFn: (item) => item.transcriptionJson?.searchRaw || item.transcriptionJson?.text || '',
-      },
-    ],
-    useTokenSearch: true,
-    ignoreLocation: true,
-    threshold: 0.4,
-  };
 
   function folderOf(jsonFile) {
     const norm = String(jsonFile || '').replace(/\\/g, '/');
@@ -284,6 +263,7 @@
       applyResult = result;
       const mapping = result.mapping || {};
       selectedTags = [...new Set(selectedTags.map((tag) => mapping[tag] || tag))];
+      await loadMeta();
       consolidatePlan = { ...consolidatePlan, groups: [] };
       consolidateSelected = {};
     } catch (error) {
@@ -300,22 +280,128 @@
     applyResult = null;
   }
 
-  $: fuseIndex = new Fuse(transcriptions, FUSE_OPTS);
-  $: searched = searchQuery.trim()
-    ? fuseIndex.search(searchQuery.trim()).map((result) => result.item)
-    : transcriptions;
-  function isUnreadable(item) {
-    return Boolean(item.transcriptionJson?.audioError) || item.transcriptionJson?.preview === '[unreadable audio]';
+  function noteFromHit(hit) {
+    if (hit?.transcriptionJson) return hit;
+    return {
+      jsonFile: hit.jsonFile,
+      basename: hit.basename || displayName(hit.jsonFile),
+      transcriptionJson: {
+        tags: hit.tags || [],
+        preview: hit.preview || '',
+        hasCleaned: Boolean(hit.hasCleaned),
+        audioError: hit.audioError || null,
+        _partial: true,
+      },
+    };
   }
 
-  $: visible = searched.filter((item) => {
-    if (noteFilter === 'unreadable' && !isUnreadable(item)) return false;
-    if (!selectedTags.length) return true;
-    const have = new Set(tagsOf(item));
-    return selectedTags.every((tag) => have.has(tag));
-  });
+  function mergeNotes(notes, { replace = false } = {}) {
+    const incoming = (notes || []).map(noteFromHit);
+    if (replace) {
+      transcriptions = incoming;
+      return;
+    }
+    const map = new Map(transcriptions.map((note) => [note.jsonFile, note]));
+    for (const note of incoming) {
+      const current = map.get(note.jsonFile);
+      if (current?.transcriptionJson && !current.transcriptionJson._partial && note.transcriptionJson?._partial) {
+        continue;
+      }
+      map.set(note.jsonFile, note);
+    }
+    transcriptions = [...map.values()];
+  }
+
+  function markLoadedYears(notes) {
+    for (const note of notes || []) {
+      const folder = folderOf(note.jsonFile);
+      if (folder.year) loadedYears[folder.year] = true;
+    }
+    loadedYears = loadedYears;
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `request failed (${response.status})`);
+    return data;
+  }
+
+  async function loadMeta() {
+    try {
+      const [years, tags] = await Promise.all([
+        fetchJson('/notes/years'),
+        fetchJson('/notes/tags?includeSingletons=1'),
+      ]);
+      yearCounts = years.years || [];
+      tagRows = tags.tags || [];
+    } catch {
+      if (!yearCounts.length) yearCounts = [];
+      if (!tagRows.length) tagRows = buildTagCloud(transcriptions).map(({ tag, count }) => ({ tag, count }));
+    }
+  }
+
+  async function loadBrowse() {
+    const data = await fetchJson('/notes/index');
+    pagedIndex = Boolean(data.paged);
+    indexing = Boolean(data.indexing);
+    mergeNotes(data.notes, { replace: true });
+    markLoadedYears(data.notes);
+    await loadMeta();
+  }
+
+  async function ensureYearLoaded(year) {
+    if (!year || !pagedIndex || loadedYears[year]) return;
+    const data = await fetchJson(`/notes/index?year=${encodeURIComponent(year)}`);
+    mergeNotes(data.notes);
+    loadedYears[year] = true;
+    loadedYears = loadedYears;
+  }
+
+  async function runRemoteFilter() {
+    const q = searchQuery.trim();
+    const filtered = Boolean(q || selectedTags.length || noteFilter === 'unreadable');
+    if (!filtered) {
+      remoteHits = null;
+      return;
+    }
+    try {
+      if (!q && !selectedTags.length && noteFilter === 'unreadable') {
+        const data = await fetchJson('/notes/index?unreadable=1');
+        remoteHits = (data.notes || []).map(noteFromHit);
+        return;
+      }
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      for (const tag of selectedTags) params.append('tag', tag);
+      if (noteFilter === 'unreadable') params.set('unreadable', '1');
+      const data = await fetchJson(`/notes/search?${params}`);
+      remoteHits = (data.hits || data.notes || []).map(noteFromHit);
+    } catch (error) {
+      inboxError = error.message || String(error);
+    }
+  }
+
+  function scheduleFilter(key) {
+    lastSearchKey = key;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => void runRemoteFilter(), 150);
+  }
+
+  $: searchKey = `${searchQuery}\0${selectedTags.join('\t')}\0${noteFilter}`;
+  $: if (indexReady && searchKey !== lastSearchKey) scheduleFilter(searchKey);
+  $: visible = remoteHits || transcriptions;
   $: groups = groupTranscriptions(visible);
-  $: tagCloud = buildTagCloud(transcriptions);
+  $: tagCloud = tagRows.length
+    ? (() => {
+        const max = Math.max(1, ...tagRows.map((row) => row.count));
+        return tagRows.map(({ tag, count }) => ({
+          tag,
+          count,
+          size: `${0.8 + (count / max) * 0.7}rem`,
+        }));
+      })()
+    : buildTagCloud(transcriptions);
   $: frequentTags = tagCloud.filter((item) => item.count > 1);
   $: singletonTags = tagCloud.filter((item) => item.count === 1);
   $: visibleTags = (() => {
@@ -372,7 +458,25 @@
       section.months.push(group);
       section.count += group.items.length;
     }
-    return sections;
+    for (const row of yearCounts) {
+      if (yearMap.has(row.year)) {
+        const section = yearMap.get(row.year);
+        if (section.count < row.count) section.count = row.count;
+        continue;
+      }
+      const section = {
+        kind: 'year',
+        key: row.year,
+        label: row.year,
+        months: [],
+        count: row.count,
+      };
+      yearMap.set(row.year, section);
+      sections.push(section);
+    }
+    const specials = sections.filter((section) => section.kind === 'special');
+    const years = sections.filter((section) => section.kind === 'year').sort((a, b) => b.key.localeCompare(a.key));
+    return [...specials, ...years];
   }
 
   function listIsFiltered() {
@@ -410,7 +514,12 @@
     const nextOpen = !isYearOpen(section);
     yearOpen[section.key] = nextOpen;
     yearOpen = yearOpen;
-    if (nextOpen && section.kind === 'year') pageThroughYear(section.key);
+    if (nextOpen && section.kind === 'year') {
+      pageThroughYear(section.key);
+      void ensureYearLoaded(section.key).catch((error) => {
+        inboxError = error.message || String(error);
+      });
+    }
   }
 
   function focusRecentYears() {
@@ -423,7 +532,16 @@
     yearOpen = next;
   }
 
-  function expandAllYears() {
+  async function expandAllYears() {
+    if (pagedIndex) {
+      try {
+        const data = await fetchJson('/notes/index?all=1');
+        mergeNotes(data.notes);
+        markLoadedYears(data.notes);
+      } catch (error) {
+        inboxError = error.message || String(error);
+      }
+    }
     const next = {};
     for (const section of yearSections) next[section.key] = true;
     yearOpen = next;
@@ -569,14 +687,19 @@
     }
   }
 
-  function applyIndex(notes) {
-    const open = Object.keys(expanded).filter((key) => expanded[key]);
-    transcriptions = notes || [];
-    for (const jsonFile of open) void hydrateNote(jsonFile);
-  }
-
   function onNotesIndex(data) {
-    applyIndex(data?.notes);
+    indexing = Boolean(data?.indexing);
+    if (data?.paged) {
+      pagedIndex = true;
+      mergeNotes(data.notes);
+      markLoadedYears(data.notes);
+    } else if (data?.notes) {
+      mergeNotes(data.notes, { replace: !pagedIndex });
+      markLoadedYears(data.notes);
+    }
+    const open = Object.keys(expanded).filter((key) => expanded[key]);
+    for (const jsonFile of open) void hydrateNote(jsonFile);
+    void loadMeta();
   }
 
   function onTranscription(data) {
@@ -586,14 +709,7 @@
   onMount(() => {
     socket.on('notes-index', onNotesIndex);
     socket.on('transcription', onTranscription);
-    void fetch('/notes/index')
-      .then((res) => {
-        if (!res.ok) throw new Error(`index ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if ((data?.notes || []).length >= transcriptions.length) applyIndex(data.notes);
-      })
+    void loadBrowse()
       .catch((error) => {
         if (!transcriptions.length) inboxError = error.message || String(error);
       })
@@ -641,6 +757,8 @@
 
   {#if !transcriptions.length && !indexReady}
     <p class="dw-empty">Loading notes…</p>
+  {:else if !transcriptions.length && indexing}
+    <p class="dw-empty">Indexing notes…</p>
   {:else if !transcriptions.length}
     <p class="dw-empty">No notes yet. Record or drop a file above.</p>
   {/if}

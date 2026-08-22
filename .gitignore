@@ -2,6 +2,8 @@ node_modules/
 dist/
 site/docs/dist/
 data/audio-files/*
+data/*.sqlite
+data/*.sqlite-*
 !data/audio-files/.gitkeep
 *.log
 .DS_Store

@@ -38,6 +38,7 @@
     "mcp": "node --experimental-strip-types src/mcp.ts",
     "retranscribe": "node --experimental-strip-types scripts/retranscribe.ts",
     "audio:probe": "node --experimental-strip-types scripts/probe-pending.ts",
+    "journal:index": "node --experimental-strip-types scripts/journal-index.ts",
     "inbox:organize": "node scripts/inbox-organize.mjs",
     "inbox:file-live": "node scripts/inbox-file-live.mjs",
     "inbox:convert": "node scripts/inbox-convert-non-mp3.mjs",
@@ -62,6 +63,7 @@
     "multer": "^2.2.0",
     "ollanet": "^0.6.5",
     "socket.io": "^4.8.1",
+    "sqlite-vec": "^0.1.9",
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.24.6"
   },

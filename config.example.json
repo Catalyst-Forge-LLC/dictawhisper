@@ -32,5 +32,10 @@
     "cleanModel": "YOUR-CLEAN-MODEL",
     "saveChats": false,
     "required": false
+  },
+  "journal": {
+    "index": "./data/journal.sqlite",
+    "search": "hybrid",
+    "embedModel": ""
   }
 }

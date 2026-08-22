@@ -10,7 +10,11 @@ Force/delete/read only accept realpaths under configured watch roots.
 | GET | `/status` | pending / raw / done / unreadable counts |
 | GET | `/tools/probe` | Last audio-probe job (running, bad files) |
 | POST | `/tools/probe` | `{ "apply": false }` scan pending audio; `{ "apply": true }` mark unreadable. 202; 409 if already running |
-| GET | `/notes/index` | Inbox summaries (path, tags, preview, search body) |
+| GET | `/notes/index` | Inbox summaries (path, tags, preview). Default: holding + unfiled + newest year. `?year=` `?month=` `?unreadable=1` `?all=1` |
+| GET | `/notes/search` | `?q=` `?tag=` `?since=` `?until=` `?mode=lex\|semantic\|hybrid` `?limit=` `?unreadable=1` |
+| GET | `/notes/years` | Year counts from the SQLite index |
+| GET | `/notes/tags` | Tag counts (`?includeSingletons=1`) |
+| GET | `/notes/stats` | Index size, embed coverage, last rebuild |
 | GET | `/note?file=` | Full sidecar (allowlisted) |
 | GET | `/audio?file=` | Stream allowlisted audio (sidecar or audio path) |
 | POST | `/audio` | Multipart `file` (or `audio`) + optional `clipName` → drop folder, process immediately |

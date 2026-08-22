@@ -1,10 +1,10 @@
 # Scale and search: thousands of notes
 
-**Status:** spec, not implemented  
+**Status:** in progress (S0–S3 wired; embeddings are Ollama + sqlite-vec, not ONNX MiniLM)  
 **Date:** 2026-08-21  
 **Surface:** inbox at 7777, HTTP, MCP. Sidecar JSON stays the source of truth.
 
-The inbox already holds 20 years of notes. Client Fuse over a full `notes-index` payload will not stay fast. This spec replaces that path with a derived SQLite index: FTS5 first, optional local embeddings second.
+The inbox already holds 20 years of notes. Client Fuse over a full `notes-index` payload will not stay fast. This spec replaces that path with a derived SQLite index: FTS5 first, sqlite-vec embeddings second via a local Ollama embed model.
 
 ---
 
@@ -65,7 +65,7 @@ Tables (names can move; jobs cannot):
 
 Columns: `basename`, `tags`, `body` (cleaned preferred), `raw` (Whisper, lower weight at query time).
 
-**`notes_vec`** (phase 2) — [sqlite-vec](https://github.com/asg017/sqlite-vec) float embedding per note. One vector per sidecar, not per paragraph, until we measure. Model and dim locked in config (`journal.embedModel`, default a local MiniLM / nomic-class model the existing Python can run).
+**`notes_vec`** — [sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` table, loaded into Node 24 `node:sqlite`. One float vector per sidecar. Model and dim locked after the first embed (`journal.embedModel`, or the first Ollama tag matching `embed|nomic|mxbai|bge|e5|minilm|arctic`). Bind vec rowids as BigInt; JS numbers arrive as REAL and sqlite-vec rejects them.
 
 Rebuild: `pnpm journal:index` (full walk). Incremental: on `emitTranscription` / sidecar write / delete, upsert or delete that row. Startup: if the db is missing or schema version mismatches, rebuild in the background; inbox can show “indexing…” in Tools, not a white screen.
 
@@ -143,13 +143,12 @@ FTS5 is the lexical engine that belongs in-process with SQLite, survives restart
 ```json
 "journal": {
   "index": "./data/journal.sqlite",
-  "search": "lex",
-  "embedModel": "",
-  "embedDevice": "cpu"
+  "search": "hybrid",
+  "embedModel": ""
 }
 ```
 
-Empty `embedModel` = FTS only. Doctor warns if the db is missing after first run of S1.
+Empty `embedModel` = auto-pick from Ollama tags. If Ollama is unreachable, search stays FTS (`lex`). `pnpm journal:index` rebuilds; `--no-embed` skips vectors.
 
 ---
 
@@ -167,7 +166,7 @@ Empty `embedModel` = FTS only. Doctor warns if the db is missing after first run
 
 ## 10. Open questions
 
-1. **Embed model:** one small local model everyone can run (ONNX MiniLM) vs reuse the Ollama box. Recommendation: CPU ONNX so search works when ollanet is asleep.
+1. **Embed model:** decided — reuse the Ollama box (`sqlite-vec` + `/api/embed`). Lexical search still works when that machine is asleep. ONNX MiniLM is not in this slice.
 2. **Chunking:** one vector per note vs per cleaned paragraph. Start per note; split only if long notes drown short ones.
 3. **FTS language:** `unicode61` + a small synonym list for house names (Kristen, Mindcorp) vs relying on Whisper’s initial prompt + embeddings. Recommendation: prompt terms become FTS synonyms in S1.
 4. **Windows file watch:** incremental index on `emitTranscription` is enough; do not add a second chokidar on `*.json`.
