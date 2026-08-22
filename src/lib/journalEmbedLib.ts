@@ -1,50 +1,100 @@
-import { ollamaBaseUrl, ollamaTags, resolveTarget } from 'ollanet';
+import { listTargets, ollamaBaseUrl, ollamaTags } from 'ollanet';
 import { config } from '../config.ts';
-import { ollanetIsConfigured } from './ollanetReadyLib.ts';
 
 const EMBED_NAME = /embed|nomic|mxbai|bge|e5|minilm|arctic/i;
 
 export type EmbedClient = {
   model: string;
   baseUrl: string;
+  host: string;
   embed(text: string): Promise<number[]>;
 };
 
-export async function resolveOllamaBase(): Promise<string | null> {
-  if (!ollanetIsConfigured()) return null;
-  try {
-    const host = await resolveTarget(config.ollanet.machine);
-    return ollamaBaseUrl(host);
-  } catch {
-    return null;
-  }
+export type EmbedCandidate = {
+  host: string;
+  baseUrl: string;
+  names: string[];
+  local: boolean;
+};
+
+export function modelMatchesPreferred(name: string, preferred: string): boolean {
+  const want = preferred.trim();
+  if (!want) return false;
+  return name === want || name.startsWith(`${want}:`) || name.startsWith(`${want}-`);
 }
 
-export async function pickEmbedModel(baseUrl: string, preferred = ''): Promise<string | null> {
+export function pickEmbedName(names: string[], preferred = ''): string | null {
   const want = preferred.trim();
-  try {
-    const tags = await ollamaTags(baseUrl, 8_000);
-    const names = tags.map((tag: { name: string }) => tag.name);
-    if (want && names.some((name) => name === want || name.startsWith(`${want}:`) || name.startsWith(`${want}-`))) {
-      return names.find((name) => name === want || name.startsWith(`${want}:`) || name.startsWith(`${want}-`)) || want;
-    }
-    const hit = names.find((name) => EMBED_NAME.test(name));
-    return hit || null;
-  } catch {
-    return want || null;
+  if (want) {
+    const hit = names.find((name) => modelMatchesPreferred(name, want));
+    if (hit) return hit;
   }
+  return names.find((name) => EMBED_NAME.test(name)) || null;
+}
+
+/** Prefer a local box, then any ollanet host that has an embed-class model. */
+export function pickEmbedTarget(candidates: EmbedCandidate[], preferred = ''): EmbedCandidate & { model: string } | null {
+  const ranked = [...candidates].sort((a, b) => Number(b.local) - Number(a.local));
+  if (preferred.trim()) {
+    for (const row of ranked) {
+      const model = pickEmbedName(row.names, preferred);
+      if (model && modelMatchesPreferred(model, preferred)) return { ...row, model };
+    }
+  }
+  for (const row of ranked) {
+    const model = pickEmbedName(row.names, preferred);
+    if (model) return { ...row, model };
+  }
+  return null;
 }
 
 export async function createEmbedClient(preferredModel = config.journal.embedModel): Promise<EmbedClient | null> {
-  const baseUrl = await resolveOllamaBase();
-  if (!baseUrl) return null;
-  const model = await pickEmbedModel(baseUrl, preferredModel);
-  if (!model) return null;
+  let targets: Awaited<ReturnType<typeof listTargets>> = [];
+  try {
+    targets = await listTargets();
+  } catch {
+    return null;
+  }
+  const ordered = [...targets].sort(
+    (a, b) => Number(b.isSelf || b.source === 'localhost') - Number(a.isSelf || a.source === 'localhost'),
+  );
+  const candidates: EmbedCandidate[] = [];
+  const want = preferredModel.trim();
+  for (const host of ordered) {
+    const baseUrl = ollamaBaseUrl(host);
+    try {
+      const tags = await ollamaTags(baseUrl, 8_000);
+      candidates.push({
+        host: host.hostname || host.dnsName || host.ip,
+        baseUrl,
+        names: tags.map((tag: { name: string }) => tag.name),
+        local: Boolean(host.isSelf || host.source === 'localhost'),
+      });
+      const pickedSoFar = pickEmbedTarget(candidates, preferredModel);
+      if (!pickedSoFar) continue;
+      if (want && !modelMatchesPreferred(pickedSoFar.model, want)) continue;
+      if (pickedSoFar.local || !want) {
+        return {
+          model: pickedSoFar.model,
+          baseUrl: pickedSoFar.baseUrl,
+          host: pickedSoFar.host,
+          async embed(text: string) {
+            return embedWithOllama(pickedSoFar.baseUrl, pickedSoFar.model, text);
+          },
+        };
+      }
+    } catch {
+      // host offline or not serving Ollama
+    }
+  }
+  const picked = pickEmbedTarget(candidates, preferredModel);
+  if (!picked) return null;
   return {
-    model,
-    baseUrl,
+    model: picked.model,
+    baseUrl: picked.baseUrl,
+    host: picked.host,
     async embed(text: string) {
-      return embedWithOllama(baseUrl, model, text);
+      return embedWithOllama(picked.baseUrl, picked.model, text);
     },
   };
 }

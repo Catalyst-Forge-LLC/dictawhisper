@@ -114,7 +114,7 @@ async function getEmbedClient(): Promise<EmbedClient | null> {
   if (embedClient) return embedClient;
   embedClient = await createEmbedClient();
   if (embedClient) {
-    console.log(`[journal-index] ollama embed model ${embedClient.model}`);
+    console.log(`[journal-index] ollama embed model ${embedClient.model} on ${embedClient.host}`);
   }
   return embedClient;
 }

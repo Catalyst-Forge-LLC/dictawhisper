@@ -65,7 +65,7 @@ Tables (names can move; jobs cannot):
 
 Columns: `basename`, `tags`, `body` (cleaned preferred), `raw` (Whisper, lower weight at query time).
 
-**`notes_vec`** — [sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` table, loaded into Node 24 `node:sqlite`. One float vector per sidecar. Model and dim locked after the first embed (`journal.embedModel`, or the first Ollama tag matching `embed|nomic|mxbai|bge|e5|minilm|arctic`). Bind vec rowids as BigInt; JS numbers arrive as REAL and sqlite-vec rejects them.
+**`notes_vec`** — [sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` table, loaded into Node 24 `node:sqlite`. One float vector per sidecar. Model and dim locked after the first embed (`journal.embedModel`, or the first Ollama tag matching `embed|nomic|mxbai|bge|e5|minilm|arctic` on any ollanet host — local first, then Tailscale). Bind vec rowids as BigInt; JS numbers arrive as REAL and sqlite-vec rejects them.
 
 Rebuild: `pnpm journal:index` (full walk). Incremental: on `emitTranscription` / sidecar write / delete, upsert or delete that row. Startup: if the db is missing or schema version mismatches, rebuild in the background; inbox can show “indexing…” in Tools, not a white screen.
 
