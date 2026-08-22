@@ -288,7 +288,7 @@ The inbox passes when:
 
 - Custom waveform player beyond the capture visualizer.
 - Virtualize the note list.
-- Tag pages or URL-synced filters (Engram does this; we can later).
+- Tag pages or URL-synced filters — see [`INBOX_SEARCH_UX_SPEC.md`](./INBOX_SEARCH_UX_SPEC.md).
 - Light theme.
 - Matching `dictawhisper.com` to this dark shell.
 - Porting Engram components by file copy (different Svelte major, different object).

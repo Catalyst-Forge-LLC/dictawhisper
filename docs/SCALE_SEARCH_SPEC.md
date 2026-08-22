@@ -105,7 +105,7 @@ MCP `dictawhisper_search` calls `searchJournal` against the db, not a fresh walk
 ## 5. Inbox behavior
 
 - First paint: newest year/month from `GET /notes/index?…`, Holding, Unfiled. Older years load when you open them (we already page months; stop downloading their search text).
-- Search box talks to `/notes/search` (debounce 150ms). Do not rebuild a client Fuse of the whole journal.
+- Search box talks to `/notes/search` (debounce 150ms). Do not rebuild a client Fuse of the whole journal. Inbox habits (URL filters, hits vs browse, date/sort/mode) are [`INBOX_SEARCH_UX_SPEC.md`](./INBOX_SEARCH_UX_SPEC.md).
 - Tag chips: from `GET /notes/tags` (counts from SQL), not a client scan of every note.
 - Tools drawer already shows queue + unreadable. After this spec: an “Index” line (row count, last rebuild, embed coverage).
 - Unreadable filter: `audio_error IS NOT NULL`, not a client preview string.
