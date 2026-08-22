@@ -69,7 +69,8 @@
   }
 
   function displayName(jsonFile) {
-    return String(jsonFile || '').replace(/\\/g, '/').split('/').pop();
+    const base = String(jsonFile || '').replace(/\\/g, '/').split('/').pop() || '';
+    return base.replace(/\.json$/i, '');
   }
 
   function tagsOf(item) {
