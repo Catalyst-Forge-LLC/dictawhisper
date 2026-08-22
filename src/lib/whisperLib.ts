@@ -39,6 +39,15 @@ function transcriptionLooksComplete(transcriptionFile: string): boolean {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const transcribeScript = path.resolve(__dirname, '../../scripts/transcribe_faster_whisper.py');
 
+function pythonEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    PYTHONUNBUFFERED: '1',
+    PYTHONIOENCODING: 'utf-8',
+    PYTHONUTF8: '1',
+  };
+}
+
 export type WhisperModelAlias = 'large-v3' | 'large' | 'turbo' | 'large-v3-turbo';
 
 const MODEL_ALIASES: Record<string, WhisperModelAlias> = {
@@ -92,7 +101,7 @@ function spawnOneShot(
 
   const child = spawn(python, ['-u', ...whisperArgs], {
     windowsHide: true,
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    env: pythonEnv(),
   });
 
   child.stdout.on('data', (data: Buffer) => forwardLines('stdout', data));
@@ -250,7 +259,7 @@ export async function startWhisperWorker(
       {
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, PYTHONUNBUFFERED: '1' },
+        env: pythonEnv(),
       }
     );
     worker = child;

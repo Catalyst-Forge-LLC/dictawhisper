@@ -52,6 +52,21 @@ KEEP_KEYS = (
 )
 
 
+def _reconfigure_stdio() -> None:
+    """Windows cp1252 cannot print Whisper tokens like ⁄ or ş; do not fail the job for a log line."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not reconfigure:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_reconfigure_stdio()
+
+
 def resolve_model(name: str) -> str:
     key = name.strip().lower()
     if key not in MODEL_ALIASES:
@@ -60,17 +75,31 @@ def resolve_model(name: str) -> str:
     return MODEL_ALIASES[key]
 
 
+def _write_line(msg: str, stream) -> None:
+    try:
+        print(msg, file=stream, flush=True)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        payload = (msg + "\n").encode(encoding, errors="replace")
+        buf = getattr(stream, "buffer", None)
+        if buf is not None:
+            buf.write(payload)
+            buf.flush()
+            return
+        print(payload.decode(encoding, errors="replace"), file=stream, flush=True)
+
+
 def log(msg: str) -> None:
     """Print immediately — piped stdout is block-buffered unless flushed."""
-    print(msg, flush=True)
+    _write_line(msg, sys.stdout)
 
 
 def log_err(msg: str) -> None:
-    print(msg, file=sys.stderr, flush=True)
+    _write_line(msg, sys.stderr)
 
 
 def emit(payload: dict[str, Any]) -> None:
-    print(json.dumps(payload, ensure_ascii=False), flush=True)
+    _write_line(json.dumps(payload, ensure_ascii=False), sys.stdout)
 
 
 def load_existing(output_path: Path) -> dict[str, Any]:
