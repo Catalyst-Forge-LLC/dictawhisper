@@ -18,12 +18,19 @@ function apiOrigin() {
 /** SvelteKit handles /note before Vite's proxy, so forward to the API here. */
 export async function GET({ url }) {
   const file = url.searchParams.get('file');
+  const download = url.searchParams.get('download');
   const target = new URL('/note', apiOrigin());
   if (file) target.searchParams.set('file', file);
+  if (download) target.searchParams.set('download', download);
   const response = await fetch(target);
-  return new Response(await response.text(), {
+  const headers = {
+    'content-type': response.headers.get('content-type') || 'application/json',
+  };
+  const disposition = response.headers.get('content-disposition');
+  if (disposition) headers['content-disposition'] = disposition;
+  return new Response(await response.arrayBuffer(), {
     status: response.status,
-    headers: { 'content-type': response.headers.get('content-type') || 'application/json' },
+    headers,
   });
 }
 

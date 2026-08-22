@@ -55,6 +55,14 @@
     return `/audio?file=${encodeURIComponent(jsonFile)}`;
   }
 
+  function audioDownloadUrl(jsonFile) {
+    return `/audio?file=${encodeURIComponent(jsonFile)}&download=1`;
+  }
+
+  function sidecarDownloadUrl(jsonFile) {
+    return `/note?file=${encodeURIComponent(jsonFile)}&download=1`;
+  }
+
   function cleanupLabel(json) {
     const row = json?.cleanup;
     if (!row || typeof row !== 'object') return '';
@@ -290,6 +298,8 @@
         <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('copy', transcription)}>
           Copy
         </button>
+        <a class="dw-btn-secondary dw-btn-compact" href={audioDownloadUrl(transcription.jsonFile)}>Audio</a>
+        <a class="dw-btn-secondary dw-btn-compact" href={sidecarDownloadUrl(transcription.jsonFile)}>Sidecar</a>
         {#if !cleaned || transcription.transcriptionJson?.cleanupError || transcription.transcriptionJson?.cleanupSkipped}
           <button
             type="button"
@@ -552,6 +562,10 @@
     flex-wrap: wrap;
     gap: 0.35rem;
     margin-top: 0.85rem;
+  }
+
+  .actions a {
+    text-decoration: none;
   }
 
   .segments {

@@ -17,6 +17,7 @@ import { resolveWhisperModel } from './lib/whisperLib.ts';
 import { getHealthReport } from './lib/healthLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 import { audioContentType, findAudioForSidecar, saveUploadedAudio } from './lib/audioLib.ts';
+import { contentDisposition } from './lib/downloadLib.ts';
 import { applyConsolidateGroups, buildConsolidatePlan } from './lib/tagConsolidateLib.ts';
 import { resolveHeldFile, type HoldingAction } from './lib/organizationLib.ts';
 import { getProbeJob, startProbeJob } from './lib/audioProbeLib.ts';
@@ -118,7 +119,12 @@ export const apiRoutes = [
         res.status(403).json({ error: audioAllowed.error });
         return;
       }
+      const asDownload = queryFlag(req.query.download);
       res.setHeader('Content-Type', audioContentType(audioAllowed.path));
+      res.setHeader(
+        'Content-Disposition',
+        contentDisposition(audioAllowed.path, asDownload ? 'attachment' : 'inline'),
+      );
       res.sendFile(path.resolve(audioAllowed.path));
     },
   },
@@ -246,8 +252,22 @@ export const apiRoutes = [
         res.status(403).json({ error: allowed.error });
         return;
       }
+      const sidecar = allowed.path.toLowerCase().endsWith('.json')
+        ? allowed.path
+        : getTranscriptionFilename(allowed.path);
+      const sidecarAllowed = resolveAllowedPath(sidecar);
+      if (!sidecarAllowed.ok) {
+        res.status(403).json({ error: sidecarAllowed.error });
+        return;
+      }
+      if (queryFlag(req.query.download)) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Disposition', contentDisposition(sidecarAllowed.path, 'attachment'));
+        res.sendFile(path.resolve(sidecarAllowed.path));
+        return;
+      }
       try {
-        const note = readTranscription(allowed.path);
+        const note = readTranscription(sidecarAllowed.path);
         if (!note) {
           res.status(404).json({ error: 'note not found' });
           return;
