@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { inboxPath, parseInboxUrl } from '../inboxUrl.js';
+  import { inboxPath, isFilenameQuery, parseInboxUrl } from '../inboxUrl.js';
   import { displayName } from '../markPreview.js';
   import NoteCard from './NoteCard.svelte';
 
@@ -400,7 +400,7 @@
       if (filterYear) params.set('year', filterYear);
       if (filterYear && filterMonth) params.set('month', filterMonth);
       params.set('sort', effectiveSort());
-      if (q && !/^filename:/i.test(q)) params.set('mode', effectiveMode());
+      if (q && !isFilenameQuery(q)) params.set('mode', effectiveMode());
       else if (q) params.set('mode', 'lex');
       const data = await fetchJson(`/notes/search?${params}`);
       remoteHits = (data.hits || data.notes || []).map(noteFromHit);

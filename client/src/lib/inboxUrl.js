@@ -62,3 +62,10 @@ export function inboxPath(state) {
   const qs = buildInboxSearch(state);
   return qs ? `/?${qs}` : '/';
 }
+
+export function isFilenameQuery(query) {
+  const raw = String(query || '').replace(/^filename:\s*/i, '').trim();
+  if (!raw) return false;
+  if (/^filename:/i.test(query)) return true;
+  return /\d{4}[-_.]\d{2}[-_.]\d{2}/.test(raw) || /\.(mp3|m4a|wav|webm|ogg|json)$/i.test(raw);
+}

@@ -123,6 +123,12 @@ test('dated filename query does not throw and hits basename', () => {
   const hits = index.search({ query: '2016-06-01_12-06-25' });
   assert.equal(hits.length, 1);
   assert.match(hits[0].basename, /2016-06-01_12-06-25/);
+  const hybrid = index.search({
+    query: '2016-06-01_12-06-25',
+    mode: 'hybrid',
+    queryEmbedding: [0.2, 0.1, 0.1, 0.1],
+  });
+  assert.equal(hybrid.length, 1);
   index.close();
   fs.rmSync(root, { recursive: true, force: true });
 });

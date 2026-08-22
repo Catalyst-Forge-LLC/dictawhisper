@@ -473,7 +473,7 @@ export class JournalIndex {
     const range = yearMonthRange(options.year, options.month);
     const since = options.since || range.since;
     const until = options.until || range.until;
-    const filenameQuery = /^filename:/i.test(query);
+    const filenameQuery = isFilenameQuery(query);
     const mode = filenameQuery ? 'lex' : options.mode || 'lex';
     const filters = {
       tags,
@@ -741,12 +741,17 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
 
 const FTS_WORDS = new Set(['and', 'or', 'not', 'near']);
 
+export function isFilenameQuery(query: string): boolean {
+  const raw = String(query || '').replace(/^filename:\s*/i, '').trim();
+  if (!raw) return false;
+  if (/^filename:/i.test(query)) return true;
+  return /\d{4}[-_.]\d{2}[-_.]\d{2}/.test(raw) || /\.(mp3|m4a|wav|webm|ogg|json)$/i.test(raw);
+}
+
 export function buildFtsQuery(query: string): string {
   const filename = query.match(/^filename:\s*(.+)$/i);
   const raw = filename ? filename[1] : query;
-  const looksLikeName = Boolean(
-    filename || /\d{4}[-_.]\d{2}[-_.]\d{2}/.test(raw) || /\.(mp3|m4a|wav|webm|ogg|json)$/i.test(raw),
-  );
+  const looksLikeName = isFilenameQuery(query);
   const tokens = raw
     .split(/[^\p{L}\p{N}*]+/u)
     .map((token) => token.replace(/\*+$/g, ''))

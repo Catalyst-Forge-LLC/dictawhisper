@@ -9,6 +9,7 @@ import {
   type IndexSearchHit,
   type SearchMode,
   type SearchSort,
+  isFilenameQuery,
 } from './journalIndexLib.ts';
 import { createEmbedClient, type EmbedClient } from './journalEmbedLib.ts';
 
@@ -204,7 +205,7 @@ export async function searchJournalIndex(options: {
   const index = requireJournal();
   const query = String(options.query || '').trim();
   const requested =
-    /^filename:/i.test(query) ? 'lex' : options.mode || config.journal.search;
+    isFilenameQuery(query) ? 'lex' : options.mode || config.journal.search;
   let queryEmbedding: number[] | null = null;
   if (requested !== 'lex' && query) {
     try {
