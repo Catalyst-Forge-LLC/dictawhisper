@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildInboxSearch, emptyInboxUrl, parseInboxUrl } from '../src/lib/inboxUrl.ts';
+import { buildInboxSearch, emptyInboxUrl, parseInboxUrl, tightenFilenameHits } from '../src/lib/inboxUrl.ts';
 
 test('round-trips q, tags, year, and file', () => {
   const state = {
@@ -21,6 +21,15 @@ test('month requires a year and pads to two digits', () => {
   const parsed = parseInboxUrl('month=7&year=2015');
   assert.equal(parsed.month, '07');
   assert.equal(parseInboxUrl('month=7').month, '');
+});
+
+test('filename hits drop hybrid neighbors that do not match the stamp', () => {
+  const hits = tightenFilenameHits('2016-06-01_12-06-25', [
+    { basename: '2016-06-01_12-06-25.json', jsonFile: 'C:/notes/2016/06/2016-06-01_12-06-25.json' },
+    { basename: '2025-06-01_17-40-41My recording 643.json', jsonFile: 'C:/notes/2025/06/x.json' },
+  ]);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].basename, '2016-06-01_12-06-25.json');
 });
 
 test('clear-search shape keeps year and tags', () => {

@@ -86,3 +86,24 @@ export function isFilenameQuery(query: string): boolean {
   if (/^filename:/i.test(query)) return true;
   return /\d{4}[-_.]\d{2}[-_.]\d{2}/.test(raw) || /\.(mp3|m4a|wav|webm|ogg|json)$/i.test(raw);
 }
+
+export function filenameNeedle(query: string): string {
+  return String(query || '')
+    .replace(/^filename:\s*/i, '')
+    .trim()
+    .replace(/\.(mp3|m4a|wav|webm|ogg|json)$/i, '');
+}
+
+export function tightenFilenameHits<T extends { basename?: string; jsonFile?: string }>(
+  query: string,
+  hits: T[],
+): T[] {
+  if (!isFilenameQuery(query) || !hits.length) return hits;
+  const needle = filenameNeedle(query);
+  if (!needle) return hits;
+  const matched = hits.filter((hit) => {
+    const name = `${hit.basename || ''} ${hit.jsonFile || ''}`.replace(/\\/g, '/');
+    return name.includes(needle);
+  });
+  return matched.length ? matched : hits;
+}

@@ -55,7 +55,7 @@ Keep one page. Record and drop stay above the archive.
 
 **Browse** (no `q`): Holding, Unfiled, year/month cards. Same as now. Year open still fetches `/notes/index?year=`.
 
-**Hits** (`q` and/or a day range that is not “this year of cards”): a flat list of hit cards **above** the archive, not instead of it. Archive can dim or stay collapsed. Clear results returns you to the year you were in.
+**Hits** (`q` and/or a day range that is not “this year of cards”): a flat list of hit cards. Hide the year archive while a query or hit filter is on — a dimmed dump of the newest year still reads as “all notes.” The Years strip stays so a year click can constrain the search. Clear results returns you to the year you were in.
 
 Do not rebuild a client Fuse of the corpus. Hits come from `GET /notes/search`.
 
@@ -162,7 +162,7 @@ Each slice should be shippable alone. Chrome spec U0–U5 is not a prerequisite 
 
 **X0 — URL state.** Read/write `q`, `tag`, `year`, `month`, `unreadable`, `file` on `/`. Hydrate the open note from `file`. No new visuals.
 
-**X1 — Hits vs browse.** Search results render as a hit list above the year archive. Clear results restores browse. Debounce stays 150ms.
+**X1 — Hits vs browse.** Search results render as a hit list. Year archive hides while a query is on. Clear results restores browse. Debounce stays 150ms.
 
 **X2 — Date + sort + mode.** Year/month selects, From/To, sort pills, mode pill (if embeddings exist). Wire `since`/`until`/`mode`/`sort`.
 

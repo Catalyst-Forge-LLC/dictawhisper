@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { inboxPath, isFilenameQuery, parseInboxUrl } from '../inboxUrl.js';
+  import { inboxPath, isFilenameQuery, parseInboxUrl, tightenFilenameHits } from '../inboxUrl.js';
   import { displayName } from '../markPreview.js';
   import NoteCard from './NoteCard.svelte';
 
@@ -389,6 +389,7 @@
       return;
     }
     try {
+      remoteHits = null;
       const params = new URLSearchParams();
       const q = searchQuery.trim();
       if (q) params.set('q', q);
@@ -403,7 +404,7 @@
       if (q && !isFilenameQuery(q)) params.set('mode', effectiveMode());
       else if (q) params.set('mode', 'lex');
       const data = await fetchJson(`/notes/search?${params}`);
-      remoteHits = (data.hits || data.notes || []).map(noteFromHit);
+      remoteHits = tightenFilenameHits(q, (data.hits || data.notes || []).map(noteFromHit));
     } catch (error) {
       inboxError = error.message || String(error);
     }
@@ -431,7 +432,14 @@
     starredOnly ? '1' : '',
   ].join('\0');
   $: if (indexReady && searchKey !== lastSearchKey) scheduleFilter(searchKey);
-  $: showHits = isHitMode();
+  $: showHits = Boolean(
+    searchQuery.trim() ||
+      since ||
+      until ||
+      starredOnly ||
+      selectedTags.length ||
+      noteFilter === 'unreadable'
+  );
   $: groups = groupTranscriptions(transcriptions);
   $: tagCloud = tagRows.length
     ? (() => {
@@ -469,7 +477,9 @@
   }
   $: newestYearCount = yearCounts.find((row) => row.year === (filterYear || newestDatedYear))?.count || 0;
   $: statusLine = showHits
-    ? `${(remoteHits || []).length} hit${(remoteHits || []).length === 1 ? '' : 's'}`
+    ? remoteHits == null
+      ? 'Searching…'
+      : `${remoteHits.length} hit${remoteHits.length === 1 ? '' : 's'}`
     : filterYear
       ? `Browsing ${filterYear}${filterMonth ? ` · ${MONTHS[Number(filterMonth) - 1] || filterMonth}` : ''} · ${newestYearCount} notes`
       : `Showing newest year · ${newestYearCount} notes`;
@@ -1067,7 +1077,9 @@
 
   {#if showHits}
     <section class="hits" aria-label="Search hits">
-      {#if remoteHits && !remoteHits.length}
+      {#if remoteHits == null}
+        <p class="dw-empty">Searching…</p>
+      {:else if !remoteHits.length}
         <p class="dw-empty">
           No notes matched
           {#if searchQuery.trim()}
@@ -1076,7 +1088,7 @@
         </p>
       {:else}
         <div class="notes">
-          {#each remoteHits || [] as transcription (transcription.jsonFile)}
+          {#each remoteHits as transcription (transcription.jsonFile)}
             <NoteCard
               {transcription}
               variant="hit"
@@ -1126,8 +1138,8 @@
     </div>
   {/if}
 
-  {#if datedYearCount > 1}
-    <div class="archive-tools" class:is-dimmed={showHits}>
+  {#if !showHits && datedYearCount > 1}
+    <div class="archive-tools">
       <p class="dw-eyebrow">Notes</p>
       <div>
         <button type="button" class="dw-text-btn dw-text-btn-accent" on:click={focusRecentYears}>Focus</button>
@@ -1136,7 +1148,8 @@
     </div>
   {/if}
 
-  <div class="archive" class:is-dimmed={showHits}>
+  {#if !showHits}
+  <div class="archive">
     {#each yearSections as section (section.key)}
       <section class="year-block">
         <button
@@ -1199,6 +1212,7 @@
       </p>
     {/if}
   </div>
+  {/if}
 </section>
 
 <style lang="scss">
@@ -1383,11 +1397,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-
-  .archive.is-dimmed,
-  .archive-tools.is-dimmed {
-    opacity: 0.55;
   }
 
   .year-block {
