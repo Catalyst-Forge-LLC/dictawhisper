@@ -26,3 +26,16 @@ export async function GET({ url }) {
     headers: { 'content-type': response.headers.get('content-type') || 'application/json' },
   });
 }
+
+export async function POST({ request }) {
+  const target = new URL('/note', apiOrigin());
+  const response = await fetch(target, {
+    method: 'POST',
+    headers: { 'content-type': request.headers.get('content-type') || 'application/json' },
+    body: await request.text(),
+  });
+  return new Response(await response.text(), {
+    status: response.status,
+    headers: { 'content-type': response.headers.get('content-type') || 'application/json' },
+  });
+}

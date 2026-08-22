@@ -1,6 +1,6 @@
 # Inbox search UX: borrow Engram’s archive habits
 
-**Status:** spec, not implemented  
+**Status:** implemented (X0–X4). Stars and per-note tag edit sit on the sidecar (`starred`, `tags`) and `?starred=1`.  
 **Date:** 2026-08-22  
 **Surface:** inbox at 7777 (`Transcriptions.svelte` + existing `/notes/*` APIs). Still one page.  
 **Reference:** sibling [Engram](https://github.com/Catalyst-Forge-LLC/engram) — `search/+page.svelte`, `SearchFacetFilters.svelte`, `ThreadMonthGroups.svelte`, `SearchHitCard.svelte`, `SegmentedControl.svelte`, `ThreadTimelineRail.svelte`.  

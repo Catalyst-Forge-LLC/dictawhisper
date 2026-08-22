@@ -1,5 +1,8 @@
 <script>
   import { onMount } from 'svelte';
+  import { inboxPath, parseInboxUrl } from '../inboxUrl.js';
+  import { displayName } from '../markPreview.js';
+  import NoteCard from './NoteCard.svelte';
 
   export let transcriptions = [];
   export let socket;
@@ -35,6 +38,13 @@
   let applyBusy = false;
   let applyResult = null;
   let searchQuery = '';
+  let filterYear = '';
+  let filterMonth = '';
+  let since = '';
+  let until = '';
+  let sortChoice = '';
+  let modeChoice = '';
+  let starredOnly = false;
   let inboxError = '';
   let indexReady = false;
   let indexing = false;
@@ -42,10 +52,14 @@
   let remoteHits = null;
   let searchTimer;
   let lastSearchKey = '';
+  let lastBrowseKey = '';
   let tagRows = [];
   let yearCounts = [];
   let loadedYears = {};
   let noteBusy = {};
+  let journalMeta = null;
+  let applyingUrl = false;
+  let datesOpen = false;
   const TAG_CLOUD_CAP = 40;
 
   function folderOf(jsonFile) {
@@ -68,96 +82,9 @@
     return `${monthName} ${group.year}`;
   }
 
-  function displayName(jsonFile) {
-    const base = String(jsonFile || '').replace(/\\/g, '/').split('/').pop() || '';
-    return base.replace(/\.json$/i, '');
-  }
-
   function tagsOf(item) {
     const tags = item.transcriptionJson?.tags;
     return Array.isArray(tags) ? tags.map((tag) => String(tag).trim()).filter(Boolean) : [];
-  }
-
-  function cleanedOf(item) {
-    const json = item.transcriptionJson || {};
-    if (json._partial) return json.hasCleaned ? String(json.preview || '').trim() : '';
-    return String(json.cleanedTranscription || json.preview || '').trim();
-  }
-
-  function preview(text, limit = 200) {
-    const oneLine = text.replace(/\s+/g, ' ').trim();
-    if (oneLine.length <= limit) return oneLine;
-    return `${oneLine.slice(0, limit)}…`;
-  }
-
-  function paragraphs(text) {
-    return text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-  }
-
-  function sectionsOf(text) {
-    const trimmed = String(text || '').trim();
-    if (!trimmed) return [];
-    const paras = paragraphs(trimmed);
-    if (paras.length >= 2) return paras;
-    const sentences = trimmed.split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter(Boolean);
-    return sentences.length >= 2 ? sentences : [trimmed];
-  }
-
-  function cuesOf(item) {
-    const cues = item.transcriptionJson?.playbackCues;
-    if (Array.isArray(cues) && cues.length) return cues;
-    const cleaned = cleanedOf(item);
-    return cleaned ? sectionsOf(cleaned).map((text) => ({ text, start: 0, end: 0 })) : [];
-  }
-
-  function audioUrl(jsonFile) {
-    return `/audio?file=${encodeURIComponent(jsonFile)}`;
-  }
-
-  function cleanupLabel(json) {
-    const row = json?.cleanup;
-    if (!row || typeof row !== 'object') return '';
-    const parts = [];
-    if (row.createdAt) parts.push(String(row.createdAt).slice(0, 10));
-    if (row.model) parts.push(row.model);
-    if (row.host) parts.push(row.host);
-    const earlier = Array.isArray(json.cleanupHistory) ? json.cleanupHistory.length : 0;
-    if (earlier) parts.push(`${earlier} earlier`);
-    return parts.join(' · ');
-  }
-
-  function formatTime(seconds) {
-    const total = Math.max(0, Math.floor(Number(seconds) || 0));
-    const minutes = Math.floor(total / 60);
-    const rest = total % 60;
-    return `${minutes}:${String(rest).padStart(2, '0')}`;
-  }
-
-  function cueHasTime(cue) {
-    return typeof cue?.start === 'number' && Number.isFinite(cue.start);
-  }
-
-  function playCue(event, cue) {
-    if (!cueHasTime(cue)) return;
-    const article = event.currentTarget.closest('.note');
-    const audio = article?.querySelector('audio');
-    if (!audio) return;
-    audio.currentTime = Math.max(0, Number(cue.start) || 0);
-    audio.play();
-  }
-
-  function cueActive(item, cue, index) {
-    if (!cueHasTime(cue)) return false;
-    const current = item.transcriptionJson?._currentTime;
-    if (typeof current !== 'number') return false;
-    const next = cuesOf(item)[index + 1];
-    const end = cue.end > cue.start ? cue.end : next ? next.start : Infinity;
-    return current >= cue.start && current < end;
-  }
-
-  function onAudioTime(item, event) {
-    item.transcriptionJson._currentTime = event.currentTarget.currentTime;
-    transcriptions = transcriptions;
   }
 
   function groupTranscriptions(list) {
@@ -282,16 +209,22 @@
   }
 
   function noteFromHit(hit) {
-    if (hit?.transcriptionJson) return hit;
+    if (hit?.transcriptionJson && !hit.transcriptionJson._partial) return hit;
+    const json = hit.transcriptionJson || {};
     return {
       jsonFile: hit.jsonFile,
       basename: hit.basename || displayName(hit.jsonFile),
+      day: hit.day || json.day || '',
       transcriptionJson: {
-        tags: hit.tags || [],
-        preview: hit.preview || '',
-        hasCleaned: Boolean(hit.hasCleaned),
-        audioError: hit.audioError || null,
-        _partial: true,
+        tags: hit.tags || json.tags || [],
+        preview: hit.preview || json.preview || '',
+        hasCleaned: hit.hasCleaned ?? json.hasCleaned,
+        audioError: hit.audioError || json.audioError || null,
+        starred: Boolean(hit.starred ?? json.starred),
+        _partial: json._partial !== false,
+        ...json,
+        tags: hit.tags || json.tags || [],
+        starred: Boolean(hit.starred ?? json.starred),
       },
     };
   }
@@ -330,24 +263,102 @@
 
   async function loadMeta() {
     try {
-      const [years, tags] = await Promise.all([
+      const [years, tags, stats] = await Promise.all([
         fetchJson('/notes/years'),
         fetchJson('/notes/tags?includeSingletons=1'),
+        fetchJson('/notes/stats'),
       ]);
       yearCounts = years.years || [];
       tagRows = tags.tags || [];
+      journalMeta = stats;
     } catch {
       if (!yearCounts.length) yearCounts = [];
       if (!tagRows.length) tagRows = buildTagCloud(transcriptions).map(({ tag, count }) => ({ tag, count }));
     }
   }
 
+  function isHitMode() {
+    return Boolean(
+      searchQuery.trim() ||
+        since ||
+        until ||
+        starredOnly ||
+        selectedTags.length ||
+        noteFilter === 'unreadable'
+    );
+  }
+
+  function hasEmbeddings() {
+    return Number(journalMeta?.embedded || 0) > 0;
+  }
+
+  function effectiveSort() {
+    if (sortChoice) return sortChoice;
+    return searchQuery.trim() ? 'relevance' : 'recent';
+  }
+
+  function effectiveMode() {
+    if (modeChoice) return modeChoice;
+    return hasEmbeddings() ? 'hybrid' : 'lex';
+  }
+
+  function inboxState() {
+    const defSort = searchQuery.trim() ? 'relevance' : 'recent';
+    const defMode = hasEmbeddings() ? 'hybrid' : 'lex';
+    return {
+      q: searchQuery,
+      tags: selectedTags,
+      year: filterYear,
+      month: filterMonth,
+      since,
+      until,
+      sort: sortChoice && sortChoice !== defSort ? sortChoice : '',
+      mode: modeChoice && modeChoice !== defMode ? modeChoice : '',
+      unreadable: noteFilter === 'unreadable',
+      starred: starredOnly,
+      file: Object.keys(expanded).find((key) => expanded[key]) || '',
+    };
+  }
+
+  function writeInboxUrl() {
+    if (applyingUrl || !indexReady) return;
+    const next = inboxPath(inboxState());
+    if (`${location.pathname}${location.search}` === next || (next === '/' && !location.search && location.pathname === '/')) {
+      return;
+    }
+    history.replaceState(history.state, '', next);
+  }
+
+  function applyInboxUrl(search = location.search) {
+    applyingUrl = true;
+    const parsed = parseInboxUrl(search);
+    searchQuery = parsed.q;
+    selectedTags = parsed.tags;
+    filterYear = parsed.year;
+    filterMonth = parsed.month;
+    since = parsed.since;
+    until = parsed.until;
+    sortChoice = parsed.sort;
+    modeChoice = parsed.mode;
+    starredOnly = parsed.starred;
+    noteFilter = parsed.unreadable ? 'unreadable' : 'all';
+    if (parsed.file) expanded = { ...expanded, [parsed.file]: true };
+    applyingUrl = false;
+  }
+
   async function loadBrowse() {
-    const data = await fetchJson('/notes/index');
+    const params = new URLSearchParams();
+    if (!isHitMode() && filterYear) {
+      params.set('year', filterYear);
+      if (filterMonth) params.set('month', filterMonth);
+    }
+    const qs = params.toString();
+    const data = await fetchJson(qs ? `/notes/index?${qs}` : '/notes/index');
     pagedIndex = Boolean(data.paged);
     indexing = Boolean(data.indexing);
     mergeNotes(data.notes, { replace: true });
     markLoadedYears(data.notes);
+    lastBrowseKey = `${!isHitMode() && filterYear ? filterYear : ''}|${!isHitMode() && filterMonth ? filterMonth : ''}`;
     await loadMeta();
   }
 
@@ -360,22 +371,37 @@
   }
 
   async function runRemoteFilter() {
-    const q = searchQuery.trim();
-    const filtered = Boolean(q || selectedTags.length || noteFilter === 'unreadable');
-    if (!filtered) {
+    if (!isHitMode()) {
       remoteHits = null;
+      const browseKey = `${filterYear}|${filterMonth}`;
+      if (browseKey !== lastBrowseKey) {
+        lastBrowseKey = browseKey;
+        try {
+          await loadBrowse();
+        } catch (error) {
+          inboxError = error.message || String(error);
+        }
+      }
+      if (filterYear) {
+        yearOpen[filterYear] = true;
+        yearOpen = yearOpen;
+      }
       return;
     }
     try {
-      if (!q && !selectedTags.length && noteFilter === 'unreadable') {
-        const data = await fetchJson('/notes/index?unreadable=1');
-        remoteHits = (data.notes || []).map(noteFromHit);
-        return;
-      }
       const params = new URLSearchParams();
+      const q = searchQuery.trim();
       if (q) params.set('q', q);
       for (const tag of selectedTags) params.append('tag', tag);
       if (noteFilter === 'unreadable') params.set('unreadable', '1');
+      if (starredOnly) params.set('starred', '1');
+      if (since) params.set('since', since);
+      if (until) params.set('until', until);
+      if (filterYear) params.set('year', filterYear);
+      if (filterYear && filterMonth) params.set('month', filterMonth);
+      params.set('sort', effectiveSort());
+      if (q && !/^filename:/i.test(q)) params.set('mode', effectiveMode());
+      else if (q) params.set('mode', 'lex');
       const data = await fetchJson(`/notes/search?${params}`);
       remoteHits = (data.hits || data.notes || []).map(noteFromHit);
     } catch (error) {
@@ -386,13 +412,27 @@
   function scheduleFilter(key) {
     lastSearchKey = key;
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => void runRemoteFilter(), 150);
+    searchTimer = setTimeout(() => {
+      writeInboxUrl();
+      void runRemoteFilter();
+    }, 150);
   }
 
-  $: searchKey = `${searchQuery}\0${selectedTags.join('\t')}\0${noteFilter}`;
+  $: searchKey = [
+    searchQuery,
+    selectedTags.join('\t'),
+    noteFilter,
+    filterYear,
+    filterMonth,
+    since,
+    until,
+    sortChoice,
+    modeChoice,
+    starredOnly ? '1' : '',
+  ].join('\0');
   $: if (indexReady && searchKey !== lastSearchKey) scheduleFilter(searchKey);
-  $: visible = remoteHits || transcriptions;
-  $: groups = groupTranscriptions(visible);
+  $: showHits = isHitMode();
+  $: groups = groupTranscriptions(transcriptions);
   $: tagCloud = tagRows.length
     ? (() => {
         const max = Math.max(1, ...tagRows.map((row) => row.count));
@@ -416,10 +456,8 @@
   let monthPage = 1;
   $: specialGroups = groups.filter((group) => group.key === 'holding' || group.key === 'unfiled');
   $: datedGroups = groups.filter((group) => group.key !== 'holding' && group.key !== 'unfiled');
-  $: pagedGroups = listIsFiltered()
-    ? groups
-    : [...specialGroups, ...datedGroups.slice(0, monthPage)];
-  $: hiddenMonths = listIsFiltered() ? 0 : Math.max(0, datedGroups.length - monthPage);
+  $: pagedGroups = showHits ? groups : [...specialGroups, ...datedGroups.slice(0, monthPage)];
+  $: hiddenMonths = showHits ? 0 : Math.max(0, datedGroups.length - monthPage);
   $: newestDatedYear = datedGroups[0]?.year;
   $: yearSections = nestByYear(groups);
   $: datedYearCount = yearSections.filter((section) => section.kind === 'year').length;
@@ -429,6 +467,12 @@
     pagedYearInit = true;
     pageThroughYear(newestDatedYear);
   }
+  $: newestYearCount = yearCounts.find((row) => row.year === (filterYear || newestDatedYear))?.count || 0;
+  $: statusLine = showHits
+    ? `${(remoteHits || []).length} hit${(remoteHits || []).length === 1 ? '' : 's'}`
+    : filterYear
+      ? `Browsing ${filterYear}${filterMonth ? ` · ${MONTHS[Number(filterMonth) - 1] || filterMonth}` : ''} · ${newestYearCount} notes`
+      : `Showing newest year · ${newestYearCount} notes`;
 
   function nestByYear(monthGroups) {
     const sections = [];
@@ -480,25 +524,20 @@
     return [...specials, ...years];
   }
 
-  function listIsFiltered() {
-    return Boolean(selectedTags.length || searchQuery.trim() || noteFilter === 'unreadable');
-  }
-
   function defaultYearOpen(key, kind) {
     if (kind === 'special') return true;
-    if (listIsFiltered()) return true;
+    if (filterYear) return key === filterYear;
     const currentYear = String(new Date().getFullYear());
     return key === currentYear || key === newestDatedYear;
   }
 
   function isYearOpen(section) {
-    if (listIsFiltered()) return true;
     if (Object.prototype.hasOwnProperty.call(yearOpen, section.key)) return yearOpen[section.key];
     return defaultYearOpen(section.key, section.kind);
   }
 
   function monthsToShow(section) {
-    if (listIsFiltered()) return section.months;
+    if (showHits || filterYear) return section.months;
     return section.months.filter((group) => pagedKeys.has(group.key));
   }
 
@@ -518,6 +557,18 @@
     if (nextOpen && section.kind === 'year') {
       pageThroughYear(section.key);
       void ensureYearLoaded(section.key).catch((error) => {
+        inboxError = error.message || String(error);
+      });
+    }
+  }
+
+  function jumpYear(year) {
+    filterYear = year;
+    filterMonth = '';
+    if (!searchQuery.trim() && !since && !until) {
+      yearOpen[year] = true;
+      yearOpen = yearOpen;
+      void ensureYearLoaded(year).then(() => loadBrowse()).catch((error) => {
         inboxError = error.message || String(error);
       });
     }
@@ -549,18 +600,30 @@
     if (datedGroups.length) monthPage = datedGroups.length;
   }
 
+  function applyNote(data) {
+    if (!data?.jsonFile) return data;
+    const i = transcriptions.findIndex((note) => note.jsonFile === data.jsonFile);
+    if (i >= 0) {
+      transcriptions[i] = data;
+      transcriptions = transcriptions;
+    } else {
+      transcriptions = [...transcriptions, data];
+    }
+    if (remoteHits) {
+      const hi = remoteHits.findIndex((note) => note.jsonFile === data.jsonFile);
+      if (hi >= 0) {
+        remoteHits[hi] = { ...remoteHits[hi], ...data, day: remoteHits[hi].day || data.day };
+        remoteHits = remoteHits;
+      }
+    }
+    return data;
+  }
+
   async function hydrateNote(jsonFile) {
     const response = await fetch(`/note?file=${encodeURIComponent(jsonFile)}&_=${Date.now()}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'failed to load note');
-    const i = transcriptions.findIndex((note) => note.jsonFile === jsonFile);
-    if (i >= 0) {
-      transcriptions[i] = data;
-      transcriptions = transcriptions;
-      return transcriptions[i];
-    }
-    transcriptions = [...transcriptions, data];
-    return data;
+    return applyNote(data);
   }
 
   async function toggleExpanded(jsonFile) {
@@ -574,6 +637,7 @@
     }
     expanded[jsonFile] = !expanded[jsonFile];
     expanded = expanded;
+    writeInboxUrl();
   }
 
   function lazyMore(node, remaining) {
@@ -599,14 +663,6 @@
         observer.disconnect();
       },
     };
-  }
-
-  function isHolding(jsonFile) {
-    return folderOf(jsonFile).key === 'holding';
-  }
-
-  function hasDateName(jsonFile) {
-    return /^\d{4}-\d{2}-\d{2}/.test(displayName(jsonFile));
   }
 
   async function withNoteBusy(jsonFile, work) {
@@ -646,6 +702,7 @@
   function deleteTranscription(jsonFile) {
     if (confirm('Are you sure you want to delete this transcription?')) {
       transcriptions = transcriptions.filter((transcription) => transcription.jsonFile !== jsonFile);
+      if (remoteHits) remoteHits = remoteHits.filter((note) => note.jsonFile !== jsonFile);
       socket.emit('delete-transcription', { jsonFile });
     }
   }
@@ -654,19 +711,51 @@
     try {
       const item = await hydrateNote(transcription.jsonFile);
       const json = item?.transcriptionJson || {};
-      const fromCues = cuesOf(item)
+      const fromCues = (json.playbackCues || [])
         .map((cue) => String(cue.text || '').trim())
         .filter(Boolean);
       const text =
         (fromCues.length ? fromCues.join('\n\n') : '') ||
-        sectionsOf(json.cleanedTranscription || '').join('\n\n') ||
-        (json.segments || []).map((segment) => segment.text).join('\n\n') ||
-        json.preview ||
-        '';
+        String(json.cleanedTranscription || json.preview || '');
       await navigator.clipboard.writeText(text);
     } catch (error) {
       console.error(error);
     }
+  }
+
+  async function starNote(jsonFile, next) {
+    await withNoteBusy(jsonFile, async () => {
+      const data = await postJson('/note', { file: jsonFile, starred: next });
+      applyNote(data);
+    });
+  }
+
+  async function saveTags(jsonFile, tags) {
+    await withNoteBusy(jsonFile, async () => {
+      const data = await postJson('/note', { file: jsonFile, tags });
+      applyNote(data);
+      await loadMeta();
+    });
+  }
+
+  function onAudioTime(item, event) {
+    item.transcriptionJson._currentTime = event.currentTarget.currentTime;
+    transcriptions = transcriptions;
+    if (remoteHits) remoteHits = remoteHits;
+  }
+
+  function clearSearch() {
+    searchQuery = '';
+  }
+
+  function clearFilters() {
+    selectedTags = [];
+    filterYear = '';
+    filterMonth = '';
+    since = '';
+    until = '';
+    starredOnly = false;
+    noteFilter = 'all';
   }
 
   function upsertNote(data) {
@@ -677,7 +766,11 @@
       if (data.transcriptionJson?._partial && current.transcriptionJson && !current.transcriptionJson._partial) {
         transcriptions[i] = {
           ...current,
-          transcriptionJson: { ...current.transcriptionJson, tags: data.transcriptionJson.tags },
+          transcriptionJson: {
+            ...current.transcriptionJson,
+            tags: data.transcriptionJson.tags,
+            starred: data.transcriptionJson.starred,
+          },
         };
       } else {
         transcriptions[i] = data;
@@ -707,12 +800,34 @@
     upsertNote(data);
   }
 
+  function onPopState() {
+    applyInboxUrl(location.search);
+    lastSearchKey = '';
+    if (indexReady) scheduleFilter(searchKey);
+    const file = parseInboxUrl(location.search).file;
+    if (file) void hydrateNote(file);
+  }
+
   onMount(() => {
+    applyInboxUrl(location.search);
+    const pendingFile = parseInboxUrl(location.search).file;
     socket.on('notes-index', onNotesIndex);
     socket.on('transcription', onTranscription);
+    window.addEventListener('popstate', onPopState);
     void loadBrowse()
       .catch((error) => {
         if (!transcriptions.length) inboxError = error.message || String(error);
+      })
+      .then(async () => {
+        if (pendingFile) {
+          try {
+            await hydrateNote(pendingFile);
+            expanded[pendingFile] = true;
+            expanded = expanded;
+          } catch (error) {
+            inboxError = error.message || String(error);
+          }
+        }
       })
       .finally(() => {
         indexReady = true;
@@ -720,6 +835,7 @@
     return () => {
       socket.off('notes-index', onNotesIndex);
       socket.off('transcription', onTranscription);
+      window.removeEventListener('popstate', onPopState);
     };
   });
 </script>
@@ -740,16 +856,79 @@
         aria-label="Search notes"
       />
       {#if searchQuery}
-        <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (searchQuery = '')}>
-          Clear
-        </button>
-      {/if}
-      {#if noteFilter === 'unreadable'}
-        <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (noteFilter = 'all')}>
-          Unreadable
-        </button>
+        <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={clearSearch}>Clear search</button>
       {/if}
     </div>
+
+    <div class="filters">
+      <p class="dw-eyebrow">Filters</p>
+      <div class="filter-row">
+        <label class="filter-field">
+          <span>Year</span>
+          <select class="dw-input dw-select" bind:value={filterYear} on:change={() => (filterMonth = filterYear ? filterMonth : '')}>
+            <option value="">All years</option>
+            {#each yearCounts as row}
+              <option value={row.year}>{row.year} · {row.count}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>Month</span>
+          <select class="dw-input dw-select" bind:value={filterMonth} disabled={!filterYear}>
+            <option value="">All months</option>
+            {#each MONTHS as name, index}
+              <option value={String(index + 1).padStart(2, '0')}>{name}</option>
+            {/each}
+          </select>
+        </label>
+        <div class="dates" class:is-open={datesOpen}>
+          <button type="button" class="dw-text-btn dates-toggle" on:click={() => (datesOpen = !datesOpen)}>
+            Dates
+          </button>
+          <label class="filter-field">
+            <span>From</span>
+            <input class="dw-input dw-select" type="date" bind:value={since} />
+          </label>
+          <label class="filter-field">
+            <span>To</span>
+            <input class="dw-input dw-select" type="date" bind:value={until} />
+          </label>
+        </div>
+        <div class="dw-segmented" role="group" aria-label="Sort">
+          <button type="button" class:is-on={effectiveSort() === 'recent'} on:click={() => (sortChoice = 'recent')}>Recent</button>
+          <button type="button" class:is-on={effectiveSort() === 'oldest'} on:click={() => (sortChoice = 'oldest')}>Oldest</button>
+          <button type="button" class:is-on={effectiveSort() === 'relevance'} on:click={() => (sortChoice = 'relevance')}>
+            Best match
+          </button>
+        </div>
+        {#if hasEmbeddings()}
+          <div class="dw-segmented" role="group" aria-label="Search mode">
+            <button type="button" class:is-on={effectiveMode() === 'lex'} on:click={() => (modeChoice = 'lex')}>Words</button>
+            <button type="button" class:is-on={effectiveMode() === 'hybrid'} on:click={() => (modeChoice = 'hybrid')}>
+              Hybrid
+            </button>
+          </div>
+        {/if}
+        <button
+          type="button"
+          class="dw-chip"
+          class:is-active={starredOnly}
+          on:click={() => (starredOnly = !starredOnly)}
+        >
+          Starred
+          {#if journalMeta?.starred}
+            <span class="dw-chip-count">{journalMeta.starred}</span>
+          {/if}
+        </button>
+        {#if noteFilter === 'unreadable'}
+          <button type="button" class="dw-chip is-active" on:click={() => (noteFilter = 'all')}>Unreadable</button>
+        {/if}
+        {#if selectedTags.length || filterYear || since || until || starredOnly || noteFilter === 'unreadable'}
+          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={clearFilters}>Clear filters</button>
+        {/if}
+      </div>
+    </div>
+    <p class="dw-muted status-line">{statusLine}</p>
   </div>
 
   {#if inboxError}
@@ -780,12 +959,7 @@
       </div>
       {#if selectedTags.length}
         <div class="tags-filter">
-          <span class="dw-muted">
-            {visible.length} note{visible.length === 1 ? '' : 's'} with {selectedTags.join(' + ')}
-          </span>
-          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (selectedTags = [])}>
-            Clear filter
-          </button>
+          <span class="dw-muted">AND {selectedTags.join(' + ')}</span>
         </div>
       {/if}
       <div class="tag-cloud-body">
@@ -891,26 +1065,69 @@
     </section>
   {/if}
 
-  {#if transcriptions.length && !visible.length}
-    <p class="dw-empty">
-      No notes match
-      {#if searchQuery.trim()}
-        “{searchQuery.trim()}”
+  {#if showHits}
+    <section class="hits" aria-label="Search hits">
+      {#if remoteHits && !remoteHits.length}
+        <p class="dw-empty">
+          No notes matched
+          {#if searchQuery.trim()}
+            “{searchQuery.trim()}”
+          {/if}.
+        </p>
+      {:else}
+        <div class="notes">
+          {#each remoteHits || [] as transcription (transcription.jsonFile)}
+            <NoteCard
+              {transcription}
+              variant="hit"
+              query={searchQuery}
+              {selectedTags}
+              expanded={!!expanded[transcription.jsonFile]}
+              showRaw={!!showRaw[transcription.jsonFile]}
+              busy={!!noteBusy[transcription.jsonFile]}
+              playing={!!expanded[transcription.jsonFile] && typeof transcription.transcriptionJson?._currentTime === 'number'}
+              on:toggle={(event) => toggleExpanded(event.detail)}
+              on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
+              on:tag={(event) => toggleTag(event.detail)}
+              on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
+              on:raw={(event) => {
+                showRaw[event.detail.jsonFile] = event.detail.show;
+                showRaw = showRaw;
+              }}
+              on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
+              on:copy={(event) => copyTranscription(event.detail)}
+              on:retry={(event) => retryCleanup(event.detail)}
+              on:skip={(event) => skipNoteCleanup(event.detail)}
+              on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
+              on:delete={(event) => deleteTranscription(event.detail)}
+            />
+          {/each}
+        </div>
       {/if}
-      {#if searchQuery.trim() && selectedTags.length}
-        and
-      {/if}
-      {#if selectedTags.length}
-        {selectedTags.join(' + ')}
-      {/if}
-      {#if noteFilter === 'unreadable' && !searchQuery.trim() && !selectedTags.length}
-        unreadable audio
-      {/if}.
-    </p>
+    </section>
+  {/if}
+
+  {#if yearCounts.length}
+    <div class="years-strip">
+      <p class="dw-eyebrow">Years</p>
+      <div class="year-jump">
+        {#each yearCounts as row}
+          <button
+            type="button"
+            class="dw-text-btn"
+            class:dw-text-btn-accent={filterYear === row.year}
+            on:click={() => jumpYear(row.year)}
+          >
+            {row.year}
+            <span class="dw-chip-count">{row.count}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
   {/if}
 
   {#if datedYearCount > 1}
-    <div class="archive-tools">
+    <div class="archive-tools" class:is-dimmed={showHits}>
       <p class="dw-eyebrow">Notes</p>
       <div>
         <button type="button" class="dw-text-btn dw-text-btn-accent" on:click={focusRecentYears}>Focus</button>
@@ -919,227 +1136,69 @@
     </div>
   {/if}
 
-  {#each yearSections as section (section.key)}
-    <section class="year-block">
-      <button
-        type="button"
-        class="year-head"
-        aria-expanded={isYearOpen(section)}
-        on:click={() => toggleYear(section)}
-      >
-        <svg class="chevron" class:is-closed={!isYearOpen(section)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-        <span class="year-label">{section.label}</span>
-        <span class="year-count">{section.count} note{section.count === 1 ? '' : 's'}</span>
-      </button>
-      {#if isYearOpen(section)}
-        <div class="year-body">
-          {#each monthsToShow(section) as group (group.key)}
-            <div class="month-block">
-              {#if section.kind === 'year'}
-                <div class="month-rail">
-                  <span>{groupLabel(group)}</span>
-                  <span>{group.items.length}</span>
+  <div class="archive" class:is-dimmed={showHits}>
+    {#each yearSections as section (section.key)}
+      <section class="year-block">
+        <button
+          type="button"
+          class="year-head"
+          aria-expanded={isYearOpen(section)}
+          on:click={() => toggleYear(section)}
+        >
+          <svg class="chevron" class:is-closed={!isYearOpen(section)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+          <span class="year-label">{section.label}</span>
+          <span class="year-count">{section.count} note{section.count === 1 ? '' : 's'}</span>
+        </button>
+        {#if isYearOpen(section)}
+          <div class="year-body">
+            {#each monthsToShow(section) as group (group.key)}
+              <div class="month-block">
+                {#if section.kind === 'year'}
+                  <div class="month-rail">
+                    <span>{groupLabel(group)}</span>
+                    <span>{group.items.length}</span>
+                  </div>
+                {/if}
+                <div class="notes">
+                  {#each group.items as transcription (transcription.jsonFile)}
+                    <NoteCard
+                      {transcription}
+                      {selectedTags}
+                      expanded={!!expanded[transcription.jsonFile]}
+                      showRaw={!!showRaw[transcription.jsonFile]}
+                      busy={!!noteBusy[transcription.jsonFile]}
+                      playing={!!expanded[transcription.jsonFile] && typeof transcription.transcriptionJson?._currentTime === 'number'}
+                      on:toggle={(event) => toggleExpanded(event.detail)}
+                      on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
+                      on:tag={(event) => toggleTag(event.detail)}
+                      on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
+                      on:raw={(event) => {
+                        showRaw[event.detail.jsonFile] = event.detail.show;
+                        showRaw = showRaw;
+                      }}
+                      on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
+                      on:copy={(event) => copyTranscription(event.detail)}
+                      on:retry={(event) => retryCleanup(event.detail)}
+                      on:skip={(event) => skipNoteCleanup(event.detail)}
+                      on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
+                      on:delete={(event) => deleteTranscription(event.detail)}
+                    />
+                  {/each}
                 </div>
-              {/if}
-              <div class="notes">
-                {#each group.items as transcription (transcription.jsonFile)}
-                  {@const cleaned = cleanedOf(transcription)}
-                  {@const tags = tagsOf(transcription)}
-                  {@const isOpen = expanded[transcription.jsonFile]}
-                  {@const playing = isOpen && typeof transcription.transcriptionJson?._currentTime === 'number'}
-                  <article class="note dw-card dw-card-hover" class:is-open={isOpen} class:is-playing={playing}>
-                    <button
-                      type="button"
-                      class="note-head"
-                      title={transcription.jsonFile}
-                      on:click={() => toggleExpanded(transcription.jsonFile)}
-                    >
-                      <span class="note-title">
-                        <span class="name">{displayName(transcription.jsonFile)}</span>
-                        {#if transcription.transcriptionJson?.elapsed}
-                          <span class="elapsed">{transcription.transcriptionJson.elapsed}</span>
-                        {/if}
-                        {#if transcription.transcriptionJson?.cleanupSkipped}
-                          <span class="status">cleanup skipped</span>
-                        {:else if !cleaned}
-                          <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
-                        {/if}
-                      </span>
-                      {#if !isOpen}
-                        <span class="preview">
-                          {preview(
-                            cleaned ||
-                              transcription.transcriptionJson?.preview ||
-                              transcription.transcriptionJson?.text ||
-                              ''
-                          )}
-                        </span>
-                      {/if}
-                    </button>
-                    {#if tags.length}
-                      <div class="note-tags">
-                        {#each tags as tag}
-                          <button
-                            type="button"
-                            class="dw-chip"
-                            class:is-active={selectedTags.includes(tag)}
-                            on:click={() => toggleTag(tag)}
-                          >
-                            {tag}
-                          </button>
-                        {/each}
-                      </div>
-                    {/if}
-                    {#if isOpen}
-                      <div class="note-body">
-                        <audio
-                          controls
-                          preload="metadata"
-                          src={audioUrl(transcription.jsonFile)}
-                          on:timeupdate={(event) => onAudioTime(transcription, event)}
-                        ></audio>
-                        {#if cleaned}
-                          {@const cleanedBy = cleanupLabel(transcription.transcriptionJson)}
-                          {#if cleanedBy}
-                            <p class="dw-muted">Cleaned {cleanedBy}</p>
-                          {/if}
-                          {#if transcription.transcriptionJson?.playbackCuesSource !== 'words'}
-                            <p class="dw-muted">
-                              Section times need a re-transcribe for word timestamps. Raw segments below still have Whisper times.
-                            </p>
-                          {/if}
-                          {#if !showRaw[transcription.jsonFile]}
-                            {#each cuesOf(transcription) as cue, index}
-                              <button
-                                type="button"
-                                class="cue"
-                                class:is-active={cueActive(transcription, cue, index)}
-                                class:untimed={!cueHasTime(cue)}
-                                class:dw-cue-pulse={cueActive(transcription, cue, index)}
-                                on:click={(event) => playCue(event, cue)}
-                              >
-                                <span class="cue-time">{cueHasTime(cue) ? formatTime(cue.start) : '—'}</span>
-                                <span class="cue-text">{cue.text}</span>
-                              </button>
-                            {/each}
-                          {/if}
-                        {:else}
-                          <p class="dw-muted">No cleaned text yet. Raw transcript below.</p>
-                        {/if}
-                        {#if (transcription.transcriptionJson?.segments || []).length}
-                          <div class="dw-segmented" role="group" aria-label="Transcript view">
-                            <button
-                              type="button"
-                              class:is-on={!showRaw[transcription.jsonFile]}
-                              on:click={() => {
-                                showRaw[transcription.jsonFile] = false;
-                                showRaw = showRaw;
-                              }}
-                            >
-                              Readable
-                            </button>
-                            <button
-                              type="button"
-                              class:is-on={!!showRaw[transcription.jsonFile]}
-                              on:click={() => {
-                                showRaw[transcription.jsonFile] = true;
-                                showRaw = showRaw;
-                              }}
-                            >
-                              Raw
-                            </button>
-                          </div>
-                        {/if}
-                        {#if showRaw[transcription.jsonFile]}
-                          <div class="segments">
-                            {#each transcription.transcriptionJson.segments as segment}
-                              <p>
-                                <span class="times">{segment.start}–{segment.end}</span>
-                                {segment.text}
-                              </p>
-                            {/each}
-                          </div>
-                        {/if}
-                        <div class="actions">
-                          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => copyTranscription(transcription)}>
-                            Copy
-                          </button>
-                          {#if !cleaned || transcription.transcriptionJson?.cleanupError}
-                            <button
-                              type="button"
-                              class="dw-btn-secondary dw-btn-compact"
-                              disabled={noteBusy[transcription.jsonFile]}
-                              on:click={() => retryCleanup(transcription.jsonFile)}
-                            >
-                              Retry
-                            </button>
-                          {/if}
-                          {#if !cleaned && !transcription.transcriptionJson?.cleanupSkipped}
-                            <button
-                              type="button"
-                              class="dw-btn-secondary dw-btn-compact"
-                              disabled={noteBusy[transcription.jsonFile]}
-                              on:click={() => skipNoteCleanup(transcription.jsonFile)}
-                            >
-                              Skip
-                            </button>
-                          {/if}
-                          {#if isHolding(transcription.jsonFile) || (folderOf(transcription.jsonFile).key === 'unfiled' && hasDateName(transcription.jsonFile))}
-                            {#if hasDateName(transcription.jsonFile)}
-                              <button
-                                type="button"
-                                class="dw-btn-secondary dw-btn-compact"
-                                disabled={noteBusy[transcription.jsonFile]}
-                                on:click={() => resolveHolding(transcription.jsonFile, 'overwrite')}
-                              >
-                                File
-                              </button>
-                              <button
-                                type="button"
-                                class="dw-btn-secondary dw-btn-compact"
-                                disabled={noteBusy[transcription.jsonFile]}
-                                on:click={() => resolveHolding(transcription.jsonFile, 'rename')}
-                              >
-                                File as copy
-                              </button>
-                            {/if}
-                            {#if isHolding(transcription.jsonFile)}
-                              <button
-                                type="button"
-                                class="dw-btn-secondary dw-btn-compact"
-                                disabled={noteBusy[transcription.jsonFile]}
-                                on:click={() => resolveHolding(transcription.jsonFile, 'unfile')}
-                              >
-                                Unfile
-                              </button>
-                            {/if}
-                          {/if}
-                          <button
-                            type="button"
-                            class="dw-btn-secondary dw-btn-compact is-danger"
-                            on:click={() => deleteTranscription(transcription.jsonFile)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    {/if}
-                  </article>
-                {/each}
               </div>
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </section>
-  {/each}
-  {#if hiddenMonths > 0}
-    <p class="dw-muted load-more" use:lazyMore={hiddenMonths}>
-      {hiddenMonths} older month{hiddenMonths === 1 ? '' : 's'} — scroll to load
-    </p>
-  {/if}
+            {/each}
+          </div>
+        {/if}
+      </section>
+    {/each}
+    {#if hiddenMonths > 0}
+      <p class="dw-muted load-more" use:lazyMore={hiddenMonths}>
+        {hiddenMonths} older month{hiddenMonths === 1 ? '' : 's'} — scroll to load
+      </p>
+    {/if}
+  </div>
 </section>
 
 <style lang="scss">
@@ -1183,15 +1242,71 @@
     padding-left: 2.4rem;
   }
 
+  .filters {
+    margin-top: 0.75rem;
+  }
+
+  .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.45rem 0.55rem;
+    margin-top: 0.4rem;
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(113 113 122);
+  }
+
+  .dw-select {
+    width: auto;
+    min-width: 8.5rem;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.8125rem;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 500;
+  }
+
+  .dates {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.45rem;
+  }
+
+  .dates-toggle {
+    display: none;
+  }
+
+  .status-line {
+    margin-top: 0.65rem;
+    font-variant-numeric: tabular-nums;
+  }
+
   .tags-head,
   .tags-filter,
-  .archive-tools {
+  .archive-tools,
+  .years-strip {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: 0.4rem 0.75rem;
     margin-bottom: 0.55rem;
+  }
+
+  .year-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem;
   }
 
   .tag-cloud-body {
@@ -1264,11 +1379,26 @@
     margin-left: 0.35rem;
   }
 
+  .hits .notes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .archive.is-dimmed,
+  .archive-tools.is-dimmed {
+    opacity: 0.55;
+  }
+
   .year-block {
     overflow: hidden;
     border-radius: 0.75rem;
     border: 1px solid rgb(255 255 255 / 0.06);
     background: rgb(0 0 0 / 0.15);
+  }
+
+  .year-block + .year-block {
+    margin-top: 0.55rem;
   }
 
   .year-head {
@@ -1359,167 +1489,23 @@
     gap: 0.5rem;
   }
 
-  .note {
-    position: relative;
-    padding: 0.85rem 1rem;
-  }
-
-  .note.is-open {
-    padding-bottom: 1rem;
-  }
-
-  .note.is-playing::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.7rem;
-    bottom: 0.7rem;
-    width: 3px;
-    border-radius: 0 2px 2px 0;
-    background: linear-gradient(180deg, #fcd34d, #f59e0b, #ea580c);
-  }
-
-  .note-head {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    padding: 0;
-    text-align: left;
-  }
-
-  .note-title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.45rem 0.6rem;
-  }
-
-  .name {
-    font-weight: 500;
-    color: rgb(250 250 250);
-    overflow-wrap: anywhere;
-  }
-
-  .elapsed,
-  .status {
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    color: rgb(113 113 122);
-  }
-
-  .preview {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    margin-top: 0.35rem;
-    font-size: 0.875rem;
-    line-height: 1.45;
-    color: rgb(161 161 170);
-  }
-
-  .note-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    margin-top: 0.45rem;
-  }
-
-  .note-body {
-    margin-top: 0.75rem;
-    font-size: 0.9375rem;
-    line-height: 1.55;
-  }
-
-  .note-body audio {
-    width: 100%;
-    margin: 0 0 0.75rem;
-    color-scheme: dark;
-  }
-
-  .cue {
-    display: grid;
-    grid-template-columns: 3.2rem 1fr;
-    gap: 0.6rem;
-    width: 100%;
-    margin: 0 0 0.25rem;
-    padding: 0.45rem 0.5rem;
-    border: 0;
-    border-left: 3px solid transparent;
-    border-radius: 0 0.5rem 0.5rem 0;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    text-align: left;
-  }
-
-  .cue:hover {
-    background: rgb(255 255 255 / 0.04);
-  }
-
-  .cue.is-active {
-    background: rgb(245 158 11 / 0.1);
-    border-left-color: var(--dw-accent);
-  }
-
-  .cue.dw-cue-pulse {
-    animation: dw-msg-highlight-pulse 2s ease-out 1;
-  }
-
-  .cue.untimed {
-    cursor: default;
-  }
-
-  .cue.untimed:hover {
-    background: transparent;
-  }
-
-  .cue-time {
-    padding-top: 0.15rem;
-    color: var(--dw-accent);
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .cue-text {
-    white-space: pre-wrap;
-  }
-
-  .dw-segmented {
-    margin: 0.65rem 0 0.5rem;
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-top: 0.85rem;
-  }
-
-  .segments {
-    margin-top: 0.5rem;
-  }
-
-  .segments p {
-    margin: 0 0 0.35rem;
-    color: rgb(161 161 170);
-    font-size: 0.8125rem;
-  }
-
-  .times {
-    display: inline-block;
-    min-width: 6rem;
-    color: rgb(113 113 122);
-    font-variant-numeric: tabular-nums;
-  }
-
   .load-more {
     padding: 0.35rem 0.15rem 0.15rem;
+  }
+
+  @media (max-width: 720px) {
+    .dates-toggle {
+      display: inline-flex;
+    }
+
+    .dates:not(.is-open) .filter-field {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chevron {
+      transition: none;
+    }
   }
 </style>

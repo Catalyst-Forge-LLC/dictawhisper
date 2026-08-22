@@ -1,7 +1,7 @@
 import path from 'path';
 import express from 'express';
 import multer from 'multer';
-import { process, cleanTranscription, countStatus, listNoteSummaries, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
+import { process, cleanTranscription, countStatus, getTranscriptionFilename, listNoteSummaries, patchTranscription, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
 import {
   journalStats,
   journalTags,
@@ -10,7 +10,7 @@ import {
   notesIndexPayload,
   searchJournalIndex,
 } from './lib/journalService.ts';
-import type { SearchMode } from './lib/journalIndexLib.ts';
+import type { SearchMode, SearchSort } from './lib/journalIndexLib.ts';
 import { q } from './lib/queueLib.ts';
 import { config } from './config.ts';
 import { resolveWhisperModel } from './lib/whisperLib.ts';
@@ -130,13 +130,15 @@ export const apiRoutes = [
         const year = typeof req.query.year === 'string' ? req.query.year.trim() : '';
         const month = typeof req.query.month === 'string' ? req.query.month.trim() : '';
         const unreadable = queryFlag(req.query.unreadable);
+        const starred = queryFlag(req.query.starred);
         const all = queryFlag(req.query.all);
-        if (year || month || unreadable || all) {
+        if (year || month || unreadable || starred || all) {
           res.json({
             notes: listInboxNotes({
               year: year || undefined,
               month: month || undefined,
               unreadable: unreadable || undefined,
+              starred: starred || undefined,
               all: all || undefined,
             }),
             paged: !all,
@@ -163,15 +165,23 @@ export const apiRoutes = [
         const until = typeof req.query.until === 'string' ? req.query.until.trim() : '';
         const modeRaw = typeof req.query.mode === 'string' ? req.query.mode.trim() : '';
         const mode = modeRaw === 'lex' || modeRaw === 'semantic' || modeRaw === 'hybrid' ? (modeRaw as SearchMode) : undefined;
+        const sortRaw = typeof req.query.sort === 'string' ? req.query.sort.trim() : '';
+        const sort = sortRaw === 'recent' || sortRaw === 'oldest' || sortRaw === 'relevance' ? (sortRaw as SearchSort) : undefined;
+        const year = typeof req.query.year === 'string' ? req.query.year.trim() : '';
+        const month = typeof req.query.month === 'string' ? req.query.month.trim() : '';
         const limit = Number(req.query.limit);
         const hits = await searchJournalIndex({
           query,
           tags,
           since: since || undefined,
           until: until || undefined,
+          year: year || undefined,
+          month: month || undefined,
           mode,
+          sort,
           limit: Number.isFinite(limit) ? limit : undefined,
           unreadable: queryFlag(req.query.unreadable),
+          starred: queryFlag(req.query.starred),
         });
         res.json({ hits, count: hits.length });
       } catch (error) {
@@ -245,6 +255,35 @@ export const apiRoutes = [
         res.json(note);
       } catch (error: any) {
         res.status(500).json({ error: error?.message || 'failed to read note' });
+      }
+    },
+  },
+  {
+    path: '/note',
+    method: 'POST',
+    handler: (req: express.Request, res: express.Response) => {
+      const file = requireAllowedFile(req, res);
+      if (!file) return;
+      const jsonFile = file.toLowerCase().endsWith('.json') ? file : getTranscriptionFilename(file);
+      const allowed = resolveAllowedPath(jsonFile);
+      if (!allowed.ok) {
+        res.status(403).json({ error: allowed.error });
+        return;
+      }
+      if (req.body?.tags === undefined && typeof req.body?.starred !== 'boolean') {
+        res.status(400).json({ error: 'POST { "file", "tags"?: string[], "starred"?: boolean }' });
+        return;
+      }
+      try {
+        res.json(
+          patchTranscription(allowed.path, {
+            tags: req.body?.tags,
+            starred: typeof req.body?.starred === 'boolean' ? req.body.starred : undefined,
+          }),
+        );
+      } catch (error: any) {
+        const status = String(error?.message || '').includes('not found') ? 404 : 500;
+        res.status(status).json({ error: error?.message || 'failed to update note' });
       }
     },
   },

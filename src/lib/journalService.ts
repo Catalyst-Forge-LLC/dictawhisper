@@ -8,6 +8,7 @@ import {
   type IndexListOptions,
   type IndexSearchHit,
   type SearchMode,
+  type SearchSort,
 } from './journalIndexLib.ts';
 import { createEmbedClient, type EmbedClient } from './journalEmbedLib.ts';
 
@@ -192,14 +193,20 @@ export async function searchJournalIndex(options: {
   tags?: string[];
   since?: string;
   until?: string;
+  year?: string;
+  month?: string;
   mode?: SearchMode;
+  sort?: SearchSort;
   limit?: number;
   unreadable?: boolean;
+  starred?: boolean;
 }): Promise<IndexSearchHit[]> {
   const index = requireJournal();
-  const requested = options.mode || config.journal.search;
+  const query = String(options.query || '').trim();
+  const requested =
+    /^filename:/i.test(query) ? 'lex' : options.mode || config.journal.search;
   let queryEmbedding: number[] | null = null;
-  if (requested !== 'lex' && String(options.query || '').trim()) {
+  if (requested !== 'lex' && query) {
     try {
       const client = await getEmbedClient();
       if (client) queryEmbedding = await client.embed(String(options.query));
@@ -247,19 +254,23 @@ export function recentJournalIndex(options: {
 export function toInboxSummary(hit: {
   jsonFile: string;
   basename: string;
+  day?: string;
   tags: string[];
   preview: string;
   hasCleaned: boolean;
   audioError: string | null;
+  starred?: boolean;
 }) {
   return {
     jsonFile: hit.jsonFile,
     basename: hit.basename,
+    day: hit.day || '',
     transcriptionJson: {
       tags: hit.tags,
       preview: hit.preview,
       hasCleaned: hit.hasCleaned,
       audioError: hit.audioError,
+      starred: Boolean(hit.starred),
       _partial: true,
     },
   };

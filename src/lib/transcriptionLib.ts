@@ -70,6 +70,7 @@ export function summarizeTranscription(jsonFile: string, json: any = transcripti
       preview,
       hasCleaned: Boolean(cleaned),
       audioError: json?.audioError ? String(json.audioError) : null,
+      starred: Boolean(json?.starred),
       _partial: true,
     },
   };
@@ -110,6 +111,42 @@ export function emitTranscription(target: Socket | SocketIOServer | null = null,
   indexSidecar(jsonFile);
   const dest = target ?? liveIo;
   dest?.emit('transcription', { jsonFile, transcriptionJson });
+}
+
+function normalizeTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const tag = String(raw || '').trim().replace(/\s+/g, '-');
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+  }
+  return out.slice(0, 40);
+}
+
+export function patchTranscription(
+  jsonFile: string,
+  patch: { tags?: unknown; starred?: boolean },
+) {
+  if (!fs.existsSync(jsonFile)) {
+    throw new Error('note not found');
+  }
+  const json = JSON.parse(fs.readFileSync(jsonFile, 'utf-8')) as TranscriptionDocument;
+  if (patch.tags !== undefined) {
+    json.tags = normalizeTags(patch.tags);
+  }
+  if (typeof patch.starred === 'boolean') {
+    json.starred = patch.starred;
+  }
+  fs.writeFileSync(jsonFile, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
+  transcriptions[jsonFile] = json;
+  indexSidecar(jsonFile);
+  liveIo?.emit('transcription', { jsonFile, transcriptionJson: json });
+  return { jsonFile, transcriptionJson: json };
 }
 
 export function getTranscriptionFilename(file: string): string {

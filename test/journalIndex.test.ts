@@ -70,3 +70,35 @@ test('sqlite-vec hybrid ranks a nearby vector first', () => {
   index.close();
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+test('search sorts the hit page and filters starred / year', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-idx-sort-'));
+  const dbPath = path.join(root, 'journal.sqlite');
+  writeNote(path.join(root, '2015', '07'), '2015-07-02.json', {
+    cleanedTranscription: 'tickets for the show',
+    tags: ['music'],
+    starred: true,
+  });
+  writeNote(path.join(root, '2015', '08'), '2015-08-10.json', {
+    cleanedTranscription: 'more tickets later',
+    tags: ['music'],
+  });
+  writeNote(path.join(root, '2013', '01'), '2013-01-05.json', {
+    cleanedTranscription: 'tickets in another year',
+    tags: ['music'],
+  });
+  const index = new JournalIndex(dbPath);
+  index.rebuildFromRoots([root]);
+  const recent = index.search({ query: 'tickets', sort: 'recent' });
+  assert.equal(recent[0].basename, '2015-08-10.json');
+  const oldest = index.search({ query: 'tickets', sort: 'oldest' });
+  assert.equal(oldest[0].basename, '2013-01-05.json');
+  const starred = index.search({ query: 'tickets', starred: true });
+  assert.equal(starred.length, 1);
+  assert.equal(starred[0].starred, true);
+  const july = index.search({ query: 'tickets', year: '2015', month: '07' });
+  assert.equal(july.length, 1);
+  assert.equal(july[0].day, '2015-07-02');
+  index.close();
+  fs.rmSync(root, { recursive: true, force: true });
+});

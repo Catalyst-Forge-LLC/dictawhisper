@@ -119,6 +119,9 @@
         {#if journal.unreadable}
           · {journal.unreadable} unreadable
         {/if}
+        {#if journal.starred}
+          · {journal.starred} starred
+        {/if}
         {#if journal.embedded}
           · {journal.embedded} embedded{journal.embedModel ? ` (${journal.embedModel})` : ''}
         {:else}

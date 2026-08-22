@@ -51,5 +51,6 @@ export type TranscriptionDocument = {
   cleanupSkipped?: boolean;
   /** ffmpeg/preprocess could not read the audio. Do not retry until force. */
   audioError?: string;
+  starred?: boolean;
   promptVersion?: number;
 };

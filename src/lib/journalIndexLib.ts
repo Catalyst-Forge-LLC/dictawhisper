@@ -6,10 +6,11 @@ import { getLoadablePath } from 'sqlite-vec';
 import { isSkippedWatchPath } from './fileSettleLib.ts';
 import { dayOf } from './journalQueryLib.ts';
 
-const SCHEMA_VERSION = '1';
+const SCHEMA_VERSION = '2';
 const PREVIEW_LIMIT = 200;
 
 export type SearchMode = 'lex' | 'semantic' | 'hybrid';
+export type SearchSort = 'recent' | 'oldest' | 'relevance';
 
 export type IndexSearchHit = {
   jsonFile: string;
@@ -20,6 +21,7 @@ export type IndexSearchHit = {
   score: number;
   hasCleaned: boolean;
   audioError: string | null;
+  starred: boolean;
 };
 
 export type IndexSummary = {
@@ -33,12 +35,14 @@ export type IndexSummary = {
   preview: string;
   hasCleaned: boolean;
   audioError: string | null;
+  starred: boolean;
 };
 
 export type IndexStats = {
   path: string;
   notes: number;
   unreadable: number;
+  starred: number;
   embedded: number;
   embedModel: string | null;
   embedDim: number | null;
@@ -49,6 +53,7 @@ export type IndexListOptions = {
   year?: string;
   month?: string;
   unreadable?: boolean;
+  starred?: boolean;
   all?: boolean;
 };
 
@@ -63,6 +68,7 @@ type NoteRow = {
   preview: string;
   has_cleaned: number;
   audio_error: string | null;
+  starred: number;
   mtime_ms: number;
   text_hash: string;
   body: string;
@@ -124,6 +130,13 @@ export class JournalIndex {
       CREATE INDEX IF NOT EXISTS notes_year ON notes(year, month);
       CREATE INDEX IF NOT EXISTS notes_folder ON notes(folder);
     `);
+    const noteCols = (
+      this.db.prepare('PRAGMA table_info(notes)').all() as { name: string }[]
+    ).map((row) => row.name);
+    if (!noteCols.includes('starred')) {
+      this.db.exec('ALTER TABLE notes ADD COLUMN starred INTEGER NOT NULL DEFAULT 0');
+    }
+    this.db.exec('CREATE INDEX IF NOT EXISTS notes_starred ON notes(starred)');
     this.db.exec(`
       CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
         basename, tags, body, raw,
@@ -172,6 +185,9 @@ export class JournalIndex {
       (this.db.prepare("SELECT COUNT(*) AS n FROM notes WHERE audio_error IS NOT NULL AND audio_error != ''").get() as { n: number })
         .n,
     );
+    const starred = Number(
+      (this.db.prepare('SELECT COUNT(*) AS n FROM notes WHERE starred = 1').get() as { n: number }).n,
+    );
     let embedded = 0;
     if (this.hasVec()) {
       embedded = Number((this.db.prepare('SELECT COUNT(*) AS n FROM notes_vec').get() as { n: number }).n);
@@ -181,6 +197,7 @@ export class JournalIndex {
       path: this.dbPath,
       notes,
       unreadable,
+      starred,
       embedded,
       embedModel: this.meta('embed_model'),
       embedDim: dimRaw ? Number(dimRaw) : null,
@@ -218,7 +235,7 @@ export class JournalIndex {
       this.db
         .prepare(
           `UPDATE notes SET basename=?, day=?, year=?, month=?, folder=?, tags=?, preview=?,
-           has_cleaned=?, audio_error=?, mtime_ms=?, text_hash=?, body=?, raw=? WHERE json_file=?`,
+           has_cleaned=?, audio_error=?, starred=?, mtime_ms=?, text_hash=?, body=?, raw=? WHERE json_file=?`,
         )
         .run(
           parsed.basename,
@@ -230,6 +247,7 @@ export class JournalIndex {
           parsed.preview,
           parsed.has_cleaned,
           parsed.audio_error,
+          parsed.starred,
           parsed.mtime_ms,
           parsed.text_hash,
           parsed.body,
@@ -248,8 +266,8 @@ export class JournalIndex {
     this.db
       .prepare(
         `INSERT INTO notes (json_file, basename, day, year, month, folder, tags, preview, has_cleaned,
-         audio_error, mtime_ms, text_hash, body, raw)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         audio_error, starred, mtime_ms, text_hash, body, raw)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         parsed.json_file,
@@ -262,6 +280,7 @@ export class JournalIndex {
         parsed.preview,
         parsed.has_cleaned,
         parsed.audio_error,
+        parsed.starred,
         parsed.mtime_ms,
         parsed.text_hash,
         parsed.body,
@@ -405,15 +424,18 @@ export class JournalIndex {
     if (options.unreadable) {
       where.push("audio_error IS NOT NULL AND audio_error != ''");
     }
+    if (options.starred) {
+      where.push('starred = 1');
+    }
     if (options.year) {
-      where.push('year = ?');
+      where.push("(folder IN ('holding', 'unfiled') OR year = ?)");
       params.push(options.year);
     }
-    if (options.month) {
-      where.push('month = ?');
+    if (options.month && options.year) {
+      where.push("(folder IN ('holding', 'unfiled') OR month = ?)");
       params.push(options.month);
     }
-    if (!options.all && !options.year && !options.month && !options.unreadable) {
+    if (!options.all && !options.year && !options.month && !options.unreadable && !options.starred) {
       const newest = this.db
         .prepare("SELECT MAX(year) AS year FROM notes WHERE folder = 'journal' AND year != ''")
         .get() as { year: string | null };
@@ -422,7 +444,7 @@ export class JournalIndex {
         params.push(newest.year);
       }
     }
-    const sql = `SELECT json_file, basename, day, year, month, folder, tags, preview, has_cleaned, audio_error
+    const sql = `SELECT json_file, basename, day, year, month, folder, tags, preview, has_cleaned, audio_error, starred
       FROM notes ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
       ORDER BY day DESC, basename DESC`;
     const rows = this.db.prepare(sql).all(...params) as Array<
@@ -436,42 +458,59 @@ export class JournalIndex {
     tags?: string[];
     since?: string;
     until?: string;
+    year?: string;
+    month?: string;
     mode?: SearchMode;
+    sort?: SearchSort;
     limit?: number;
     unreadable?: boolean;
+    starred?: boolean;
     queryEmbedding?: number[] | null;
   }): IndexSearchHit[] {
     const limit = Math.min(50, Math.max(1, options.limit || 20));
     const tags = (options.tags || []).map((tag) => tag.trim()).filter(Boolean);
     const query = String(options.query || '').trim();
-    const mode = options.mode || 'lex';
-    const filters = { tags, since: options.since, until: options.until, unreadable: options.unreadable };
-    if (!query && !tags.length && !options.unreadable) return [];
+    const range = yearMonthRange(options.year, options.month);
+    const since = options.since || range.since;
+    const until = options.until || range.until;
+    const filenameQuery = /^filename:/i.test(query);
+    const mode = filenameQuery ? 'lex' : options.mode || 'lex';
+    const filters = {
+      tags,
+      since,
+      until,
+      unreadable: options.unreadable,
+      starred: options.starred,
+    };
+    if (!query && !tags.length && !options.unreadable && !options.starred && !since && !until) {
+      return [];
+    }
 
+    let hits: IndexSearchHit[];
     if (!query) {
-      return this.filterRows(filters, limit).map((row) => toHit(row, 0));
+      hits = this.filterRows(filters, limit).map((row) => toHit(row, 0));
+    } else {
+      const lexHits = this.searchLex(query, { ...filters, limit: 80 });
+      if (mode === 'lex' || !options.queryEmbedding || !this.hasVec()) {
+        hits = lexHits.slice(0, limit);
+      } else {
+        const semHits = this.searchSemantic(options.queryEmbedding, { ...filters, limit: 80 });
+        hits = mode === 'semantic' ? semHits.slice(0, limit) : rrfMerge(lexHits, semHits, limit);
+      }
     }
-
-    const lexHits = this.searchLex(query, { ...filters, limit: 80 });
-    if (mode === 'lex' || !options.queryEmbedding || !this.hasVec()) {
-      return lexHits.slice(0, limit);
-    }
-
-    const semHits = this.searchSemantic(options.queryEmbedding, { ...filters, limit: 80 });
-    if (mode === 'semantic') return semHits.slice(0, limit);
-    return rrfMerge(lexHits, semHits, limit);
+    return sortHits(hits, options.sort || (query ? 'relevance' : 'recent'));
   }
 
   private searchLex(
     query: string,
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; limit: number },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; limit: number },
   ): IndexSearchHit[] {
     const match = buildFtsQuery(query);
     if (!match) return [];
     const { extra, params } = this.filterSql(options);
     const rows = this.db
       .prepare(
-        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error,
+        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
                 bm25(notes_fts) AS rank
          FROM notes_fts
          JOIN notes n ON n.rowid = notes_fts.rowid
@@ -487,12 +526,12 @@ export class JournalIndex {
 
   private searchSemantic(
     embedding: number[],
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; limit: number },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; limit: number },
   ): IndexSearchHit[] {
     const { extra, params } = this.filterSql(options);
     const rows = this.db
       .prepare(
-        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error,
+        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
                 v.distance AS rank
          FROM notes_vec v
          JOIN notes n ON n.rowid = v.rowid
@@ -506,7 +545,7 @@ export class JournalIndex {
   }
 
   private filterRows(
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean },
     limit: number,
   ): NoteRow[] {
     const { extra, params } = this.filterSql(options);
@@ -515,7 +554,13 @@ export class JournalIndex {
       .all(...params, limit) as NoteRow[];
   }
 
-  private filterSql(options: { tags: string[]; since?: string; until?: string; unreadable?: boolean }): {
+  private filterSql(options: {
+    tags: string[];
+    since?: string;
+    until?: string;
+    unreadable?: boolean;
+    starred?: boolean;
+  }): {
     extra: string;
     params: Array<string | number>;
   } {
@@ -531,6 +576,9 @@ export class JournalIndex {
     }
     if (options.unreadable) {
       extra.push("AND n.audio_error IS NOT NULL AND n.audio_error != ''");
+    }
+    if (options.starred) {
+      extra.push('AND n.starred = 1');
     }
     for (const tag of options.tags) {
       extra.push('AND lower(n.tags) LIKE ?');
@@ -551,6 +599,7 @@ function toSummary(row: {
   preview: string;
   has_cleaned: number;
   audio_error: string | null;
+  starred?: number;
 }): IndexSummary {
   return {
     jsonFile: row.json_file,
@@ -563,6 +612,7 @@ function toSummary(row: {
     preview: row.preview,
     hasCleaned: Boolean(row.has_cleaned),
     audioError: row.audio_error,
+    starred: Boolean(row.starred),
   };
 }
 
@@ -575,6 +625,7 @@ function toHit(
     preview: string;
     has_cleaned: number;
     audio_error: string | null;
+    starred?: number;
   },
   score: number,
 ): IndexSearchHit {
@@ -587,6 +638,7 @@ function toHit(
     score,
     hasCleaned: Boolean(row.has_cleaned),
     audioError: row.audio_error,
+    starred: Boolean(row.starred),
   };
 }
 
@@ -637,7 +689,8 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
   }
   const basename = path.basename(resolved);
   const day = dayOf(resolved, basename.replace(/\.json$/i, ''), mtimeMs);
-  const textHash = createHash('sha1').update(`${cleaned}\0${raw}\0${tags.join(',')}`).digest('hex');
+  const starred = json.starred === true || json.starred === 1 ? 1 : 0;
+  const textHash = createHash('sha1').update(`${cleaned}\0${raw}\0${tags.join(',')}\0${starred}`).digest('hex');
   return {
     json_file: resolved,
     basename,
@@ -649,6 +702,7 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
     preview: audioError && !source ? '[unreadable audio]' : previewOf(source),
     has_cleaned: cleaned ? 1 : 0,
     audio_error: audioError,
+    starred,
     mtime_ms: mtimeMs,
     text_hash: textHash,
     body: cleaned || raw,
@@ -670,6 +724,28 @@ export function buildFtsQuery(query: string): string {
   });
   const joined = parts.join(' AND ');
   return filename ? `{basename} : ${joined}` : joined;
+}
+
+export function yearMonthRange(year?: string, month?: string): { since?: string; until?: string } {
+  const y = String(year || '').trim();
+  if (!/^\d{4}$/.test(y)) return {};
+  const m = String(month || '').trim().padStart(2, '0');
+  if (/^\d{2}$/.test(m) && Number(m) >= 1 && Number(m) <= 12) {
+    const last = new Date(Number(y), Number(m), 0).getDate();
+    return { since: `${y}-${m}-01`, until: `${y}-${m}-${String(last).padStart(2, '0')}` };
+  }
+  return { since: `${y}-01-01`, until: `${y}-12-31` };
+}
+
+function sortHits(hits: IndexSearchHit[], sort: SearchSort): IndexSearchHit[] {
+  if (sort === 'relevance') return hits;
+  const copy = [...hits];
+  copy.sort((a, b) => {
+    const day = String(a.day).localeCompare(String(b.day));
+    const name = String(a.basename).localeCompare(String(b.basename));
+    return sort === 'oldest' ? day || name : -(day || name);
+  });
+  return copy;
 }
 
 function rrfMerge(lex: IndexSearchHit[], sem: IndexSearchHit[], limit: number): IndexSearchHit[] {
