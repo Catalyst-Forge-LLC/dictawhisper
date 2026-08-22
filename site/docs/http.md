@@ -7,7 +7,9 @@ Force/delete/read only accept realpaths under configured watch roots.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Shared doctor report, queues, Whisper worker, ollanet reachability (`?fresh=1` to skip cache) |
-| GET | `/status` | pending / raw / done counts |
+| GET | `/status` | pending / raw / done / unreadable counts |
+| GET | `/tools/probe` | Last audio-probe job (running, bad files) |
+| POST | `/tools/probe` | `{ "apply": false }` scan pending audio; `{ "apply": true }` mark unreadable. 202; 409 if already running |
 | GET | `/notes/index` | Inbox summaries (path, tags, preview, search body) |
 | GET | `/note?file=` | Full sidecar (allowlisted) |
 | GET | `/audio?file=` | Stream allowlisted audio (sidecar or audio path) |

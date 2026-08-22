@@ -67,6 +67,7 @@ export function summarizeTranscription(jsonFile: string, json: any = transcripti
       searchBody: source,
       searchRaw: raw,
       hasCleaned: Boolean(cleaned),
+      audioError: json?.audioError ? String(json.audioError) : null,
       _partial: true,
     },
   };
@@ -394,6 +395,7 @@ export function countStatus(roots: string[]) {
   let pendingAudio = 0;
   let rawOnly = 0;
   let done = 0;
+  let unreadable = 0;
 
   const walk = (dir: string) => {
     if (!fs.existsSync(dir)) return;
@@ -406,13 +408,22 @@ export function countStatus(roots: string[]) {
       }
       if (!audioFileRegex.test(full)) continue;
       if (full.includes('_original') || full.includes('_clean')) continue;
-      const { transcriptionExists, isProcessed } = checkTranscription(full);
-      if (!transcriptionExists) pendingAudio += 1;
-      else if (!isProcessed) rawOnly += 1;
-      else done += 1;
+      const { transcriptionExists, transcriptionFile } = checkTranscription(full);
+      if (!transcriptionExists) {
+        pendingAudio += 1;
+        continue;
+      }
+      try {
+        const json = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
+        if (json.audioError) unreadable += 1;
+        else if (json.cleanedTranscription) done += 1;
+        else rawOnly += 1;
+      } catch {
+        rawOnly += 1;
+      }
     }
   };
 
   for (const root of roots) walk(root);
-  return { pendingAudio, rawOnly, done };
+  return { pendingAudio, rawOnly, done, unreadable };
 }

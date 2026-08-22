@@ -4,6 +4,7 @@
 
   export let transcriptions = [];
   export let socket;
+  export let noteFilter = 'all';
 
   const MONTHS = [
     'January',
@@ -303,7 +304,12 @@
   $: searched = searchQuery.trim()
     ? fuseIndex.search(searchQuery.trim()).map((result) => result.item)
     : transcriptions;
+  function isUnreadable(item) {
+    return Boolean(item.transcriptionJson?.audioError) || item.transcriptionJson?.preview === '[unreadable audio]';
+  }
+
   $: visible = searched.filter((item) => {
+    if (noteFilter === 'unreadable' && !isUnreadable(item)) return false;
     if (!selectedTags.length) return true;
     const have = new Set(tagsOf(item));
     return selectedTags.every((tag) => have.has(tag));
@@ -323,10 +329,10 @@
   let monthPage = 1;
   $: specialGroups = groups.filter((group) => group.key === 'holding' || group.key === 'unfiled');
   $: datedGroups = groups.filter((group) => group.key !== 'holding' && group.key !== 'unfiled');
-  $: pagedGroups = selectedTags.length
+  $: pagedGroups = listIsFiltered()
     ? groups
     : [...specialGroups, ...datedGroups.slice(0, monthPage)];
-  $: hiddenMonths = selectedTags.length ? 0 : Math.max(0, datedGroups.length - monthPage);
+  $: hiddenMonths = listIsFiltered() ? 0 : Math.max(0, datedGroups.length - monthPage);
   $: newestDatedYear = datedGroups[0]?.year;
   $: yearSections = nestByYear(groups);
   $: datedYearCount = yearSections.filter((section) => section.kind === 'year').length;
@@ -369,21 +375,25 @@
     return sections;
   }
 
+  function listIsFiltered() {
+    return Boolean(selectedTags.length || searchQuery.trim() || noteFilter === 'unreadable');
+  }
+
   function defaultYearOpen(key, kind) {
     if (kind === 'special') return true;
-    if (selectedTags.length || searchQuery.trim()) return true;
+    if (listIsFiltered()) return true;
     const currentYear = String(new Date().getFullYear());
     return key === currentYear || key === newestDatedYear;
   }
 
   function isYearOpen(section) {
-    if (selectedTags.length || searchQuery.trim()) return true;
+    if (listIsFiltered()) return true;
     if (Object.prototype.hasOwnProperty.call(yearOpen, section.key)) return yearOpen[section.key];
     return defaultYearOpen(section.key, section.kind);
   }
 
   function monthsToShow(section) {
-    if (selectedTags.length || searchQuery.trim()) return section.months;
+    if (listIsFiltered()) return section.months;
     return section.months.filter((group) => pagedKeys.has(group.key));
   }
 
@@ -617,6 +627,11 @@
           Clear
         </button>
       {/if}
+      {#if noteFilter === 'unreadable'}
+        <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => (noteFilter = 'all')}>
+          Unreadable
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -768,6 +783,9 @@
       {/if}
       {#if selectedTags.length}
         {selectedTags.join(' + ')}
+      {/if}
+      {#if noteFilter === 'unreadable' && !searchQuery.trim() && !selectedTags.length}
+        unreadable audio
       {/if}.
     </p>
   {/if}

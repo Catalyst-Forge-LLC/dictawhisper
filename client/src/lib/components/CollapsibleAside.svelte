@@ -29,7 +29,7 @@
     </div>
     <p>Record or drop an audio file. Browser clips start immediately. Phone-folder watches wait until the file has settled, then file into <code>YYYY/MM/</code>.</p>
     <p>Cleaned text and tags are the default view. Retry cleanup if ollanet was unreachable; Skip leaves the raw transcript. Holding notes can File, File as copy, or Unfile.</p>
-    <p>Search the inbox by words, tags, or filename. First-run problems: <code>pnpm run doctor</code>.</p>
+    <p>Search the inbox by words, tags, or filename. Tools shows queues, health checks, and a probe for broken audio. First-run problems: <code>pnpm run doctor</code>.</p>
   </aside>
 {/if}
 

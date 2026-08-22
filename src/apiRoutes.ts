@@ -10,6 +10,7 @@ import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 import { audioContentType, findAudioForSidecar, saveUploadedAudio } from './lib/audioLib.ts';
 import { applyConsolidateGroups, buildConsolidatePlan } from './lib/tagConsolidateLib.ts';
 import { resolveHeldFile, type HoldingAction } from './lib/organizationLib.ts';
+import { getProbeJob, startProbeJob } from './lib/audioProbeLib.ts';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -139,6 +140,27 @@ export const apiRoutes = [
       } catch (error: any) {
         res.status(500).json({ error: error?.message || 'failed to read note' });
       }
+    },
+  },
+  {
+    path: '/tools/probe',
+    method: 'GET',
+    handler: (_req: express.Request, res: express.Response) => {
+      res.json(getProbeJob());
+    },
+  },
+  {
+    path: '/tools/probe',
+    method: 'POST',
+    handler: (req: express.Request, res: express.Response) => {
+      const apply = Boolean(req.body?.apply);
+      const current = getProbeJob();
+      if (current.running) {
+        res.status(409).json(current);
+        return;
+      }
+      const started = startProbeJob([...config.watch.roots, config.watch.browserDropFolder], { apply });
+      res.status(202).json(started);
     },
   },
   {

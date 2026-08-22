@@ -82,6 +82,9 @@
         <span class={pillClass(ollanet.state)} title={ollanet.title}>{ollanet.label}</span>
         <span class={pillClass(device.state)} title={device.title}>{device.label}</span>
       </div>
+      <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('tools')}>
+        Tools
+      </button>
       <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('help')}>
         Help
       </button>

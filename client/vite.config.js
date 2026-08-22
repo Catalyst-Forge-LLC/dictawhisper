@@ -102,6 +102,7 @@ export default defineConfig({
       "/socket.io": { target, ws: true },
       "/health": { target },
       "/status": { target },
+      "/tools": { target },
       "/transcribe": { target },
       "/process": { target },
       "/audio": { target },
