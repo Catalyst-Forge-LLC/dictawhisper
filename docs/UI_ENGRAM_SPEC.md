@@ -32,7 +32,7 @@ Copy that system. Do not invent a second one.
 - Single page. Record, drop, search, read, play.
 - Year / month groups, Holding and Unfiled as real groups (not a pitch, just folders).
 - Cleaned text first; raw segments on a toggle.
-- Tag AND-filter. Fuse search.
+- Tag AND-filter. Search via `GET /notes/search` (FTS / hybrid), not a client Fuse of the corpus.
 - Playback cues aligned to word timestamps. Click a paragraph to seek.
 - Retry / skip cleanup. Holding resolve (File, File as copy, Unfile).
 - Help aside (rewrite the chrome; keep the facts).
@@ -46,7 +46,7 @@ Copy that system. Do not invent a second one.
 - User picker.
 - Facet explosion (platform, account, corpus, SMS year, media). We have search + tags + year/month.
 - Bulk archive toolbar. Out of scope unless Holding review later needs a bar.
-- Virtualized thread reader. 870 notes already lazy-load by month; keep that.
+- Virtualized thread reader. ~2.8k notes already lazy-load by year/month; keep that.
 - Tailwind, Svelte 5 runes, `$app/state`.
 - Amber *and* sky *and* cyan badges on every row. One accent.
 
