@@ -506,22 +506,51 @@ export class JournalIndex {
     options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; limit: number },
   ): IndexSearchHit[] {
     const match = buildFtsQuery(query);
-    if (!match) return [];
     const { extra, params } = this.filterSql(options);
+    if (match) {
+      try {
+        const rows = this.db
+          .prepare(
+            `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
+                    bm25(notes_fts) AS rank
+             FROM notes_fts
+             JOIN notes n ON n.rowid = notes_fts.rowid
+             WHERE notes_fts MATCH ? ${extra}
+             ORDER BY rank
+             LIMIT ?`,
+          )
+          .all(match, ...params, options.limit) as Array<
+          Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'body' | 'raw' | 'year' | 'month' | 'folder'> & { rank: number }
+        >;
+        return rows.map((row) => toHit(row, Number(row.rank) || 0));
+      } catch {
+        // hyphenated filenames and other FTS syntax — fall through to LIKE
+      }
+    }
+    return this.searchBasenameLike(query, { ...options, extra, params });
+  }
+
+  private searchBasenameLike(
+    query: string,
+    options: { extra: string; params: Array<string | number>; limit: number },
+  ): IndexSearchHit[] {
+    const needle = String(query || '')
+      .replace(/^filename:\s*/i, '')
+      .trim()
+      .replace(/[!%_]/g, (char) => `!${char}`);
+    if (needle.replace(/!/g, '').length < 2) return [];
     const rows = this.db
       .prepare(
-        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
-                bm25(notes_fts) AS rank
-         FROM notes_fts
-         JOIN notes n ON n.rowid = notes_fts.rowid
-         WHERE notes_fts MATCH ? ${extra}
-         ORDER BY rank
+        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred
+         FROM notes n
+         WHERE lower(n.basename) LIKE ? ESCAPE '!' ${options.extra}
+         ORDER BY n.day DESC, n.basename DESC
          LIMIT ?`,
       )
-      .all(match, ...params, options.limit) as Array<
-      Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'body' | 'raw' | 'year' | 'month' | 'folder'> & { rank: number }
+      .all(`%${needle.toLowerCase()}%`, ...options.params, options.limit) as Array<
+      Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'body' | 'raw' | 'year' | 'month' | 'folder'>
     >;
-    return rows.map((row) => toHit(row, Number(row.rank) || 0));
+    return rows.map((row) => toHit(row, 0));
   }
 
   private searchSemantic(
@@ -710,20 +739,22 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
   };
 }
 
+const FTS_WORDS = new Set(['and', 'or', 'not', 'near']);
+
 export function buildFtsQuery(query: string): string {
   const filename = query.match(/^filename:\s*(.+)$/i);
   const raw = filename ? filename[1] : query;
+  const looksLikeName = Boolean(
+    filename || /\d{4}[-_.]\d{2}[-_.]\d{2}/.test(raw) || /\.(mp3|m4a|wav|webm|ogg|json)$/i.test(raw),
+  );
   const tokens = raw
-    .split(/\s+/)
-    .map((token) => token.replace(/["']/g, '').replace(/[^\p{L}\p{N}_*-]/gu, ''))
+    .split(/[^\p{L}\p{N}*]+/u)
+    .map((token) => token.replace(/\*+$/g, ''))
     .filter((token) => token.length > 1 || /\p{L}/u.test(token));
   if (!tokens.length) return '';
-  const parts = tokens.map((token) => {
-    const cleaned = token.replace(/\*+$/g, '');
-    return `${cleaned}*`;
-  });
+  const parts = tokens.map((token) => (FTS_WORDS.has(token.toLowerCase()) ? `"${token}"` : `${token}*`));
   const joined = parts.join(' AND ');
-  return filename ? `{basename} : ${joined}` : joined;
+  return looksLikeName ? `{basename} : ${joined}` : joined;
 }
 
 export function yearMonthRange(year?: string, month?: string): { since?: string; until?: string } {

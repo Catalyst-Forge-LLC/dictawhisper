@@ -15,6 +15,10 @@ function writeNote(dir: string, name: string, body: Record<string, unknown>) {
 test('buildFtsQuery prefix-ANDs tokens', () => {
   assert.equal(buildFtsQuery('Kristen sangria'), 'Kristen* AND sangria*');
   assert.match(buildFtsQuery('filename:Record008'), /basename/);
+  assert.equal(
+    buildFtsQuery('2016-06-01_12-06-25'),
+    '{basename} : 2016* AND 06* AND 01* AND 12* AND 06* AND 25*',
+  );
 });
 
 test('FTS search finds words and AND-filters tags', () => {
@@ -99,6 +103,26 @@ test('search sorts the hit page and filters starred / year', () => {
   const july = index.search({ query: 'tickets', year: '2015', month: '07' });
   assert.equal(july.length, 1);
   assert.equal(july[0].day, '2015-07-02');
+  index.close();
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('dated filename query does not throw and hits basename', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-idx-name-'));
+  const dbPath = path.join(root, 'journal.sqlite');
+  writeNote(path.join(root, '2016', '06'), '2016-06-01_12-06-25 My recording.json', {
+    cleanedTranscription: 'A walk after lunch.',
+    tags: [],
+  });
+  writeNote(path.join(root, '2016', '06'), '2016-06-02_09-00-00 other.json', {
+    cleanedTranscription: 'Unrelated note.',
+    tags: [],
+  });
+  const index = new JournalIndex(dbPath);
+  index.rebuildFromRoots([root]);
+  const hits = index.search({ query: '2016-06-01_12-06-25' });
+  assert.equal(hits.length, 1);
+  assert.match(hits[0].basename, /2016-06-01_12-06-25/);
   index.close();
   fs.rmSync(root, { recursive: true, force: true });
 });
