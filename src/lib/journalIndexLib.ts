@@ -87,6 +87,7 @@ export class JournalIndex {
     fs.mkdirSync(path.dirname(this.dbPath), { recursive: true });
     this.db = new DatabaseSync(this.dbPath, { allowExtension: true });
     this.db.exec('PRAGMA journal_mode = WAL');
+    this.db.exec('PRAGMA busy_timeout = 8000');
     this.db.exec('PRAGMA foreign_keys = ON');
     this.db.enableLoadExtension(true);
     this.db.loadExtension(getLoadablePath());

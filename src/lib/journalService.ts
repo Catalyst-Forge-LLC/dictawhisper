@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { config } from '../config.ts';
 import {
   getJournalIndex,
@@ -137,17 +138,47 @@ export async function ensureEmbeddings(index: JournalIndex = requireJournal()): 
   let done = 0;
   for (const row of pending) {
     try {
-      await embedOne(index, client, row.rowid, row.body);
+      await embedOneWithRetry(index, client, row.rowid, row.body, row.json_file);
       done += 1;
       if (done % 25 === 0) console.log(`[journal-index] embedded ${done}/${pending.length}`);
     } catch (error) {
       console.warn(
         `[journal-index] embed failed ${row.json_file}: ${error instanceof Error ? error.message : error}`,
       );
-      break;
+      if (!isSqliteBusy(error)) break;
     }
   }
   return done;
+}
+
+function isSqliteBusy(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /database is locked|SQLITE_BUSY/i.test(message);
+}
+
+async function embedOneWithRetry(
+  index: JournalIndex,
+  client: EmbedClient,
+  rowid: number,
+  text: string,
+  jsonFile: string,
+) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    try {
+      await embedOne(index, client, rowid, text);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isSqliteBusy(error) || attempt === 6) throw error;
+      const waitMs = 200 * attempt;
+      console.warn(
+        `[journal-index] sqlite busy on ${path.basename(jsonFile)}; retry ${attempt}/6 in ${waitMs}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+  throw lastError;
 }
 
 export async function searchJournalIndex(options: {
