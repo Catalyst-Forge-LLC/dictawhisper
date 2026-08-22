@@ -133,7 +133,13 @@ export async function ensureEmbeddings(index: JournalIndex = requireJournal()): 
     return 0;
   }
   const pending = index.rowsNeedingEmbed();
-  if (!pending.length) return 0;
+  if (!pending.length) {
+    const stats = index.stats();
+    console.log(
+      `[journal-index] embeddings up to date (${stats.embedded} vectors, model ${stats.embedModel || 'none'})`,
+    );
+    return 0;
+  }
   console.log(`[journal-index] embedding ${pending.length} notes with ${client.model}`);
   let done = 0;
   for (const row of pending) {
