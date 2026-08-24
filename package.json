@@ -30,6 +30,7 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "dev": "node scripts/ensure-lease.mjs dictawhisper 7777 && node scripts/ensure-lease.mjs dictawhisper-api 8008 && node --experimental-strip-types src/dev.ts",
+    "serve": "node scripts/ensure-lease.mjs dictawhisper 7777 && node scripts/ensure-lease.mjs dictawhisper-api 8008 && node --experimental-strip-types src/dev.ts",
     "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
     "ui": "pnpm --dir client dev",
     "typecheck": "tsc --noEmit -p tsconfig.json",
