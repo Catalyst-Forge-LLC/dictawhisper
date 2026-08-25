@@ -1,11 +1,19 @@
 import { execSync, spawn, type ChildProcess } from 'child_process';
+import { localberthGet } from './lib/localberthGet.ts';
 
 const children: ChildProcess[] = [];
 
-function run(command: string, args: string[], hide = true) {
+function apiEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    PORT: String(localberthGet('dictawhisper-api') ?? 8008),
+  };
+}
+
+function run(command: string, args: string[], hide = true, env: NodeJS.ProcessEnv = process.env) {
   const child = spawn(command, args, {
     stdio: 'inherit',
-    env: process.env,
+    env,
     windowsHide: hide,
   });
   children.push(child);
@@ -20,7 +28,8 @@ function run(command: string, args: string[], hide = true) {
 }
 
 // windowsHide hides Node stdout in Git Bash; the API child must stay visible.
-run(process.execPath, ['--experimental-strip-types', 'src/server.ts'], false);
+// Do not inherit the UI lease PORT (7777) — the API is dictawhisper-api (8008).
+run(process.execPath, ['--experimental-strip-types', 'src/server.ts'], false, apiEnv());
 
 if (process.platform === 'win32') {
   // pnpm is a .cmd on PATH; CreateProcess cannot run it without cmd.exe.

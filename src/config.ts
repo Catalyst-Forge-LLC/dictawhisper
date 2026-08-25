@@ -135,12 +135,29 @@ export function applyConfigToEnv(config: DictaConfig): void {
   process.env.WHISPER_COMPUTE_TYPE = config.whisper.computeType;
 }
 
+/** LocalBerth start on the UI lease sets PORT=7777. That must not become the API. */
+export function resolveApiListenPort(
+  envPort: string | undefined,
+  uiPort: number | undefined,
+  apiLeasePort: number | undefined,
+  configPort: number
+): number {
+  const n = Number(envPort);
+  if (Number.isInteger(n) && n > 0 && n !== uiPort) return n;
+  return apiLeasePort || configPort;
+}
+
 export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim() || defaultConfigPath): DictaConfig {
   const parsed = dictaConfigFileSchema.parse(readJson(configPath));
   const config: DictaConfig = {
     http: {
       host: process.env.HOST?.trim() || parsed.http.host,
-      port: Number(process.env.PORT) || localberthGet('dictawhisper-api') || parsed.http.port,
+      port: resolveApiListenPort(
+        process.env.PORT,
+        localberthGet('dictawhisper'),
+        localberthGet('dictawhisper-api'),
+        parsed.http.port
+      ),
       corsOrigins: parsed.http.corsOrigins,
       tailscale:
         process.env.DICTA_TAILSCALE === '1' ||

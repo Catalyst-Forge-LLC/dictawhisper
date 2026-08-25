@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dictaConfigFileSchema } from '../src/config.ts';
+import { dictaConfigFileSchema, resolveApiListenPort } from '../src/config.ts';
 
 test('empty config file gets defaults', () => {
   const parsed = dictaConfigFileSchema.parse({});
@@ -20,4 +20,10 @@ test('unknown keys are stripped', () => {
 
 test('invalid port is rejected', () => {
   assert.throws(() => dictaConfigFileSchema.parse({ http: { port: -1 } }));
+});
+
+test('UI lease PORT does not become the API port', () => {
+  assert.equal(resolveApiListenPort('7777', 7777, 8008, 8008), 8008);
+  assert.equal(resolveApiListenPort('8008', 7777, 8008, 8008), 8008);
+  assert.equal(resolveApiListenPort(undefined, 7777, 8008, 8008), 8008);
 });
