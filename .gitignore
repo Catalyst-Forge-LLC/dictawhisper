@@ -4,6 +4,7 @@ site/docs/dist/
 data/audio-files/*
 data/*.sqlite
 data/*.sqlite-*
+data/asr-compare/
 !data/audio-files/.gitkeep
 *.log
 .DS_Store
