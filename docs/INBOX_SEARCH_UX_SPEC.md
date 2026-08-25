@@ -170,7 +170,7 @@ Each slice should be shippable alone. Chrome spec U0–U5 is not a prerequisite 
 
 **X4 — Year jump + counts.** Years strip from `/notes/years`. “N hits” / “browsing YYYY” copy.
 
-**X5 — (optional)** `year`/`month` on the search API; snippet offsets from FTS; `#cue-` land.
+**X5 —** `year`/`month` on search (shipped). FTS snippet + `#cue-` land on expand.
 
 ---
 

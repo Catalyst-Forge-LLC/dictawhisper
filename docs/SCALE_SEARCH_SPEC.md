@@ -1,6 +1,6 @@
 # Scale and search: thousands of notes
 
-**Status:** in progress (S0–S3 wired; embeddings are Ollama + sqlite-vec, not ONNX MiniLM)  
+**Status:** S0–S4 wired (embeddings are Ollama + sqlite-vec, not ONNX MiniLM). Socket `notes-index` is a reload ping; months load over HTTP.  
 **Date:** 2026-08-21  
 **Surface:** inbox at 7777, HTTP, MCP. Sidecar JSON stays the source of truth.
 
@@ -124,7 +124,7 @@ Acceptance for the inbox slice: 10k dummy sidecars, search “sangria” and fil
 
 **S3 — Local embeddings.** Python worker (same family as Whisper) writes vectors into sqlite-vec. `mode=semantic` + `hybrid`. Tools shows “embedded N / M”. No embed of audio. Skip notes with `audio_error`.
 
-**S4 — Kill the 32MB dump.** Socket `notes-index` becomes a diff or a “reload month” event. Lower `maxHttpBufferSize` back to something sane.
+**S4 — Kill the 32MB dump.** Shipped: socket `notes-index` is `{ reload: true }`; inbox refetches the newest year over HTTP. `maxHttpBufferSize` is 1MB.
 
 Order: S0 if we need air now, else S1 → S2 → S3 → S4. Do not start S3 until S1 search is what the inbox uses.
 

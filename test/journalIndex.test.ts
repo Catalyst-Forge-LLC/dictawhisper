@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { JournalIndex, buildFtsQuery } from '../src/lib/journalIndexLib.ts';
+import { JournalIndex, buildFtsQuery, cueIndexForQuery } from '../src/lib/journalIndexLib.ts';
 
 function writeNote(dir: string, name: string, body: Record<string, unknown>) {
   fs.mkdirSync(dir, { recursive: true });
@@ -13,7 +13,8 @@ function writeNote(dir: string, name: string, body: Record<string, unknown>) {
 }
 
 test('buildFtsQuery prefix-ANDs tokens', () => {
-  assert.equal(buildFtsQuery('Kristen sangria'), 'Kristen* AND sangria*');
+  assert.match(buildFtsQuery('Kristen sangria'), /sangria\*/);
+  assert.match(buildFtsQuery('Kisten'), /Kristen\*/);
   assert.match(buildFtsQuery('filename:Record008'), /basename/);
   assert.equal(
     buildFtsQuery('2016-06-01_12-06-25'),
@@ -103,6 +104,28 @@ test('search sorts the hit page and filters starred / year', () => {
   const july = index.search({ query: 'tickets', year: '2015', month: '07' });
   assert.equal(july.length, 1);
   assert.equal(july[0].day, '2015-07-02');
+  index.close();
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('house-name typo hits the canonical note and lands on a cue', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-idx-syn-'));
+  const dbPath = path.join(root, 'journal.sqlite');
+  writeNote(path.join(root, '2013', '07'), '2013-07-04.json', {
+    cleanedTranscription: 'Dinner was late.\n\nKristen mentioned sangria and the tickets.',
+    tags: ['Kristen'],
+  });
+  const index = new JournalIndex(dbPath);
+  index.rebuildFromRoots([root]);
+  const hits = index.search({ query: 'Kisten sangria' });
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].basename, '2013-07-04.json');
+  assert.ok(hits[0].snippet);
+  assert.equal(hits[0].cue, 1);
+  assert.equal(
+    cueIndexForQuery('Dinner was late.\n\nKristen mentioned sangria and the tickets.', 'sangria'),
+    1,
+  );
   index.close();
   fs.rmSync(root, { recursive: true, force: true });
 });

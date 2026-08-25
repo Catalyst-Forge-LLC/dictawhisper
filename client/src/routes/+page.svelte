@@ -6,7 +6,7 @@
   import ToolsAside from '../lib/components/ToolsAside.svelte';
   import Transcriptions from '../lib/components/Transcriptions.svelte';
 
-  const socket = io({ path: '/socket.io', maxHttpBufferSize: 32e6 });
+  const socket = io({ path: '/socket.io' });
   let helpOpen = false;
   let toolsOpen = false;
   let noteFilter = 'all';

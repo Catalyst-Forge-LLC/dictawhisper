@@ -13,6 +13,7 @@ export type InboxUrlState = {
   unreadable: boolean;
   starred: boolean;
   file: string;
+  cue: number | null;
 };
 
 const SORTS = new Set(['recent', 'oldest', 'relevance']);
@@ -31,6 +32,7 @@ export function emptyInboxUrl(): InboxUrlState {
     unreadable: false,
     starred: false,
     file: '',
+    cue: null,
   };
 }
 
@@ -54,7 +56,15 @@ export function parseInboxUrl(search: string | URLSearchParams): InboxUrlState {
     unreadable: params.get('unreadable') === '1',
     starred: params.get('starred') === '1',
     file: params.get('file') || '',
+    cue: null,
   };
+}
+
+export function parseCueHash(hash: string): number | null {
+  const match = String(hash || '').match(/^#?cue-(\d+)$/);
+  if (!match) return null;
+  const cue = Number(match[1]);
+  return Number.isInteger(cue) && cue >= 0 ? cue : null;
 }
 
 export function buildInboxSearch(state: InboxUrlState): string {
@@ -77,7 +87,11 @@ export function buildInboxSearch(state: InboxUrlState): string {
 
 export function inboxPath(state: InboxUrlState): string {
   const qs = buildInboxSearch(state);
-  return qs ? `/?${qs}` : '/';
+  const path = qs ? `/?${qs}` : '/';
+  if (state.file && state.cue != null && Number.isInteger(state.cue) && state.cue >= 0) {
+    return `${path}#cue-${state.cue}`;
+  }
+  return path;
 }
 
 export function isFilenameQuery(query: string): boolean {

@@ -18,6 +18,8 @@ export type IndexSearchHit = {
   day: string;
   tags: string[];
   preview: string;
+  snippet?: string;
+  cue?: number | null;
   score: number;
   hasCleaned: boolean;
   audioError: string | null;
@@ -466,6 +468,7 @@ export class JournalIndex {
     unreadable?: boolean;
     starred?: boolean;
     queryEmbedding?: number[] | null;
+    synonyms?: string[];
   }): IndexSearchHit[] {
     const limit = Math.min(50, Math.max(1, options.limit || 20));
     const tags = (options.tags || []).map((tag) => tag.trim()).filter(Boolean);
@@ -490,7 +493,7 @@ export class JournalIndex {
     if (!query) {
       hits = this.filterRows(filters, limit).map((row) => toHit(row, 0));
     } else {
-      const lexHits = this.searchLex(query, { ...filters, limit: 80 });
+      const lexHits = this.searchLex(query, { ...filters, limit: 80, synonyms: options.synonyms });
       if (mode === 'lex' || !options.queryEmbedding || !this.hasVec()) {
         hits = lexHits.slice(0, limit);
       } else {
@@ -503,15 +506,24 @@ export class JournalIndex {
 
   private searchLex(
     query: string,
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; limit: number },
+    options: {
+      tags: string[];
+      since?: string;
+      until?: string;
+      unreadable?: boolean;
+      starred?: boolean;
+      limit: number;
+      synonyms?: string[];
+    },
   ): IndexSearchHit[] {
-    const match = buildFtsQuery(query);
+    const match = buildFtsQuery(query, options.synonyms);
     const { extra, params } = this.filterSql(options);
     if (match) {
       try {
         const rows = this.db
           .prepare(
             `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
+                    n.body, snippet(notes_fts, 2, '', '', '…', 24) AS snippet,
                     bm25(notes_fts) AS rank
              FROM notes_fts
              JOIN notes n ON n.rowid = notes_fts.rowid
@@ -520,9 +532,17 @@ export class JournalIndex {
              LIMIT ?`,
           )
           .all(match, ...params, options.limit) as Array<
-          Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'body' | 'raw' | 'year' | 'month' | 'folder'> & { rank: number }
+          Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'raw' | 'year' | 'month' | 'folder'> & {
+            rank: number;
+            snippet?: string;
+          }
         >;
-        return rows.map((row) => toHit(row, Number(row.rank) || 0));
+        return rows.map((row) =>
+          toHit(row, Number(row.rank) || 0, {
+            snippet: String(row.snippet || '').trim() || undefined,
+            cue: cueIndexForQuery(row.body, query),
+          }),
+        );
       } catch {
         // hyphenated filenames and other FTS syntax — fall through to LIKE
       }
@@ -657,6 +677,7 @@ function toHit(
     starred?: number;
   },
   score: number,
+  extra: { snippet?: string; cue?: number | null } = {},
 ): IndexSearchHit {
   return {
     jsonFile: row.json_file,
@@ -664,6 +685,8 @@ function toHit(
     day: row.day,
     tags: parseTags(row.tags),
     preview: row.preview,
+    snippet: extra.snippet,
+    cue: extra.cue ?? null,
     score,
     hasCleaned: Boolean(row.has_cleaned),
     audioError: row.audio_error,
@@ -741,6 +764,83 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
 
 const FTS_WORDS = new Set(['and', 'or', 'not', 'near']);
 
+/** House names and Whisper typos. Prompt terms are passed in at query time. */
+export const HOUSE_SEARCH_NAMES = ['Kristen', 'Kisten', 'Kristin', 'Mindcorp'];
+
+const HOUSE_GROUPS = [
+  ['kristen', 'kisten', 'kristin'],
+  ['mindcorp', 'mind-corp'],
+];
+
+export function editDistance(a: string, b: string): number {
+  const left = String(a || '');
+  const right = String(b || '');
+  const rows = left.length + 1;
+  const cols = right.length + 1;
+  const grid = Array.from({ length: rows }, (_, i) => {
+    const row = new Array<number>(cols);
+    row[0] = i;
+    return row;
+  });
+  for (let j = 0; j < cols; j += 1) grid[0][j] = j;
+  for (let i = 1; i < rows; i += 1) {
+    for (let j = 1; j < cols; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      grid[i][j] = Math.min(grid[i - 1][j] + 1, grid[i][j - 1] + 1, grid[i - 1][j - 1] + cost);
+    }
+  }
+  return grid[left.length][right.length];
+}
+
+export function synonymGroupFor(token: string, extraTerms: string[] = []): string[] {
+  const raw = String(token || '').trim();
+  if (!raw) return [];
+  const lower = raw.toLowerCase();
+  const hits = new Set<string>([raw]);
+  const pool = [...HOUSE_SEARCH_NAMES, ...extraTerms].map((term) => String(term || '').trim()).filter(Boolean);
+  for (const term of pool) {
+    const t = term.toLowerCase();
+    if (t === lower || (lower.length >= 4 && t.length >= 4 && editDistance(lower, t) <= 1)) {
+      hits.add(term);
+    }
+  }
+  for (const group of HOUSE_GROUPS) {
+    if (group.includes(lower) || [...hits].some((hit) => group.includes(hit.toLowerCase()))) {
+      for (const alias of group) hits.add(alias);
+    }
+  }
+  return [...hits];
+}
+
+export function queryTokens(query: string): string[] {
+  return String(query || '')
+    .replace(/^filename:\s*/i, '')
+    .split(/[^\p{L}\p{N}*]+/u)
+    .map((token) => token.replace(/\*+$/g, ''))
+    .filter((token) => token.length > 1 || /\p{L}/u.test(token));
+}
+
+export function noteSections(text: string): string[] {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return [];
+  const paras = trimmed.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  if (paras.length >= 2) return paras;
+  const sentences = trimmed.split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter(Boolean);
+  return sentences.length >= 2 ? sentences : [trimmed];
+}
+
+export function cueIndexForQuery(body: string, query: string): number | null {
+  if (isFilenameQuery(query)) return null;
+  const tokens = queryTokens(query).map((token) => token.toLowerCase());
+  if (!tokens.length) return null;
+  const sections = noteSections(body);
+  const index = sections.findIndex((section) => {
+    const lower = section.toLowerCase();
+    return tokens.some((token) => lower.includes(token));
+  });
+  return index >= 0 ? index : null;
+}
+
 export function isFilenameQuery(query: string): boolean {
   const raw = String(query || '').replace(/^filename:\s*/i, '').trim();
   if (!raw) return false;
@@ -748,16 +848,22 @@ export function isFilenameQuery(query: string): boolean {
   return /\d{4}[-_.]\d{2}[-_.]\d{2}/.test(raw) || /\.(mp3|m4a|wav|webm|ogg|json)$/i.test(raw);
 }
 
-export function buildFtsQuery(query: string): string {
+function ftsToken(token: string): string {
+  return FTS_WORDS.has(token.toLowerCase()) ? `"${token}"` : `${token}*`;
+}
+
+export function buildFtsQuery(query: string, extraTerms: string[] = []): string {
   const filename = query.match(/^filename:\s*(.+)$/i);
   const raw = filename ? filename[1] : query;
   const looksLikeName = isFilenameQuery(query);
-  const tokens = raw
-    .split(/[^\p{L}\p{N}*]+/u)
-    .map((token) => token.replace(/\*+$/g, ''))
-    .filter((token) => token.length > 1 || /\p{L}/u.test(token));
+  const tokens = queryTokens(raw);
   if (!tokens.length) return '';
-  const parts = tokens.map((token) => (FTS_WORDS.has(token.toLowerCase()) ? `"${token}"` : `${token}*`));
+  const parts = tokens.map((token) => {
+    if (looksLikeName) return ftsToken(token);
+    const group = synonymGroupFor(token, extraTerms);
+    if (group.length <= 1) return ftsToken(token);
+    return `(${group.map((alias) => ftsToken(alias)).join(' OR ')})`;
+  });
   const joined = parts.join(' AND ');
   return looksLikeName ? `{basename} : ${joined}` : joined;
 }

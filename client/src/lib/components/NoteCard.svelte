@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { afterUpdate, createEventDispatcher } from 'svelte';
   import { displayName, markPreview } from '../markPreview.js';
 
   export let transcription;
@@ -10,9 +10,12 @@
   export let showRaw = false;
   export let busy = false;
   export let playing = false;
+  export let landCue = null;
 
   const dispatch = createEventDispatcher();
   let tagDraft = '';
+  let card;
+  let landedFor = '';
 
   function tagsOf(item) {
     const tags = item.transcriptionJson?.tags;
@@ -134,6 +137,21 @@
     });
   }
 
+  function landTarget() {
+    if (!expanded || landCue == null) return;
+    const key = `${transcription.jsonFile}:${landCue}`;
+    if (landedFor === key) return;
+    const el = card?.querySelector(`#cue-${landCue}`);
+    if (!el) return;
+    landedFor = key;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const cues = cuesOf(transcription);
+    const cue = cues[landCue];
+    if (cueHasTime(cue)) playCue({ currentTarget: el }, cue);
+  }
+
+  afterUpdate(landTarget);
+
   $: cleaned = cleanedOf(transcription);
   $: tags = tagsOf(transcription);
   $: starred = isStarred(transcription);
@@ -143,6 +161,7 @@
 </script>
 
 <article
+  bind:this={card}
   class="note dw-card dw-card-hover"
   class:is-open={expanded}
   class:is-playing={playing}
@@ -173,7 +192,13 @@
         <span class="preview">
           {#if variant === 'hit' && query.trim()}
             {@html markPreview(
-              preview(cleaned || transcription.transcriptionJson?.preview || transcription.transcriptionJson?.text || ''),
+              preview(
+                transcription.snippet ||
+                  cleaned ||
+                  transcription.transcriptionJson?.preview ||
+                  transcription.transcriptionJson?.text ||
+                  ''
+              ),
               query
             )}
           {:else}
@@ -241,10 +266,11 @@
           {#each cuesOf(transcription) as cue, index}
             <button
               type="button"
+              id={`cue-${index}`}
               class="cue"
-              class:is-active={cueActive(transcription, cue, index)}
+              class:is-active={cueActive(transcription, cue, index) || landCue === index}
               class:untimed={!cueHasTime(cue)}
-              class:dw-cue-pulse={cueActive(transcription, cue, index)}
+              class:dw-cue-pulse={cueActive(transcription, cue, index) || landCue === index}
               on:click={(event) => playCue(event, cue)}
             >
               <span class="cue-time">{cueHasTime(cue) ? formatTime(cue.start) : '—'}</span>

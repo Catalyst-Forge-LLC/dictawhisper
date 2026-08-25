@@ -215,7 +215,16 @@ export async function searchJournalIndex(options: {
       console.warn(`[journal-index] query embed failed: ${error instanceof Error ? error.message : error}`);
     }
   }
-  return index.search({ ...options, mode: requested, queryEmbedding });
+  return index.search({
+    ...options,
+    mode: requested,
+    queryEmbedding,
+    synonyms: config.whisper.promptTerms,
+  });
+}
+
+export function notesIndexReload() {
+  return { paged: true, reload: true as const, indexing: rebuilding };
 }
 
 export function listInboxNotes(options: IndexListOptions = {}) {

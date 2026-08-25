@@ -287,7 +287,7 @@ The inbox passes when:
 ## 16. Out of scope
 
 - Custom waveform player beyond the capture visualizer.
-- Virtualize the note list.
+- Virtualize the note list. (Done later: `VirtualList.svelte` windows months and hit lists over 16 cards.)
 - Tag pages or URL-synced filters — see [`INBOX_SEARCH_UX_SPEC.md`](./INBOX_SEARCH_UX_SPEC.md).
 - Light theme.
 - Matching `dictawhisper.com` to this dark shell.

@@ -16,7 +16,7 @@ import { config } from '../config.ts';
 import { ollanetIsConfigured } from './ollanetReadyLib.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
 import { applyCleanupProvenance, dictawhisperVersion } from './cleanupProvenanceLib.ts';
-import { dropSidecar, indexSidecar, notesIndexPayload } from './journalService.ts';
+import { dropSidecar, indexSidecar, notesIndexReload } from './journalService.ts';
 
 export const transcriptions: Record<string, any> = {};
 
@@ -28,7 +28,7 @@ export function setTranscriptionIo(io: SocketIOServer | null) {
 
 export function emitNotesIndex(target: Socket | SocketIOServer | null = null) {
   const dest = target ?? liveIo;
-  dest?.emit('notes-index', notesIndexPayload(listNoteSummaries));
+  dest?.emit('notes-index', notesIndexReload());
 }
 
 export function forgetTranscription(jsonFile: string) {

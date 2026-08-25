@@ -1,8 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { inboxPath, isFilenameQuery, parseInboxUrl, tightenFilenameHits } from '../inboxUrl.js';
+  import { inboxPath, isFilenameQuery, parseCueHash, parseInboxUrl, tightenFilenameHits } from '../inboxUrl.js';
   import { displayName } from '../markPreview.js';
-  import NoteCard from './NoteCard.svelte';
+  import NoteList from './NoteList.svelte';
 
   export let transcriptions = [];
   export let socket;
@@ -50,6 +50,7 @@
   let indexing = false;
   let pagedIndex = false;
   let remoteHits = null;
+  let landCue = null;
   let searchTimer;
   let lastSearchKey = '';
   let lastBrowseKey = '';
@@ -215,6 +216,8 @@
       jsonFile: hit.jsonFile,
       basename: hit.basename || displayName(hit.jsonFile),
       day: hit.day || json.day || '',
+      snippet: hit.snippet || json.snippet || '',
+      cue: hit.cue ?? json.cue ?? null,
       transcriptionJson: {
         tags: hit.tags || json.tags || [],
         preview: hit.preview || json.preview || '',
@@ -317,13 +320,15 @@
       unreadable: noteFilter === 'unreadable',
       starred: starredOnly,
       file: Object.keys(expanded).find((key) => expanded[key]) || '',
+      cue: landCue,
     };
   }
 
   function writeInboxUrl() {
     if (applyingUrl || !indexReady) return;
     const next = inboxPath(inboxState());
-    if (`${location.pathname}${location.search}` === next || (next === '/' && !location.search && location.pathname === '/')) {
+    const current = `${location.pathname}${location.search}${location.hash}`;
+    if (current === next || (next === '/' && !location.search && !location.hash && location.pathname === '/')) {
       return;
     }
     history.replaceState(history.state, '', next);
@@ -343,6 +348,7 @@
     starredOnly = parsed.starred;
     noteFilter = parsed.unreadable ? 'unreadable' : 'all';
     if (parsed.file) expanded = { ...expanded, [parsed.file]: true };
+    landCue = parseCueHash(typeof location !== 'undefined' ? location.hash : '');
     applyingUrl = false;
   }
 
@@ -644,6 +650,10 @@
         console.error(error);
         return;
       }
+      const hit = (remoteHits || []).find((note) => note.jsonFile === jsonFile);
+      landCue = hit?.cue ?? landCue;
+    } else {
+      landCue = null;
     }
     expanded[jsonFile] = !expanded[jsonFile];
     expanded = expanded;
@@ -793,6 +803,13 @@
 
   function onNotesIndex(data) {
     indexing = Boolean(data?.indexing);
+    if (data?.reload) {
+      pagedIndex = true;
+      void loadBrowse().catch((error) => {
+        inboxError = error.message || String(error);
+      });
+      return;
+    }
     if (data?.paged) {
       pagedIndex = true;
       mergeNotes(data.notes);
@@ -1088,32 +1105,31 @@
         </p>
       {:else}
         <div class="notes">
-          {#each remoteHits as transcription (transcription.jsonFile)}
-            <NoteCard
-              {transcription}
-              variant="hit"
-              query={searchQuery}
-              {selectedTags}
-              expanded={!!expanded[transcription.jsonFile]}
-              showRaw={!!showRaw[transcription.jsonFile]}
-              busy={!!noteBusy[transcription.jsonFile]}
-              playing={!!expanded[transcription.jsonFile] && typeof transcription.transcriptionJson?._currentTime === 'number'}
-              on:toggle={(event) => toggleExpanded(event.detail)}
-              on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
-              on:tag={(event) => toggleTag(event.detail)}
-              on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
-              on:raw={(event) => {
-                showRaw[event.detail.jsonFile] = event.detail.show;
-                showRaw = showRaw;
-              }}
-              on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
-              on:copy={(event) => copyTranscription(event.detail)}
-              on:retry={(event) => retryCleanup(event.detail)}
-              on:skip={(event) => skipNoteCleanup(event.detail)}
-              on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
-              on:delete={(event) => deleteTranscription(event.detail)}
-            />
-          {/each}
+          <NoteList
+            items={remoteHits}
+            variant="hit"
+            query={searchQuery}
+            {selectedTags}
+            {expanded}
+            {showRaw}
+            {noteBusy}
+            landFile={Object.keys(expanded).find((key) => expanded[key]) || ''}
+            {landCue}
+            on:toggle={(event) => toggleExpanded(event.detail)}
+            on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
+            on:tag={(event) => toggleTag(event.detail)}
+            on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
+            on:raw={(event) => {
+              showRaw[event.detail.jsonFile] = event.detail.show;
+              showRaw = showRaw;
+            }}
+            on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
+            on:copy={(event) => copyTranscription(event.detail)}
+            on:retry={(event) => retryCleanup(event.detail)}
+            on:skip={(event) => skipNoteCleanup(event.detail)}
+            on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
+            on:delete={(event) => deleteTranscription(event.detail)}
+          />
         </div>
       {/if}
     </section>
@@ -1175,30 +1191,29 @@
                   </div>
                 {/if}
                 <div class="notes">
-                  {#each group.items as transcription (transcription.jsonFile)}
-                    <NoteCard
-                      {transcription}
-                      {selectedTags}
-                      expanded={!!expanded[transcription.jsonFile]}
-                      showRaw={!!showRaw[transcription.jsonFile]}
-                      busy={!!noteBusy[transcription.jsonFile]}
-                      playing={!!expanded[transcription.jsonFile] && typeof transcription.transcriptionJson?._currentTime === 'number'}
-                      on:toggle={(event) => toggleExpanded(event.detail)}
-                      on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
-                      on:tag={(event) => toggleTag(event.detail)}
-                      on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
-                      on:raw={(event) => {
-                        showRaw[event.detail.jsonFile] = event.detail.show;
-                        showRaw = showRaw;
-                      }}
-                      on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
-                      on:copy={(event) => copyTranscription(event.detail)}
-                      on:retry={(event) => retryCleanup(event.detail)}
-                      on:skip={(event) => skipNoteCleanup(event.detail)}
-                      on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
-                      on:delete={(event) => deleteTranscription(event.detail)}
-                    />
-                  {/each}
+                  <NoteList
+                    items={group.items}
+                    {selectedTags}
+                    {expanded}
+                    {showRaw}
+                    {noteBusy}
+                    landFile={Object.keys(expanded).find((key) => expanded[key]) || ''}
+                    {landCue}
+                    on:toggle={(event) => toggleExpanded(event.detail)}
+                    on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
+                    on:tag={(event) => toggleTag(event.detail)}
+                    on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
+                    on:raw={(event) => {
+                      showRaw[event.detail.jsonFile] = event.detail.show;
+                      showRaw = showRaw;
+                    }}
+                    on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
+                    on:copy={(event) => copyTranscription(event.detail)}
+                    on:retry={(event) => retryCleanup(event.detail)}
+                    on:skip={(event) => skipNoteCleanup(event.detail)}
+                    on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
+                    on:delete={(event) => deleteTranscription(event.detail)}
+                  />
                 </div>
               </div>
             {/each}

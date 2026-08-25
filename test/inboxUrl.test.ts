@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildInboxSearch, emptyInboxUrl, parseInboxUrl, tightenFilenameHits } from '../src/lib/inboxUrl.ts';
+import { buildInboxSearch, emptyInboxUrl, inboxPath, parseCueHash, parseInboxUrl, tightenFilenameHits } from '../src/lib/inboxUrl.ts';
 
 test('round-trips q, tags, year, and file', () => {
   const state = {
@@ -21,6 +21,20 @@ test('month requires a year and pads to two digits', () => {
   const parsed = parseInboxUrl('month=7&year=2015');
   assert.equal(parsed.month, '07');
   assert.equal(parseInboxUrl('month=7').month, '');
+});
+
+test('cue hash is parsed and written next to the open file', () => {
+  assert.equal(parseCueHash('#cue-3'), 3);
+  assert.equal(parseCueHash('cue-0'), 0);
+  assert.equal(parseCueHash('#nope'), null);
+  const path = inboxPath({
+    ...emptyInboxUrl(),
+    q: 'sangria',
+    file: 'C:/notes/a.json',
+    cue: 2,
+  });
+  assert.match(path, /q=sangria/);
+  assert.match(path, /#cue-2$/);
 });
 
 test('filename hits drop hybrid neighbors that do not match the stamp', () => {

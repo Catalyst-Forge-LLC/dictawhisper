@@ -37,8 +37,8 @@ const app = express();
 app.use(express.json());
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  // Inbox index is ~10MB with a full VoiceNotes tree; 1MB dropped the packet.
-  maxHttpBufferSize: 32e6,
+  // Inbox reloads months over HTTP. Keep this at Socket.IO's default.
+  maxHttpBufferSize: 1e6,
   pingTimeout: 60000,
   cors: {
     origin: corsOrigins,
