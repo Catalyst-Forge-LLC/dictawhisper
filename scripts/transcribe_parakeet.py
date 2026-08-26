@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -93,23 +95,49 @@ def hypotheses_to_sidecar(
     }
 
 
+def to_mono_wav(audio: Path, dest: Path) -> Path:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(audio),
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-c:a",
+        "pcm_s16le",
+        str(dest),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr[-800:] if proc.stderr else "ffmpeg failed")
+    return dest
+
+
 def transcribe(audio: Path, model_name: str) -> dict[str, Any]:
     import nemo.collections.asr as nemo_asr  # type: ignore
+    from omegaconf import open_dict
 
     model = nemo_asr.models.ASRModel.from_pretrained(model_name=model_name)
+    # Unified checkpoint ships with validation_ds=null; NeMo still reads it for transcribe.
+    if getattr(model.cfg, "validation_ds", None) is None:
+        with open_dict(model.cfg):
+            model.cfg.validation_ds = {"use_start_end_token": False}
     started = time.time()
-    try:
-        output = model.transcribe([str(audio)], timestamps=True)
-    except TypeError:
-        output = model.transcribe([str(audio)])
+    with tempfile.TemporaryDirectory() as tmp:
+        wav = to_mono_wav(audio, Path(tmp) / "mono.wav")
+        try:
+            output = model.transcribe([str(wav)], timestamps=True)
+        except TypeError:
+            output = model.transcribe([str(wav)])
     elapsed = time.time() - started
     hyp = output[0]
     if isinstance(hyp, (list, tuple)):
         hyp = hyp[0]
     text = str(getattr(hyp, "text", hyp) or "")
-    timestamp = getattr(hyp, "timestamp", None)
-    if timestamp is None:
-        timestamp = getattr(hyp, "timestep", None)
+    timestamp = getattr(hyp, "timestamp", None) or getattr(hyp, "timestep", None)
     if not isinstance(timestamp, dict):
         timestamp = {}
     return hypotheses_to_sidecar(text, timestamp, model_name=model_name, elapsed=elapsed)
