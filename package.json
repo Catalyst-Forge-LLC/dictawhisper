@@ -1,6 +1,6 @@
 {
   "name": "dictawhisper",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": false,
   "description": "Name hold. The voice journal is a git clone (dictawhisper.com). A CLI or library may land here later.",
   "homepage": "https://dictawhisper.com",
