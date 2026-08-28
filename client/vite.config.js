@@ -98,6 +98,7 @@ export default defineConfig({
     port: UI_PORT,
     strictPort: true,
     host: "127.0.0.1",
+    allowedHosts: true,
     proxy: {
       "/socket.io": { target, ws: true },
       "/health": { target },
@@ -116,6 +117,7 @@ export default defineConfig({
     port: UI_PORT,
     strictPort: false,
     host: "127.0.0.1",
+    allowedHosts: true,
   },
   css: {
     preprocessorOptions: {
