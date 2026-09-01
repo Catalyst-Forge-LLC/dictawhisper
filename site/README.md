@@ -45,4 +45,4 @@ Dependency is the public npm package:
 
 **Site** = product narrative (home, Install, posts). **`site/docs/`** = flags, HTTP, env, MCP (FilePress mount at `/docs`). **Root README** stays short and points at the docs. When behavior changes, update `site/docs/*` and the matching product page.
 
-Site copy follows [aiBreze](https://aibreze.com): `landing.md` plus [`docs/aibreze-overlay.md`](../docs/aibreze-overlay.md).
+Site copy follows [Smell Check](https://smellcheck.dev): `landing.md` plus [`docs/smellcheck-overlay.md`](../docs/smellcheck-overlay.md).

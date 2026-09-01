@@ -1,14 +1,14 @@
 ---
-description: aiBreze. House voice and anti-performative prose for all drafting.
+description: Smell Check. House voice and anti-performative prose for all drafting.
 alwaysApply: true
 ---
 
-# aiBreze
+# Smell Check
 
-Full rules: [`node_modules/aibreze/rules/core.md`](../../node_modules/aibreze/rules/core.md).
-Smell audit: [`audit.md`](../../node_modules/aibreze/rules/audit.md).
-Claims: [`claims.md`](../../node_modules/aibreze/rules/claims.md).
-Overlay: [`docs/aibreze-overlay.md`](../../docs/aibreze-overlay.md).
+Full rules: [`node_modules/smellcheck/rules/core.md`](../../node_modules/smellcheck/rules/core.md).
+Smell audit: [`audit.md`](../../node_modules/smellcheck/rules/audit.md).
+Claims: [`claims.md`](../../node_modules/smellcheck/rules/claims.md).
+Overlay: [`docs/smellcheck-overlay.md`](../../docs/smellcheck-overlay.md).
 
 This file is a digest. If it conflicts with `core.md`, core wins.
 Do not copy genre law into this file.
@@ -71,14 +71,14 @@ Earn the word.
 ## Corpus-applicability carve-out
 
 If a term has real application in this project, leave it. Read
-[`docs/aibreze-overlay.md`](../../docs/aibreze-overlay.md) for the local
+[`docs/smellcheck-overlay.md`](../../docs/smellcheck-overlay.md) for the local
 list and pronoun policy.
 
 ## When to open a genre file
 
-- Page / marketing site: [`landing.md`](../../node_modules/aibreze/rules/landing.md)
-- Essay / talk: [`essays.md`](../../node_modules/aibreze/rules/essays.md)
-- Email / DM / text: [`outreach.md`](../../node_modules/aibreze/rules/outreach.md)
-- Ship post: [`launch.md`](../../node_modules/aibreze/rules/launch.md)
+- Page / marketing site: [`landing.md`](../../node_modules/smellcheck/rules/landing.md)
+- Essay / talk: [`essays.md`](../../node_modules/smellcheck/rules/essays.md)
+- Email / DM / text: [`outreach.md`](../../node_modules/smellcheck/rules/outreach.md)
+- Ship post: [`launch.md`](../../node_modules/smellcheck/rules/launch.md)
 
 Reference docs, changelogs, API pages, UI chrome: core only.

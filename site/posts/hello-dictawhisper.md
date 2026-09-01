@@ -16,4 +16,4 @@ What it does today:
 
 Clone it, run the checkup, start it. See [/install](/install).
 
-Built with [FilePress](https://getfilepress.com). Copy follows [aiBreze](https://aibreze.com).
+Built with [FilePress](https://getfilepress.com). Copy follows [Smell Check](https://smellcheck.dev).

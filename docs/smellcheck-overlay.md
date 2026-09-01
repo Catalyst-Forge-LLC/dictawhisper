@@ -1,6 +1,6 @@
-# DictaWhisper aiBreze overlay
+# DictaWhisper Smell Check overlay
 
-Point at `aibreze` (`node_modules/aibreze/rules/core.md`). Do not fork core.
+Point at `smellcheck` (`node_modules/smellcheck/rules/core.md`). Do not fork core.
 
 ## Pronouns
 
@@ -27,7 +27,7 @@ Point at `aibreze` (`node_modules/aibreze/rules/core.md`). Do not fork core.
 
 ## House extras
 
-- Site copy follows `aibreze` `landing.md`. Keep Syncthing, remote Ollama, and Tailscale optional. Do not imply they are required.
+- Site copy follows `smellcheck` `landing.md`. Keep Syncthing, remote Ollama, and Tailscale optional. Do not imply they are required.
 - README stays short and points at `site/docs`. Those pages stay technical. Do not flatten them to match the landing pages.
 - One concrete landing chant is enough. Do not stack "No X. No Y. No Z." The site spends its chant on the `lede`, "Speak, keep the note, stay on your machine."
 - Feature labels name the feature. "Custom vocabulary," not "Names you actually say." See the riddle-label tell in core.
