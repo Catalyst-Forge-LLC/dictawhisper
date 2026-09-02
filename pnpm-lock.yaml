@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+onlyBuiltDependencies:
+  - esbuild
+  - getfilepress
+  - workerd
+
 importers:
 
   .:
@@ -95,8 +100,8 @@ importers:
   site:
     devDependencies:
       getfilepress:
-        specifier: ^0.1.24
-        version: 0.1.24
+        specifier: ^0.1.27
+        version: 0.1.27
       wrangler:
         specifier: ^4.28.0
         version: 4.124.0
@@ -2075,7 +2080,6 @@ packages:
   /detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
-    requiresBuild: true
     dev: true
 
   /devalue@4.3.3:
@@ -2586,7 +2590,6 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
-    requiresBuild: true
     dev: true
     optional: true
 
@@ -2628,8 +2631,8 @@ packages:
       es-object-atoms: 1.1.2
     dev: false
 
-  /getfilepress@0.1.24:
-    resolution: {integrity: sha512-6GlmJcI4AePXaFzmCpeYN0ErIcfKVuwaqdXcKTifaoK/LNPwPmA8CJLQajYpbiAV84qJSO49ddgYxcvE/dhMuQ==}
+  /getfilepress@0.1.27:
+    resolution: {integrity: sha512-EjN3dAbs9cy4OJYiJiNs6rWLMeTaD4yrSL6Wo//aPhrArRe2pO/Xz/pA4/MdI34Axvs5O6zPFzEycdkuQCEJaA==}
     engines: {node: '>=20'}
     hasBin: true
     requiresBuild: true
@@ -3799,7 +3802,6 @@ packages:
   /picomatch@4.0.5:
     resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
     engines: {node: '>=12'}
-    requiresBuild: true
     dev: true
 
   /pkce-challenge@5.0.1:
