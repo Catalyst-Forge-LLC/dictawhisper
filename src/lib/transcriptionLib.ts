@@ -91,6 +91,12 @@ function readSidecar(transcriptionFile: string): TranscriptionDocument | null {
   }
 }
 
+function sidecarIsProcessed(json: TranscriptionDocument | null): boolean {
+  if (!json) return false;
+  if (json.cleanedTranscription || json.audioError || json.cleanupSkipped) return true;
+  return typeof json.text === 'string' && !json.text.trim() && Array.isArray(json.segments);
+}
+
 export function readTranscription(jsonFile: string) {
   const transcriptionJson = readSidecar(jsonFile);
   if (!transcriptionJson) return null;
@@ -176,7 +182,7 @@ export function checkTranscription(file: string): {
   if (transcriptionExists) {
     const transcriptionJson = readSidecar(transcriptionFile);
     return {
-      isProcessed: Boolean(transcriptionJson?.cleanedTranscription || transcriptionJson?.audioError),
+      isProcessed: sidecarIsProcessed(transcriptionJson),
       transcriptionFile,
       transcriptionExists,
     };
@@ -210,8 +216,9 @@ export async function cleanTranscription(
 
   try {
     const transcriptionJson = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
-    if (!transcriptionJson.text) {
-      callback(new Error(`No text in ${transcriptionFile}`));
+    if (!String(transcriptionJson.text || '').trim()) {
+      console.log(`[clean-transcription] no speech to clean: ${transcriptionFile}`);
+      callback(null);
       return;
     }
 
@@ -305,7 +312,11 @@ export async function process(file: string, options: ProcessOptions = {}) {
 function enqueueProcessing(file: string, elapsed?: string) {
   const { transcriptionFile } = checkTranscription(file);
   const sidecar = readSidecar(transcriptionFile);
-  if (sidecar?.cleanupSkipped) {
+  if (sidecarIsProcessed(sidecar)) {
+    emitTranscription(null, transcriptionFile, elapsed ?? null);
+    return;
+  }
+  if (!String(sidecar?.text || '').trim()) {
     emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
   }

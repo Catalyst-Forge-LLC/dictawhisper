@@ -41,6 +41,21 @@ test('unreadable sidecar does not throw from checkTranscription', () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('empty Whisper result counts as processed so cleanup is not queued', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-empty-whisper-'));
+  const audio = path.join(dir, 'note.mp3');
+  const json = path.join(dir, 'note.json');
+  fs.writeFileSync(audio, 'x');
+  fs.writeFileSync(
+    json,
+    JSON.stringify({ elapsed: '1.0s', text: '', segments: [], language: 'en', whisper: {} }),
+  );
+  const status = checkTranscription(audio);
+  assert.equal(status.transcriptionExists, true);
+  assert.equal(status.isProcessed, true);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('audioError counts as processed so the backlog skips the file', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-audio-err-'));
   const audio = path.join(dir, 'note.mp3');
