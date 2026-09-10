@@ -2,9 +2,9 @@
 tool_facts_version: "0.1.0"
 name: DictaWhisper MCP Server
 developer: Catalyst Forge
-version: "0.0.3"
+version: "0.0.9"
 status: active
-license: Apache-2.0
+license: MIT
 kind: mcp-server
 homepage: https://dictawhisper.com
 repository: https://github.com/Catalyst-Forge-LLC/dictawhisper
@@ -50,8 +50,8 @@ tools:
       processes: false
     idempotent: true
 generated:
-  date: 2026-08-20
-  generator: hand-authored (tools inventory from dictawhisper mcp (read-only journal))
+  date: 2026-09-10
+  generator: hand-authored (tools inventory from dictawhisper mcp 0.0.9, read-only journal)
 credits:
   generated_with: https://toolfacts.dev
   built_by: "Catalyst Forge - https://www.catalystforge.com/"
@@ -62,9 +62,9 @@ credits:
 | | |
 |---|---|
 | **Developer** | Catalyst Forge |
-| **Version** | 0.0.3 |
+| **Version** | 0.0.9 |
 | **Status** | active |
-| **License** | Apache-2.0 |
+| **License** | MIT |
 | **Kind** | mcp-server |
 
 ## Runtime
@@ -106,4 +106,4 @@ None required.
 ---
 *Generated with [ToolFacts](https://toolfacts.dev) · Built by [Catalyst Forge](https://www.catalystforge.com/)*
 
-[toolfacts-label]: https://toolfacts.dev/v#tf1.eNrFlE1v2zAMhv-KoHO-tt2y05ChpwwY0MMORRGoEmNrtSWXop0GQf77XioN9oH1nItjkC_58mEsnexk1x9mNrme7Np-jV7cjzaWgdh823w398QTsZ3ZQBN1GWGoNk5cdyxi7jI3hCQkJeaE1GqxWnxCpIiTsSDgvMRJNV30lIqafBmcb2n-cbFC-DmmgFjvh3m5evGYJOo8J0uv5Ee59O6yd9184OypFMiEXSpDZkGuSIjZnmfWMwVCueuK1jO9jBEhu354RJYa1lokhDrqSfiI4pQTVcQiMTl1K296yVn7PJyuCwq6oMNlQbtCjn2rtDHQjvZ78qLMTC4oBoFTvfaxo4J9Ua-TemxR04nkkPn5t_8bGaHFHuMT_NG3H7IAyK6FR4Jo5CHXNd5XdzNlLNYkiIp5Ohq0DGVmxDV4ZjbqrbN_NkwycipmcNIiFxwqrkKXgnGmtFimGZimSAcs8__UDclO7W7FfUcCbJRWaGXWMbzjSqbMY4ovIzKu_IPuO3KJghF6lcqs9O-CdrHIripuRLrFAHVEE5ORlszPDAzXmUMEqM84Ju9Pz-S16S1HT3Qg_anf5j4y3uvkedAzBg6w1b8huKPBYW5IP1fBZWLPjzPb5p4G12i7VmQo6-XyT8KFz30FgWWUXE_yVdfAZnxSxfJ6Wc3rZTXfbjd_dan3yJg8TkO4YJx_AeesyY0
+[toolfacts-label]: https://toolfacts.dev/v#tf1.eNrFlE9rGzEQxb-KmLOcpMdujymBggOFFHoIwSja5101u5IyM7uOMf7uZdZx_9Gcc9JBT_PebyTNgWZqPnjKYQQ19DlFDd_7JBXsbq-_ujvwDCZPLWYMpYKpoeugYdiLupvCHcjTDJZUMjV0dXF18ZE8iQadhBoKUdNsmiFFZDGT2y_fyNNTyi01NMa6krMJT1mTBTkQXhAnPRUdSgzDqnKJECFPyiFLLazUkGibCh09RUaLrCkMYucZz1NitNTcPxw9oWM72xxIMWCE8p4ayiVjYRNNOZibvOq1FKtzfzh3prXO7E6d2QgCx94wU4sNtltENVhGaA0DIfbmtU0DZC-K0ZLGUmHbGbor_PTb_5UMQs02DIKjp9RirEWRlRrlCZ7qxLUs_btb3N1cUoTLRSHuce92hVvxTkMn3hV25m3ZPzmGTpzF1aC9eNcGxS9hyK0LTvrC6ipjTtjR0f-fuoNuzO69uG-gsXcln6CN2WLEwAuZMU85PU9wj0H-QY8DQkbrFC-6MBv9m6BDEt0sinciXSfRJaJL2WkP96NMnMPgdkl7F8uU9e30jGhF3zN6xg62LG9zm1j0lLxU-2NhMLblGtqwdxxyB3uuChY6Pnjqy4gaOivXq1ZpLi__JLyIZVxAapGkZfnJZ12XtJ8eTXF5nlKrZUqt1uvrv6osc2TKMagNCcM4_gRh38d-
