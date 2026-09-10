@@ -2,14 +2,20 @@
 title: Install
 ---
 
-Requires **Node 20+** and [pnpm](https://pnpm.io).
+The npm package is a name hold (`dictawhisper` `0.0.10`). Clone this repo. There is no desktop installer.
 
-- NVIDIA GPU + CUDA for local Whisper (or set `whisper.device` to `cpu`, which is far slower)
-- Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper): point `whisper.python` at that interpreter
-- `ffmpeg` on PATH if denoise is on
-- [ollanet](https://ollanet.dev) + an Ollama model for cleanup (localhost or another reachable host; optional for raw transcripts)
-- Optional: [Tailscale](https://tailscale.com) if you want the UI from another device on your tailnet
-- Optional: a watched folder ([Syncthing](https://syncthing.net), a shared drive, a dump directory) if you already record outside the browser
+## Before you clone
+
+| Need | Status |
+| --- | --- |
+| Node 20+ and [pnpm](https://pnpm.io) | Required |
+| Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) | Required. Set `whisper.python` |
+| NVIDIA GPU + CUDA, `whisper.device` = `cuda` | Exercised path |
+| `whisper.device` = `cpu` | Supported, slow, doctor warning |
+| `ffmpeg` on PATH | Required when denoise (`audio.preprocess`) is on |
+| [ollanet](https://ollanet.dev) + Ollama model | Optional. Raw transcripts still work |
+| Windows | Exercised (paths and doctor probes use it) |
+| macOS, Linux | Unverified |
 
 Record or drag files at [localhost:7777](http://localhost:7777). Run it on a computer you leave turned on.
 
@@ -25,7 +31,9 @@ pnpm install
 pnpm run doctor
 ```
 
-The UI can record and accept dropped files with no Syncthing. Add `watch.roots` only if you already have a phone folder or dump directory. Then: which Python has CUDA Whisper, and which Ollama (this computer or another on your network) ollanet should use for cleanup.
+Ready signal: doctor exits 0, or only warnings remain. Then `pnpm dev` and open [http://localhost:7777](http://localhost:7777).
+
+The UI can record and accept dropped files with no Syncthing. Add `watch.roots` only if you already have a phone folder or dump directory.
 
 `pnpm run doctor` and startup `/health` run the same probes: Node, config, watch roots, ffmpeg, `faster-whisper` import, CUDA vs CPU, ollanet reachability, and port availability. A fail is loud. The inbox still serves notes already on disk. Warnings (CPU mode, ollanet unreachable, port already in use) are reported without blocking. `pnpm doctor` without `run` is pnpm's own command and will not check this app.
 

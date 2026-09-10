@@ -6,9 +6,13 @@
 
 **A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. Transcribe on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Clean the note with [ollanet](https://ollanet.dev). The `.json` next to each recording is the journal.
 
-The npm package is a name hold. Clone this repo to run it.
+The npm package (`dictawhisper` `0.0.10`) is a name hold. Clone this repo. There is no installer.
 
 **Docs:** [dictawhisper.com/docs](https://dictawhisper.com/docs) · **Site:** [dictawhisper.com](https://dictawhisper.com)
+
+## Before you clone
+
+Exercised path: Windows, Node 20+, pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` is required when denoise is on. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
 
 ## Install
 
@@ -21,7 +25,7 @@ pnpm run doctor
 pnpm dev
 ```
 
-Open [http://localhost:7777](http://localhost:7777). Point `whisper.python` at the interpreter that has CUDA Whisper. Cleanup host and model are optional; raw transcripts still work.
+Ready signal: `pnpm run doctor` exits 0, or only warnings remain. Then open [http://localhost:7777](http://localhost:7777). Point `whisper.python` at the interpreter that has CUDA Whisper. Cleanup host and model are optional; raw transcripts still work.
 
 ## Quick start
 
@@ -34,7 +38,7 @@ Hit Record, or drag an audio file onto the page. Flags, HTTP, MCP, and `retransc
 
 ## What you get
 
-Files are the database. The Whisper model stays loaded. Audio stays on this computer. The inbox is loopback by default; `http.tailscale` puts the same page on your tailnet. Playback follows cleaned paragraphs using Whisper word times.
+Files are the database. Each note is the recording plus a neighboring `.json`. The Whisper model stays loaded. Audio stays on this computer. If you point ollanet at another machine, only the transcript text crosses the network. The inbox is loopback by default; `http.tailscale` puts the same page on your tailnet. Playback follows cleaned paragraphs using Whisper word times. If cleanup is skipped or fails, the inbox shows **raw only** or **cleanup failed**, and **Retry** is available. Transcription itself still needs faster-whisper.
 
 <!-- xfacts-nutrition-label -->
 

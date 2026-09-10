@@ -6,7 +6,7 @@ title: Introduction
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on this computer. The `.json` next to each recording is the note: no database, no account.
 
-The npm package is a name hold. Clone this repo to run it.
+The npm package (`dictawhisper` `0.0.10`) is a name hold. Clone this repo. There is no installer. Hardware and runtimes belong on [Install](/docs/install) before the clone.
 
 ## Why it exists
 
@@ -38,8 +38,19 @@ Voice notes are easy to make and hard to keep. Phone recordings pile up as undat
 
 By default the API binds to `127.0.0.1`. Turn on `http.tailscale` and the inbox also listens on this machine's Tailscale address (`100.x`, plus MagicDNS when you have it) so a phone on the same tailnet can open it. The API stays on loopback; Vite proxies to it.
 
+## Files on disk
+
+| Item | Default | What it is |
+| --- | --- | --- |
+| Browser drop folder | `./data/audio-files` | Recordings and drops from the inbox |
+| Watch roots | none | Optional phone or dump folders |
+| Notes file | `<audio>.json` next to the audio | Raw text, segments, cleaned text, tags |
+| Journal index | `./data/journal.sqlite` | Search index, not the source of truth |
+
+Copy the audio and its JSON together and you copied the note.
+
 ## Next
 
-- [Install](/docs/install) — clone, config, doctor
-- [Quick start](/docs/quick-start) — record, drop, optional phone folder
+- [Install](/docs/install) — hardware, clone, doctor
+- [Quick start](/docs/quick-start) — record, drop, recovery
 - [Config](/docs/config) — env and `config.json`

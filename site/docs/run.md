@@ -23,6 +23,8 @@ pnpm retranscribe --force
 
 `--reclean` runs ollanet again after the new transcript. Without it, cleaned text and tags are kept; only words/times/raw text update. Each successful cleanup writes a `cleanup` record (text, time, model, host, prompt version, app version). The previous record, if any, is prepended to `cleanupHistory` (capped). `cleanedTranscription` remains the current text.
 
+If ollanet is down, leave `--reclean` off. The raw transcript stays in the JSON. The inbox **Retry** button queues cleanup without a new Whisper pass.
+
 ## Site
 
 Marketing site (FilePress): [`site/`](https://github.com/Catalyst-Forge-LLC/dictawhisper/tree/master/site). From the package root: `pnpm site:dev` / `pnpm site:build` / `pnpm ship`. Live: [dictawhisper.com](https://dictawhisper.com).

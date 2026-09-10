@@ -8,6 +8,8 @@ Voice notes pile up. **DictaWhisper** turns a recording into a note you can rere
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. There is no account. Each recording keeps a small notes file beside it. That file is the journal.
 
+There is no installer. The npm name is a hold. You need Node, pnpm, Python with faster-whisper, and (for the exercised path) an NVIDIA GPU. [Install](/install) lists that before the clone.
+
 <div class="cta-row">
   <a class="cta cta-primary" href="/install">Get started →</a>
   <a class="cta cta-secondary" href="https://github.com/Catalyst-Forge-LLC/dictawhisper">View on GitHub</a>
@@ -38,7 +40,26 @@ If a phone app is also dropping files into a folder, those wait until the copy i
   <p>The recording stays. Only the text moves, and only if you asked another computer to help.</p>
 </div>
 
+## Where the files live
+
+Browser recordings and drops go under `watch.browserDropFolder` (default `./data/audio-files`). Optional phone folders are `watch.roots`. Each note is a pair:
+
+```text
+data/audio-files/2026-09-10_walk-note.webm
+data/audio-files/2026-09-10_walk-note.webm.json
+```
+
+The JSON holds raw Whisper text (`text`, `segments`) and, when cleanup ran, `cleanedTranscription` and tags. The inbox **Raw** control shows the transcript. **Sidecar** downloads that file. A search index may also live at `journal.index` (default `./data/journal.sqlite`). That index is not the journal. The pair is.
+
+Sample names above are fictional.
+
+## If cleanup is down
+
+The inbox still lists the recording. Status can read **raw only**, **cleanup skipped**, or **cleanup failed**. **Retry** queues another cleanup pass. `pnpm retranscribe --reclean` does the same from the terminal. Doctor warns when ollanet is unreachable. It does not claim Whisper succeeded if faster-whisper is missing.
+
 ## Quick start
+
+Read [Install](/install) for hardware first. Then:
 
 ```bash
 git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
@@ -49,7 +70,7 @@ pnpm run doctor
 pnpm dev
 ```
 
-Then open [http://localhost:7777](http://localhost:7777). Setup is on [Install](/install). Flags live in the [docs](/docs).
+Ready signal: doctor exits 0, or only warnings remain. Then open [http://localhost:7777](http://localhost:7777). Flags live in the [docs](/docs).
 
 <div class="cta-row">
   <a class="cta cta-primary" href="/install">Get started →</a>
