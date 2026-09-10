@@ -29,6 +29,18 @@ test('async processor throw is reported and the queue keeps going', async () => 
   assert.match(String(errors[0]), /ffmpeg died/);
 });
 
+test('unreadable sidecar does not throw from checkTranscription', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-bad-json-'));
+  const audio = path.join(dir, 'note.mp3');
+  const json = path.join(dir, 'note.json');
+  fs.writeFileSync(audio, 'x');
+  fs.writeFileSync(json, '{ "cleanedTranscription": "a very powerful "car talk" leftover",');
+  const status = checkTranscription(audio);
+  assert.equal(status.transcriptionExists, true);
+  assert.equal(status.isProcessed, false);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('audioError counts as processed so the backlog skips the file', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-audio-err-'));
   const audio = path.join(dir, 'note.mp3');

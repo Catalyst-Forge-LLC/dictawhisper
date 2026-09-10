@@ -80,9 +80,20 @@ export function listNoteSummaries() {
   return Object.entries(transcriptions).map(([jsonFile, json]) => summarizeTranscription(jsonFile, json));
 }
 
+function readSidecar(transcriptionFile: string): TranscriptionDocument | null {
+  try {
+    if (!fs.existsSync(transcriptionFile)) return null;
+    return JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8')) as TranscriptionDocument;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[transcription] unreadable sidecar ${transcriptionFile}: ${detail}`);
+    return null;
+  }
+}
+
 export function readTranscription(jsonFile: string) {
-  if (!fs.existsSync(jsonFile)) return null;
-  const transcriptionJson = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
+  const transcriptionJson = readSidecar(jsonFile);
+  if (!transcriptionJson) return null;
   let dirty = false;
   if (ensurePlaybackCues(transcriptionJson)) dirty = true;
   if (dirty) {
@@ -97,7 +108,8 @@ export function emitTranscription(target: Socket | SocketIOServer | null = null,
     console.error(`[emit-transcription-error] JSON file does not exist (yet): ${jsonFile}`);
     return;
   }
-  const transcriptionJson = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
+  const transcriptionJson = readSidecar(jsonFile);
+  if (!transcriptionJson) return;
   let dirty = false;
   if (elapsed && !Object.hasOwn(transcriptionJson, 'elapsed')) {
     transcriptionJson.elapsed = elapsed;
@@ -162,9 +174,9 @@ export function checkTranscription(file: string): {
   const transcriptionFile = getTranscriptionFilename(file);
   const transcriptionExists = fs.existsSync(transcriptionFile);
   if (transcriptionExists) {
-    const transcriptionJson = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
+    const transcriptionJson = readSidecar(transcriptionFile);
     return {
-      isProcessed: Boolean(transcriptionJson.cleanedTranscription || transcriptionJson.audioError),
+      isProcessed: Boolean(transcriptionJson?.cleanedTranscription || transcriptionJson?.audioError),
       transcriptionFile,
       transcriptionExists,
     };
@@ -288,15 +300,6 @@ export async function process(file: string, options: ProcessOptions = {}) {
     settleMs: options.settleMs,
     label: 'voice-transcribe',
   });
-}
-
-function readSidecar(transcriptionFile: string): TranscriptionDocument | null {
-  try {
-    if (!fs.existsSync(transcriptionFile)) return null;
-    return JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8')) as TranscriptionDocument;
-  } catch {
-    return null;
-  }
 }
 
 function enqueueProcessing(file: string, elapsed?: string) {

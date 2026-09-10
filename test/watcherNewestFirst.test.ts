@@ -34,3 +34,34 @@ test('initial scan hands files to the handler newest first', async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('initial scan keeps going when one addHandler throws', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-watch-throw-'));
+  fs.writeFileSync(path.join(dir, '2025-07-22_new.mp3'), 'x');
+  fs.writeFileSync(path.join(dir, '2006-01-01_old.mp3'), 'x');
+  const seen: string[] = [];
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('watcher ready timed out')), 8000);
+      new Watcher({
+        watchFolder: dir,
+        watchDepth: 0,
+        ignoreCheck: () => false,
+        fileMatchRegex: /\.mp3$/i,
+        addHandler: async (filePath) => {
+          const name = path.basename(filePath);
+          if (name.startsWith('2025')) throw new Error('boom');
+          seen.push(name);
+        },
+        readyHandler: () => {
+          clearTimeout(timer);
+          resolve();
+        },
+      });
+    });
+    assert.deepEqual(seen, ['2006-01-01_old.mp3']);
+  } finally {
+    await closeAllWatchers();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

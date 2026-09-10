@@ -45,7 +45,11 @@ export class Watcher {
           this.pendingAdds.push(filePath);
           return;
         }
-        await config.addHandler(filePath, match, config.watchFolder);
+        try {
+          await config.addHandler(filePath, match, config.watchFolder);
+        } catch (error) {
+          console.error(`[watcher] addHandler failed for ${filePath}:`, error);
+        }
       })
       .on('change', (filePath) => {
         const match = filePath.match(config.fileMatchRegex);
@@ -53,7 +57,11 @@ export class Watcher {
           if (this.logEvents) {
             console.log(`[watcher] File ${filePath} has been changed`);
           }
-          config.changeHandler?.(filePath, match, config.watchFolder);
+          try {
+            config.changeHandler?.(filePath, match, config.watchFolder);
+          } catch (error) {
+            console.error(`[watcher] changeHandler failed for ${filePath}:`, error);
+          }
         }
       })
       .on('unlink', (filePath) => {
@@ -93,7 +101,12 @@ export class Watcher {
     );
     for (const filePath of files) {
       const match = filePath.match(config.fileMatchRegex);
-      if (match) await config.addHandler(filePath, match, config.watchFolder);
+      if (!match) continue;
+      try {
+        await config.addHandler(filePath, match, config.watchFolder);
+      } catch (error) {
+        console.error(`[watcher] addHandler failed for ${filePath}:`, error);
+      }
     }
     config.readyHandler?.();
   }
