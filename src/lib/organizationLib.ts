@@ -6,6 +6,7 @@ import { Watcher } from '../classes/Watcher.ts';
 import { confirmFolder, moveFile } from './fsLib.ts';
 import { checkTranscription, getTranscriptionFilename, process, relocateTranscription } from './transcriptionLib.ts';
 import { config } from '../config.ts';
+import { containedRelative } from './pathAllowLib.ts';
 
 const DATE_NAME = /^(?:MTIME_)?(\d{4})-(\d{2})-\d{2}/;
 
@@ -150,10 +151,7 @@ export async function resolveHeldFile(filePath: string, action: HoldingAction): 
     filePath = findAudioForSidecar(filePath) || filePath;
   }
   const resolved = path.resolve(filePath);
-  const root = config.watch.roots.find((candidate) => {
-    const prefix = path.resolve(candidate);
-    return resolved === prefix || resolved.startsWith(`${prefix}${path.sep}`);
-  });
+  const root = config.watch.roots.find((candidate) => containedRelative(resolved, path.resolve(candidate)));
   if (!root) throw new Error('file is not under a watch root');
 
   const date = dateFromFilename(filePath);

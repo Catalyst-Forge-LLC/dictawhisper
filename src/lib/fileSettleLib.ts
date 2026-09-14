@@ -159,7 +159,7 @@ export function requestWhenSettled(
     started.add(key);
     Promise.resolve(action()).catch((error) => {
       started.delete(key);
-      console.error(`[${label}] action failed for ${filePath}:`, error);
+      console.error('[settle] action failed', label, filePath, error);
     });
   };
 

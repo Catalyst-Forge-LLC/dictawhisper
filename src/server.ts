@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import http from 'http';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { config } from './config.ts';
 import { apiRoutes } from './apiRoutes.ts';
 import { socketConnect, socketEvents } from './socketEvents.ts';
@@ -35,6 +36,14 @@ const listenHost = apiListenHost(config);
 
 const app = express();
 app.use(express.json());
+app.use(
+  rateLimit({
+    windowMs: 60_000,
+    limit: 300,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+  }),
+);
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   // Inbox reloads months over HTTP. Keep this at Socket.IO's default.

@@ -12,12 +12,12 @@ export async function moveFile(filePath: string, destPath: string): Promise<void
     }
     fs.copyFile(filePath, destPath, (err) => {
       if (err) {
-        console.error(`[fs-copy-error] Error copying file ${filePath} to ${destPath}:`, err);
+        console.error('[fs-copy-error] copy failed', filePath, destPath, err);
         reject(err);
       } else {
         fs.unlink(filePath, (unlinkErr) => {
           if (unlinkErr) {
-            console.error(`[fs-delete-error] Error deleting original file ${filePath}:`, unlinkErr);
+            console.error('[fs-delete-error] unlink failed', filePath, unlinkErr);
             reject(unlinkErr);
           } else {
             console.log(`[fs-delete] Moved ${filePath} to ${destPath}`);

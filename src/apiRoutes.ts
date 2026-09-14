@@ -1,4 +1,3 @@
-import path from 'path';
 import express from 'express';
 import multer from 'multer';
 import { process, cleanTranscription, countStatus, getTranscriptionFilename, listNoteSummaries, patchTranscription, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
@@ -125,7 +124,7 @@ export const apiRoutes = [
         'Content-Disposition',
         contentDisposition(audioAllowed.path, asDownload ? 'attachment' : 'inline'),
       );
-      res.sendFile(path.resolve(audioAllowed.path));
+      res.sendFile(audioAllowed.relative, { root: audioAllowed.root });
     },
   },
   {
@@ -263,7 +262,7 @@ export const apiRoutes = [
       if (queryFlag(req.query.download)) {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         res.setHeader('Content-Disposition', contentDisposition(sidecarAllowed.path, 'attachment'));
-        res.sendFile(path.resolve(sidecarAllowed.path));
+        res.sendFile(sidecarAllowed.relative, { root: sidecarAllowed.root });
         return;
       }
       try {

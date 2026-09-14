@@ -17,3 +17,16 @@ test('rejects a path outside every watch root', () => {
   const allowed = resolveAllowedPath(outside);
   assert.equal(allowed.ok, false);
 });
+
+test('rejects a null byte in the path', () => {
+  const candidate = `${path.join(config.watch.browserDropFolder, 'clip.webm')}\0.json`;
+  const allowed = resolveAllowedPath(candidate);
+  assert.equal(allowed.ok, false);
+});
+
+test('does not treat a sibling of a watch root as inside it', () => {
+  const drop = path.resolve(config.watch.browserDropFolder);
+  const sibling = `${drop}-evil${path.sep}clip.webm`;
+  const allowed = resolveAllowedPath(sibling);
+  assert.equal(allowed.ok, false);
+});
