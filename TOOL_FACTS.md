@@ -2,7 +2,7 @@
 tool_facts_version: "0.1.0"
 name: DictaWhisper MCP Server
 developer: Catalyst Forge
-version: "0.0.12"
+version: "0.0.13"
 status: active
 license: MIT
 kind: mcp-server
@@ -62,7 +62,7 @@ credits:
 | | |
 |---|---|
 | **Developer** | Catalyst Forge |
-| **Version** | 0.0.12 |
+| **Version** | 0.0.13 |
 | **Status** | active |
 | **License** | MIT |
 | **Kind** | mcp-server |
