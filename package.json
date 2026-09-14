@@ -56,13 +56,18 @@
     "node": ">=20"
   },
   "packageManager": "pnpm@8.14.1",
+  "pnpm": {
+    "overrides": {
+      "fast-uri": "3.1.7"
+    }
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "async": "^3.2.6",
     "chokidar": "^4.0.3",
     "express": "^4.21.2",
     "fuse.js": "^7.5.0",
-    "multer": "^2.2.0",
+    "multer": "^2.4.0",
     "ollanet": "^0.6.5",
     "socket.io": "^4.8.1",
     "sqlite-vec": "^0.1.9",
