@@ -90,7 +90,7 @@
 
 {#if open}
   <div class="dimmer" on:click={close} on:keydown={(event) => event.key === 'Enter' && close()} role="presentation"></div>
-  <aside class="dw-card-elevated drawer" role="dialog" aria-labelledby="tools-title">
+  <div class="dw-card-elevated drawer" role="dialog" aria-labelledby="tools-title">
     <div class="drawer-head">
       <h2 id="tools-title">Tools</h2>
       <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={close}>Close</button>
@@ -187,7 +187,7 @@
     {:else}
       <p class="line">Health unavailable.</p>
     {/if}
-  </aside>
+  </div>
 {/if}
 
 <style lang="scss">

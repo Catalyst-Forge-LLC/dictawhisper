@@ -122,7 +122,11 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: '@use "src/variables.scss" as *;',
+        additionalData(source, filename) {
+          if (String(filename).includes("variables.scss")) return source;
+          return '@use "variables.scss" as *;\n' + source;
+        },
+        loadPaths: [path.resolve(path.dirname(fileURLToPath(import.meta.url)), "src")],
       },
     },
   },

@@ -6,7 +6,7 @@
 
 Engram is a local archive you *read*. DictaWhisper is a local journal you *record and reread*. Steal the chrome. Do not steal the object. Notes stay notes-with-audio. Do not grow a multi-route app, a user picker, SMS bubbles, or an ingest page.
 
-Do not take Tailwind or Svelte 5 as a prerequisite. Port tokens and class names into the existing Svelte 3 + SCSS client. Prefix: `dw-` (not `eg-`).
+Do not take Tailwind as a prerequisite. The inbox is Svelte 5 + Kit 2 + SCSS. Prefix: `dw-` (not `eg-`).
 
 ---
 

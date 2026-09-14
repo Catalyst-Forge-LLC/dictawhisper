@@ -62,7 +62,7 @@ POST /transcribe/force  or  socket force -------------------------------+
 | `src/lib/audioLib.ts` | Denoise + browser save | Shell-interpolated ffmpeg; always encodes MP3 then keeps original extension |
 | `src/lib/transcriptionLib.ts` | Watch → queue → clean → emit | In-memory map; incomplete extension list |
 | `src/classes/Queue.ts` | `async.queue` wrapper | Chilon pause-condition comments; callback shape `{err}` vs `(err, result)` |
-| `client/` | SvelteKit 1 / Svelte 3 recorder + table | MDN dictaphone; hardcoded socket; no cleaned text/tags |
+| `client/` | SvelteKit 2 / Svelte 5 recorder + inbox | MDN dictaphone leftover; hardcoded socket |
 
 ---
 
@@ -214,7 +214,7 @@ Zod is a dependency but unused for config. Defaults include a real machine and m
 
 - `CollapsibleAside` is MDN “Web dictaphone” help text.
 - Recorder is imperative `document.querySelector` / `createElement` inside Svelte.
-- Svelte 3 / Kit 1 / Vite 4 — fine to keep for a polish pass; upgrade is a later workstream, not a gate.
+- Inbox is Svelte 5 / Kit 2 / Vite 8. Remaining polish is copy and unused deps, not a framework jump.
 - Client depends on `socket.io` (server package) unused.
 
 **Do:** delete the aside or replace with DictaWhisper help (settle, force, tags). Rewrite recorder as Svelte state. Drop unused deps.

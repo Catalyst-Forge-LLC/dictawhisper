@@ -191,6 +191,7 @@
 <section
   class="dw-card-elevated capture"
   class:is-drop={dragOver}
+  aria-label="Record or drop audio"
   on:dragover={handleDragOver}
   on:dragleave={handleDragLeave}
   on:drop={handleDrop}
