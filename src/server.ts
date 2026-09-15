@@ -1,6 +1,8 @@
 import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { config } from './config.ts';
@@ -103,6 +105,28 @@ for (const route of apiRoutes) {
   else if (route.method === 'POST') app.post(route.path, route.handler);
   else throw new Error(`Unsupported method: ${route.method}`);
 }
+
+function mountPackagedUi(): void {
+  if (process.env.DICTA_SERVE_UI !== '1' && process.env.DICTA_SERVE_UI !== 'true') return;
+  const uiDir =
+    process.env.DICTA_UI_DIR?.trim() ||
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist/ui');
+  if (!fs.existsSync(uiDir)) {
+    console.warn(`[ui] no inbox build at ${uiDir} — run pnpm --dir client build`);
+    return;
+  }
+  app.use(express.static(uiDir));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (req.path.startsWith('/socket.io')) return next();
+    res.sendFile(path.join(uiDir, 'index.html'), (err) => {
+      if (err) next(err);
+    });
+  });
+  console.log(`[ui] serving inbox from ${uiDir}`);
+}
+
+mountPackagedUi();
 
 io.on('connection', (socket) => {
   socketConnect(socket, transcriptions);

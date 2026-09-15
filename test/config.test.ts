@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
-import { dictaConfigFileSchema, resolveApiListenPort } from '../src/config.ts';
+import {
+  dictaConfigFileSchema,
+  resolveApiListenPort,
+  resolveConfigPath,
+  resolveListenPort,
+} from '../src/config.ts';
 
 test('empty config file gets defaults', () => {
   const parsed = dictaConfigFileSchema.parse({});
@@ -26,4 +34,29 @@ test('UI lease PORT does not become the API port', () => {
   assert.equal(resolveApiListenPort('7777', 7777, 8008, 8008), 8008);
   assert.equal(resolveApiListenPort('8008', 7777, 8008, 8008), 8008);
   assert.equal(resolveApiListenPort(undefined, 7777, 8008, 8008), 8008);
+});
+
+test('packaged inbox binds the UI port', () => {
+  assert.equal(resolveListenPort('8008', 7777, 8008, 8008, true), 7777);
+  assert.equal(resolveListenPort(undefined, undefined, 8008, 8008, true), 7777);
+  assert.equal(resolveListenPort('8008', 7777, 8008, 8008, false), 8008);
+});
+
+test('config path prefers env, then cwd, then home', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'dicta-cfg-'));
+  const cwd = path.join(tmp, 'cwd');
+  const home = path.join(tmp, 'home');
+  mkdirSync(cwd);
+  mkdirSync(path.join(home, '.dictawhisper'), { recursive: true });
+  writeFileSync(path.join(home, '.dictawhisper', 'config.json'), '{}');
+  assert.equal(
+    resolveConfigPath({}, cwd, home),
+    path.join(home, '.dictawhisper', 'config.json'),
+  );
+  writeFileSync(path.join(cwd, 'config.json'), '{}');
+  assert.equal(resolveConfigPath({}, cwd, home), path.join(cwd, 'config.json'));
+  assert.equal(
+    resolveConfigPath({ DICTA_CONFIG: path.join(tmp, 'explicit.json') }, cwd, home),
+    path.join(tmp, 'explicit.json'),
+  );
 });

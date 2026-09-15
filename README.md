@@ -6,7 +6,15 @@
 
 **A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. Transcribe on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Clean the note with [ollanet](https://ollanet.dev). The `.json` next to each recording is the journal.
 
-The npm package (`dictawhisper` `0.0.10`) is a name hold. Clone this repo. There is no installer.
+```bash
+pnpm add -g dictawhisper
+dictawhisper init          # or: dictawhisper init --home
+# edit whisper.python (and optional ollanet) in config.json
+dictawhisper doctor
+dictawhisper               # inbox + API → http://127.0.0.1:7777
+```
+
+A checkout is still the full development path (`pnpm dev`). The npm package is the same app: `dictawhisper` starts the API and serves the packaged inbox. It does not install Python or faster-whisper.
 
 **Docs:** [dictawhisper.com/docs](https://dictawhisper.com/docs) · **Site:** [dictawhisper.com](https://dictawhisper.com)
 
@@ -14,7 +22,7 @@ The npm package (`dictawhisper` `0.0.10`) is a name hold. Clone this repo. There
 
 Exercised path: Windows, Node 20+, pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` is required when denoise is on. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
 
-## Install
+## From a checkout
 
 ```bash
 git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git

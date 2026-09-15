@@ -1,11 +1,32 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { z } from 'zod';
 import { localberthGet } from './lib/localberthGet.ts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const defaultConfigPath = path.resolve(__dirname, '../config.json');
+export function resolveConfigPath(
+  env: NodeJS.ProcessEnv = process.env,
+  cwd = process.cwd(),
+  home = os.homedir()
+): string {
+  const fromEnv = env.DICTA_CONFIG?.trim();
+  if (fromEnv) return path.resolve(fromEnv);
+  const inCwd = path.resolve(cwd, 'config.json');
+  if (fs.existsSync(inCwd)) return inCwd;
+  const inHome = path.join(home, '.dictawhisper', 'config.json');
+  if (fs.existsSync(inHome)) return inHome;
+  return inCwd;
+}
+
+export const defaultConfigPath = resolveConfigPath();
+
+function resolveAgainst(configDir: string, filePath: string): string {
+  return path.isAbsolute(filePath) ? filePath : path.resolve(configDir, filePath);
+}
+
+function servePackagedUi(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.DICTA_SERVE_UI === '1' || env.DICTA_SERVE_UI === 'true';
+}
 
 const httpSchema = z
   .object({
@@ -124,10 +145,6 @@ function readJson(filePath: string): unknown {
   }
 }
 
-function resolveExistingOrPlain(filePath: string): string {
-  return path.resolve(filePath);
-}
-
 export function applyConfigToEnv(config: DictaConfig): void {
   process.env.WHISPER_MODEL = config.whisper.model;
   process.env.WHISPER_PYTHON = config.whisper.python;
@@ -147,16 +164,30 @@ export function resolveApiListenPort(
   return apiLeasePort || configPort;
 }
 
-export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim() || defaultConfigPath): DictaConfig {
+/** Combined inbox+API (npm CLI) binds the UI port so the page and /note share origin. */
+export function resolveListenPort(
+  envPort: string | undefined,
+  uiPort: number | undefined,
+  apiLeasePort: number | undefined,
+  configPort: number,
+  serveUi = false
+): number {
+  if (serveUi) return uiPort || 7777;
+  return resolveApiListenPort(envPort, uiPort, apiLeasePort, configPort);
+}
+
+export function loadConfig(configPath: string = resolveConfigPath()): DictaConfig {
   const parsed = dictaConfigFileSchema.parse(readJson(configPath));
+  const configDir = path.dirname(path.resolve(configPath));
   const config: DictaConfig = {
     http: {
       host: process.env.HOST?.trim() || parsed.http.host,
-      port: resolveApiListenPort(
+      port: resolveListenPort(
         process.env.PORT,
         localberthGet('dictawhisper'),
         localberthGet('dictawhisper-api'),
-        parsed.http.port
+        parsed.http.port,
+        servePackagedUi()
       ),
       corsOrigins: parsed.http.corsOrigins,
       tailscale:
@@ -165,8 +196,8 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
         parsed.http.tailscale,
     },
     watch: {
-      roots: parsed.watch.roots.map((root) => resolveExistingOrPlain(root)),
-      browserDropFolder: resolveExistingOrPlain(parsed.watch.browserDropFolder),
+      roots: parsed.watch.roots.map((root) => resolveAgainst(configDir, root)),
+      browserDropFolder: resolveAgainst(configDir, parsed.watch.browserDropFolder),
       settleMinutes: Number(process.env.VOICE_SETTLE_MINUTES) || parsed.watch.settleMinutes,
       browserSettleMs:
         process.env.VOICE_BROWSER_SETTLE_MS !== undefined
@@ -193,7 +224,7 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
       required: parsed.ollanet.required,
     },
     journal: {
-      index: resolveExistingOrPlain(parsed.journal.index),
+      index: resolveAgainst(configDir, parsed.journal.index),
       search: parsed.journal.search,
       embedModel: process.env.DICTA_EMBED_MODEL?.trim() || parsed.journal.embedModel,
     },
@@ -203,5 +234,5 @@ export function loadConfig(configPath: string = process.env.DICTA_CONFIG?.trim()
   return config;
 }
 
-export const configPath = process.env.DICTA_CONFIG?.trim() || defaultConfigPath;
+export const configPath = resolveConfigPath();
 export const config = loadConfig(configPath);
