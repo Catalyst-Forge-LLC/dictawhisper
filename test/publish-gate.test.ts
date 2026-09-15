@@ -38,7 +38,7 @@ test("applyVersion keeps package.json formatting", () => {
 test("prepublishOnly runs the login and bump gate", () => {
 	const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	assert.match(pkg.scripts.prepublishOnly, /publish-gate/);
-	assert.equal(pkg.bin.dictawhisper, "./bin/dictawhisper.js");
+	assert.equal(pkg.bin.dictawhisper, "bin/dictawhisper.js");
 	assert.ok(pkg.files.includes("bin"));
 	assert.ok(pkg.files.includes("src"));
 	assert.ok(pkg.files.includes("dist/ui"));
