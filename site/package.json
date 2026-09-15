@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"docs:build": "node scripts/build-docs.mjs",
-		"dev": "pnpm docs:build && node ../scripts/ensure-lease.mjs dictawhisper-site 5186 && filepress dev --host 0.0.0.0",
+		"dev": "pnpm docs:build && localslip claim dictawhisper-site --port 5186 && filepress dev --host 0.0.0.0",
 		"build": "pnpm docs:build && filepress build",
 		"preview": "filepress preview",
 		"check": "filepress check",
