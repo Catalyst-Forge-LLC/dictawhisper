@@ -1,12 +1,12 @@
 import { execSync, spawn, type ChildProcess } from 'child_process';
-import { localberthGet } from './lib/localberthGet.ts';
+import { localslipGet } from './lib/localslipGet.ts';
 
 const children: ChildProcess[] = [];
 
 function apiEnv(): NodeJS.ProcessEnv {
   return {
     ...process.env,
-    PORT: String(localberthGet('dictawhisper-api') ?? 8008),
+    PORT: String(localslipGet('dictawhisper-api') ?? 8008),
   };
 }
 

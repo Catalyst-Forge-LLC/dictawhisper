@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { z } from 'zod';
-import { localberthGet } from './lib/localberthGet.ts';
+import { localslipGet } from './lib/localslipGet.ts';
 
 export function resolveConfigPath(
   env: NodeJS.ProcessEnv = process.env,
@@ -152,7 +152,7 @@ export function applyConfigToEnv(config: DictaConfig): void {
   process.env.WHISPER_COMPUTE_TYPE = config.whisper.computeType;
 }
 
-/** LocalBerth start on the UI lease sets PORT=7777. That must not become the API. */
+/** LocalSlip start on the UI lease sets PORT=7777. That must not become the API. */
 export function resolveApiListenPort(
   envPort: string | undefined,
   uiPort: number | undefined,
@@ -184,8 +184,8 @@ export function loadConfig(configPath: string = resolveConfigPath()): DictaConfi
       host: process.env.HOST?.trim() || parsed.http.host,
       port: resolveListenPort(
         process.env.PORT,
-        localberthGet('dictawhisper'),
-        localberthGet('dictawhisper-api'),
+        localslipGet('dictawhisper'),
+        localslipGet('dictawhisper-api'),
         parsed.http.port,
         servePackagedUi()
       ),
