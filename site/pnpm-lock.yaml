@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  cookie@<0.7.0: 1.1.1
   js-yaml: 3.15.2
   sharp: 0.35.4
 
@@ -822,10 +823,6 @@ packages:
   console-clear@1.1.1:
     resolution: {integrity: sha512-pMD+MVR538ipqkG5JXeOEbKWS5um1H4LUUccUQG68qpeqBYbzYy79Gh55jkd2TtPdRfUaLWdv6LPP//5Zt0aPQ==}
     engines: {node: '>=4'}
-
-  cookie@0.6.0:
-    resolution: {integrity: sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==}
-    engines: {node: '>= 0.6'}
 
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
@@ -2049,7 +2046,7 @@ snapshots:
       '@sveltejs/vite-plugin-svelte': 7.3.0(svelte@5.56.9)(vite@8.2.1(esbuild@0.28.2)(tsx@4.23.12))
       '@types/cookie': 0.6.0
       acorn: 8.18.0
-      cookie: 0.6.0
+      cookie: 1.1.1
       devalue: 5.9.0
       esm-env: 1.2.2
       kleur: 4.1.5
@@ -2134,8 +2131,6 @@ snapshots:
   comma-separated-tokens@2.0.3: {}
 
   console-clear@1.1.1: {}
-
-  cookie@0.6.0: {}
 
   cookie@1.1.1: {}
 
