@@ -5,8 +5,8 @@ import { getSettleMs, inspectFileReadiness, isSkippedWatchPath, requestWhenSettl
 import { Watcher } from '../classes/Watcher.ts';
 import { confirmFolder, moveFile } from './fsLib.ts';
 import { checkTranscription, getTranscriptionFilename, process, relocateTranscription } from './transcriptionLib.ts';
+import { containedRelative, resolveAllowedPath } from './pathAllowLib.ts';
 import { config } from '../config.ts';
-import { containedRelative } from './pathAllowLib.ts';
 
 const DATE_NAME = /^(?:MTIME_)?(\d{4})-(\d{2})-\d{2}/;
 
@@ -146,12 +146,19 @@ export type HoldingAction = 'overwrite' | 'rename' | 'unfile';
 
 /** Move a holding/unfiled note into YYYY/MM or _unfiled. */
 export async function resolveHeldFile(filePath: string, action: HoldingAction): Promise<string> {
+  const allowed = resolveAllowedPath(filePath);
+  if (!allowed.ok) throw new Error(allowed.error);
+  filePath = allowed.path;
   if (!fs.existsSync(filePath)) throw new Error('file not found');
   if (filePath.toLowerCase().endsWith('.json')) {
-    filePath = findAudioForSidecar(filePath) || filePath;
+    const audio = findAudioForSidecar(filePath);
+    if (audio) {
+      const audioAllowed = resolveAllowedPath(audio);
+      if (!audioAllowed.ok) throw new Error(audioAllowed.error);
+      filePath = audioAllowed.path;
+    }
   }
-  const resolved = path.resolve(filePath);
-  const root = config.watch.roots.find((candidate) => containedRelative(resolved, path.resolve(candidate)));
+  const root = config.watch.roots.find((candidate) => containedRelative(filePath, path.resolve(candidate)));
   if (!root) throw new Error('file is not under a watch root');
 
   const date = dateFromFilename(filePath);

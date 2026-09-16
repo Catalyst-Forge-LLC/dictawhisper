@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { config } from '../src/config.ts';
 import { resolveAllowedPath } from '../src/lib/pathAllowLib.ts';
+import { moveFile } from '../src/lib/fsLib.ts';
 
 test('allows a path under the browser drop folder', () => {
   const candidate = path.join(config.watch.browserDropFolder, 'clip.webm');
@@ -22,6 +24,16 @@ test('rejects a null byte in the path', () => {
   const candidate = `${path.join(config.watch.browserDropFolder, 'clip.webm')}\0.json`;
   const allowed = resolveAllowedPath(candidate);
   assert.equal(allowed.ok, false);
+});
+
+test('moveFile refuses a destination outside every watch root', async () => {
+  const src = path.join(config.watch.browserDropFolder, `dw-move-src-${Date.now()}.txt`);
+  const dest = path.join(os.tmpdir(), `dw-move-dest-${Date.now()}.txt`);
+  fs.mkdirSync(path.dirname(src), { recursive: true });
+  fs.writeFileSync(src, 'x');
+  await assert.rejects(() => moveFile(src, dest), /outside configured watch roots/);
+  assert.equal(fs.existsSync(dest), false);
+  fs.rmSync(src, { force: true });
 });
 
 test('does not treat a sibling of a watch root as inside it', () => {
