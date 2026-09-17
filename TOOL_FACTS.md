@@ -2,7 +2,7 @@
 tool_facts_version: "0.1.0"
 name: DictaWhisper MCP Server
 developer: Catalyst Forge
-version: "0.0.13"
+version: "0.1.2"
 status: active
 license: MIT
 kind: mcp-server
@@ -50,8 +50,8 @@ tools:
       processes: false
     idempotent: true
 generated:
-  date: 2026-09-10
-  generator: hand-authored (tools inventory from dictawhisper mcp 0.0.9, read-only journal)
+  date: 2026-09-16
+  generator: hand-authored (tools inventory from dictawhisper mcp 0.1.2, read-only journal)
 credits:
   generated_with: https://toolfacts.dev
   built_by: "Catalyst Forge - https://www.catalystforge.com/"
@@ -62,7 +62,7 @@ credits:
 | | |
 |---|---|
 | **Developer** | Catalyst Forge |
-| **Version** | 0.0.13 |
+| **Version** | 0.1.2 |
 | **Status** | active |
 | **License** | MIT |
 | **Kind** | mcp-server |
@@ -105,5 +105,3 @@ None required.
 
 ---
 *Generated with [ToolFacts](https://toolfacts.dev) · Built by [Catalyst Forge](https://www.catalystforge.com/)*
-
-[toolfacts-label]: https://toolfacts.dev/v#tf1.eNrFlE9rGzEQxb-KmLOcpMdujymBggOFFHoIwSja5101u5IyM7uOMf7uZdZx_9Gcc9JBT_PebyTNgWZqPnjKYQQ19DlFDd_7JBXsbq-_ujvwDCZPLWYMpYKpoeugYdiLupvCHcjTDJZUMjV0dXF18ZE8iQadhBoKUdNsmiFFZDGT2y_fyNNTyi01NMa6krMJT1mTBTkQXhAnPRUdSgzDqnKJECFPyiFLLazUkGibCh09RUaLrCkMYucZz1NitNTcPxw9oWM72xxIMWCE8p4ayiVjYRNNOZibvOq1FKtzfzh3prXO7E6d2QgCx94wU4sNtltENVhGaA0DIfbmtU0DZC-K0ZLGUmHbGbor_PTb_5UMQs02DIKjp9RirEWRlRrlCZ7qxLUs_btb3N1cUoTLRSHuce92hVvxTkMn3hV25m3ZPzmGTpzF1aC9eNcGxS9hyK0LTvrC6ipjTtjR0f-fuoNuzO69uG-gsXcln6CN2WLEwAuZMU85PU9wj0H-QY8DQkbrFC-6MBv9m6BDEt0sinciXSfRJaJL2WkP96NMnMPgdkl7F8uU9e30jGhF3zN6xg62LG9zm1j0lLxU-2NhMLblGtqwdxxyB3uuChY6Pnjqy4gaOivXq1ZpLi__JLyIZVxAapGkZfnJZ12XtJ8eTXF5nlKrZUqt1uvrv6osc2TKMagNCcM4_gRh38d-
