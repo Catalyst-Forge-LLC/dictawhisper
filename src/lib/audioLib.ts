@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -99,32 +99,57 @@ export type AudioProbe = {
 const MIN_AUDIO_BYTES = 512;
 
 /** Cheap ffprobe: reject stubs, empty files, and containers with no duration. */
-export function probeAudioFile(filePath: string): AudioProbe {
-  if (!fs.existsSync(filePath)) return { ok: false, reason: 'missing', size: 0 };
+export function probeAudioFile(filePath: string): Promise<AudioProbe> {
+  if (!fs.existsSync(filePath)) return Promise.resolve({ ok: false, reason: 'missing', size: 0 });
   const size = fs.statSync(filePath).size;
-  if (size < MIN_AUDIO_BYTES) return { ok: false, reason: `too small (${size} bytes)`, size };
-  const result = spawnSync(
-    'ffprobe',
-    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'json', filePath],
-    { encoding: 'utf8', timeout: 15_000, windowsHide: true },
-  );
-  if (result.status !== 0) {
-    const line = String(result.stderr || result.stdout || 'ffprobe failed')
-      .trim()
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .pop();
-    return { ok: false, reason: line || 'ffprobe failed', size };
+  if (size < MIN_AUDIO_BYTES) {
+    return Promise.resolve({ ok: false, reason: `too small (${size} bytes)`, size });
   }
-  try {
-    const duration = Number(JSON.parse(result.stdout || '{}')?.format?.duration);
-    if (!Number.isFinite(duration) || duration <= 0) {
-      return { ok: false, reason: 'no duration', size };
-    }
-    return { ok: true, reason: `${duration.toFixed(1)}s`, durationSec: duration, size };
-  } catch {
-    return { ok: false, reason: 'ffprobe json', size };
-  }
+  return new Promise((resolve) => {
+    const child = spawn(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'json', filePath],
+      { windowsHide: true },
+    );
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve({ ok: false, reason: 'ffprobe timeout', size });
+    }, 15_000);
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      resolve({ ok: false, reason: error.message || 'ffprobe failed', size });
+    });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        const line = String(stderr || stdout || 'ffprobe failed')
+          .trim()
+          .split(/\r?\n/)
+          .filter(Boolean)
+          .pop();
+        resolve({ ok: false, reason: line || 'ffprobe failed', size });
+        return;
+      }
+      try {
+        const duration = Number(JSON.parse(stdout || '{}')?.format?.duration);
+        if (!Number.isFinite(duration) || duration <= 0) {
+          resolve({ ok: false, reason: 'no duration', size });
+          return;
+        }
+        resolve({ ok: true, reason: `${duration.toFixed(1)}s`, durationSec: duration, size });
+      } catch {
+        resolve({ ok: false, reason: 'ffprobe json', size });
+      }
+    });
+  });
 }
 
 function unlinkIfExists(filePath: string): void {
@@ -172,7 +197,7 @@ export async function cleanAudioFile(file: string, cleanAgain = false): Promise<
   }
 
   const source = fs.existsSync(originalFile) && cleanAgain ? originalFile : file;
-  const probe = probeAudioFile(source);
+  const probe = await probeAudioFile(source);
   if (!probe.ok) {
     throw new Error(`unreadable audio: ${probe.reason}`);
   }

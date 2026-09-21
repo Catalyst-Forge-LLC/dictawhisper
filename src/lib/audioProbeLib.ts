@@ -60,7 +60,7 @@ export function listWatchAudio(roots: string[]): string[] {
   return files;
 }
 
-export function scanPendingAudio(roots: string[], options: { apply?: boolean } = {}): ProbeReport {
+export async function scanPendingAudio(roots: string[], options: { apply?: boolean } = {}): Promise<ProbeReport> {
   const apply = Boolean(options.apply);
   const files = listWatchAudio(roots);
   const hits: ProbeHit[] = [];
@@ -70,12 +70,17 @@ export function scanPendingAudio(roots: string[], options: { apply?: boolean } =
     const { isProcessed, transcriptionFile } = checkTranscription(file);
     if (isProcessed) continue;
     pending += 1;
-    const probe = probeAudioFile(file);
-    if (probe.ok) continue;
+    const probe = await probeAudioFile(file);
+    if (probe.ok) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      continue;
+    }
     hits.push({ file, reason: probe.reason });
-    if (!apply) continue;
-    recordAudioFailure(transcriptionFile, new Error(`unreadable audio: ${probe.reason}`));
-    marked += 1;
+    if (apply) {
+      recordAudioFailure(transcriptionFile, new Error(`unreadable audio: ${probe.reason}`));
+      marked += 1;
+    }
+    await new Promise<void>((resolve) => setImmediate(resolve));
   }
   if (apply && marked) emitNotesIndex();
   return { audio: files.length, pending, bad: hits.length, marked, files: hits };
@@ -89,9 +94,9 @@ export function startProbeJob(roots: string[], options: { apply?: boolean } = {}
   if (job.running) return getProbeJob();
   const apply = Boolean(options.apply);
   job = { ...idleJob(), running: true, apply, startedAt: new Date().toISOString() };
-  setImmediate(() => {
+  void (async () => {
     try {
-      const report = scanPendingAudio(roots, { apply });
+      const report = await scanPendingAudio(roots, { apply });
       job = {
         ...job,
         ...report,
@@ -107,6 +112,6 @@ export function startProbeJob(roots: string[], options: { apply?: boolean } = {}
         error: error instanceof Error ? error.message : String(error),
       };
     }
-  });
+  })();
   return getProbeJob();
 }

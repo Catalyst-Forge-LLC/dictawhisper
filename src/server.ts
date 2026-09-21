@@ -64,7 +64,7 @@ function startQueues(): void {
     transcription: {
       processor: async (task, callback) => {
         try {
-          const probe = probeAudioFile(task.file);
+          const probe = await probeAudioFile(task.file);
           if (!probe.ok) {
             throw new Error(`unreadable audio: ${probe.reason}`);
           }

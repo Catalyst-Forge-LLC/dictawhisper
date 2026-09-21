@@ -825,6 +825,7 @@
 
   function onTranscription(data) {
     upsertNote(data);
+    if (data?.jsonFile && expanded[data.jsonFile]) void hydrateNote(data.jsonFile);
   }
 
   function onPopState() {

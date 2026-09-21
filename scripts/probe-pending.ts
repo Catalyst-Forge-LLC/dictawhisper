@@ -9,7 +9,7 @@ import { config } from '../src/config.ts';
 import { scanPendingAudio } from '../src/lib/audioProbeLib.ts';
 
 const apply = process.argv.includes('--apply');
-const report = scanPendingAudio(config.watch.roots, { apply });
+const report = await scanPendingAudio(config.watch.roots, { apply });
 for (const hit of report.files) {
   console.log(`bad  ${hit.reason.padEnd(48)} ${hit.file}`);
 }

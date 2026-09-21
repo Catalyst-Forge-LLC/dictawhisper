@@ -128,7 +128,7 @@ export function emitTranscription(target: Socket | SocketIOServer | null = null,
   transcriptions[jsonFile] = transcriptionJson;
   indexSidecar(jsonFile);
   const dest = target ?? liveIo;
-  dest?.emit('transcription', { jsonFile, transcriptionJson });
+  dest?.emit('transcription', summarizeTranscription(jsonFile, transcriptionJson));
 }
 
 function normalizeTags(tags: unknown): string[] {

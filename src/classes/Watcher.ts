@@ -107,6 +107,7 @@ export class Watcher {
       } catch (error) {
         console.error(`[watcher] addHandler failed for ${filePath}:`, error);
       }
+      await new Promise<void>((resolve) => setImmediate(resolve));
     }
     config.readyHandler?.();
   }

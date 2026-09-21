@@ -24,14 +24,16 @@ test('sorts newest first', () => {
   ]);
 });
 
-test('probe rejects tiny and non-audio files', () => {
+test('probe rejects tiny and non-audio files', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-probe-'));
   const tiny = path.join(dir, 'tiny.mp3');
   const junk = path.join(dir, 'junk.mp3');
   fs.writeFileSync(tiny, 'ID3');
   fs.writeFileSync(junk, Buffer.alloc(2048, 0));
-  assert.equal(probeAudioFile(tiny).ok, false);
-  assert.match(probeAudioFile(tiny).reason, /too small/);
-  assert.equal(probeAudioFile(junk).ok, false);
+  const tinyProbe = await probeAudioFile(tiny);
+  const junkProbe = await probeAudioFile(junk);
+  assert.equal(tinyProbe.ok, false);
+  assert.match(tinyProbe.reason, /too small/);
+  assert.equal(junkProbe.ok, false);
   fs.rmSync(dir, { recursive: true, force: true });
 });
