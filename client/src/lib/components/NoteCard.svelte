@@ -145,9 +145,6 @@
     if (!el) return;
     landedFor = key;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const cues = cuesOf(transcription);
-    const cue = cues[landCue];
-    if (cueHasTime(cue)) playCue({ currentTarget: el }, cue);
   }
 
   afterUpdate(landTarget);
