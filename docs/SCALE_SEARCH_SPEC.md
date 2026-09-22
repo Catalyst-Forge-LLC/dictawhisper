@@ -65,7 +65,7 @@ Tables (names can move; jobs cannot):
 
 Columns: `basename`, `tags`, `body` (cleaned preferred), `raw` (Whisper, lower weight at query time).
 
-**`notes_vec`** — [sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` table, loaded into Node 24 `node:sqlite`. One float vector per sidecar. Model and dim locked after the first embed (`journal.embedModel`, or the first Ollama tag matching `embed|nomic|mxbai|bge|e5|minilm|arctic` on any ollanet host — local first, then Tailscale). Bind vec rowids as BigInt; JS numbers arrive as REAL and sqlite-vec rejects them.
+**`notes_vec`**: [sqlite-vec](https://github.com/asg017/sqlite-vec) `vec0` table, loaded into Node 24 `node:sqlite`. One float vector per sidecar. Model and dim locked after the first embed (`journal.embedModel`, or the first Ollama tag matching `embed|nomic|mxbai|bge|e5|minilm|arctic` on a host `journal.embedHost` allows; default is this computer only). Bind vec rowids as BigInt; JS numbers arrive as REAL and sqlite-vec rejects them.
 
 Rebuild: `pnpm journal:index` (full walk). Incremental: on `emitTranscription` / sidecar write / delete, upsert or delete that row. Startup: if the db is missing or schema version mismatches, rebuild in the background; inbox can show “indexing…” in Tools, not a white screen.
 
@@ -144,11 +144,12 @@ FTS5 is the lexical engine that belongs in-process with SQLite, survives restart
 "journal": {
   "index": "./data/journal.sqlite",
   "search": "hybrid",
-  "embedModel": ""
+  "embedModel": "",
+  "embedHost": "local"
 }
 ```
 
-Empty `embedModel` = auto-pick from Ollama tags. If Ollama is unreachable, search stays FTS (`lex`). `pnpm journal:index` rebuilds; `--no-embed` skips vectors.
+Empty `embedModel` = auto-pick from Ollama tags on an allowed host. `embedHost` is `local` (default, this computer only), `machine` (`ollanet.machine`), one host name, or `any` (opt-in: any discovered host). If no allowed host has an embed model, search stays FTS (`lex`). `search: "lex"` never embeds. `pnpm journal:index` rebuilds; `--no-embed` skips vectors.
 
 ---
 

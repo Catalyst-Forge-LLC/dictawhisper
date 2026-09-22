@@ -14,7 +14,7 @@ Force/delete/read only accept realpaths under configured watch roots.
 | GET | `/notes/search` | `?q=` `?tag=` `?since=` `?until=` `?mode=lex\|semantic\|hybrid` `?limit=` `?unreadable=1` |
 | GET | `/notes/years` | Year counts from the SQLite index |
 | GET | `/notes/tags` | Tag counts (`?includeSingletons=1`) |
-| GET | `/notes/stats` | Index size, embed coverage, last rebuild |
+| GET | `/notes/stats` | Index size, embed coverage, semantic search on/off and why, last rebuild |
 | GET | `/note?file=` | Full sidecar (allowlisted) |
 | GET | `/audio?file=` | Stream allowlisted audio (sidecar or audio path) |
 | POST | `/audio` | Multipart `file` (or `audio`) + optional `clipName` → drop folder, process immediately |

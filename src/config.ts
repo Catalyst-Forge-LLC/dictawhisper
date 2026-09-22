@@ -79,6 +79,8 @@ const journalSchema = z
     index: z.string().default('./data/journal.sqlite'),
     search: z.enum(['lex', 'semantic', 'hybrid']).default('hybrid'),
     embedModel: z.string().default(''),
+    /** 'local' (this computer), 'machine' (ollanet.machine), 'any', or one ollanet host name. */
+    embedHost: z.string().default('local'),
   })
   .default({});
 
@@ -131,6 +133,7 @@ export type DictaConfig = {
     index: string;
     search: 'lex' | 'semantic' | 'hybrid';
     embedModel: string;
+    embedHost: string;
   };
 };
 
@@ -227,6 +230,7 @@ export function loadConfig(configPath: string = resolveConfigPath()): DictaConfi
       index: resolveAgainst(configDir, parsed.journal.index),
       search: parsed.journal.search,
       embedModel: process.env.DICTA_EMBED_MODEL?.trim() || parsed.journal.embedModel,
+      embedHost: process.env.DICTA_EMBED_HOST?.trim() || parsed.journal.embedHost.trim() || 'local',
     },
   };
 

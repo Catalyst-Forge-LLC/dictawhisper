@@ -11,9 +11,11 @@ import {
   type SearchSort,
   isFilenameQuery,
 } from './journalIndexLib.ts';
-import { createEmbedClient, type EmbedClient } from './journalEmbedLib.ts';
+import { resolveEmbedClient, type EmbedClient, type EmbedResolution } from './journalEmbedLib.ts';
 
-let embedClient: EmbedClient | null = null;
+const EMBED_RETRY_MS = 60_000;
+
+let embedResolution: { at: number; result: EmbedResolution } | null = null;
 let embedChain: Promise<void> = Promise.resolve();
 let rebuilding = false;
 
@@ -113,13 +115,33 @@ function queueEmbed(index: JournalIndex, rowid: number, jsonFile: string) {
     });
 }
 
-async function getEmbedClient(): Promise<EmbedClient | null> {
-  if (embedClient) return embedClient;
-  embedClient = await createEmbedClient();
-  if (embedClient) {
-    console.log(`[journal-index] ollama embed model ${embedClient.model} on ${embedClient.host}`);
+export async function getEmbedResolution(): Promise<EmbedResolution> {
+  const cached = embedResolution;
+  if (cached && (cached.result.client || Date.now() - cached.at < EMBED_RETRY_MS)) {
+    return cached.result;
   }
-  return embedClient;
+  const result = await resolveEmbedClient();
+  const changed = cached?.result.reason !== result.reason || cached?.result.client?.host !== result.client?.host;
+  embedResolution = { at: Date.now(), result };
+  if (changed) {
+    console.log(
+      result.client
+        ? `[journal-index] ollama embed model ${result.client.model} on ${result.client.host}`
+        : `[journal-index] semantic search off: ${result.reason}`,
+    );
+  }
+  return result;
+}
+
+/** Last known semantic-search state, without probing hosts. */
+export function embedStatus(): { semantic: boolean; embedHost: string; host: string; reason: string } | null {
+  if (!embedResolution) return null;
+  const { client, reason } = embedResolution.result;
+  return { semantic: Boolean(client), embedHost: config.journal.embedHost, host: client?.host || '', reason };
+}
+
+async function getEmbedClient(): Promise<EmbedClient | null> {
+  return (await getEmbedResolution()).client;
 }
 
 async function embedOne(index: JournalIndex, client: EmbedClient, rowid: number, text: string) {
@@ -130,10 +152,7 @@ async function embedOne(index: JournalIndex, client: EmbedClient, rowid: number,
 
 export async function ensureEmbeddings(index: JournalIndex = requireJournal()): Promise<number> {
   const client = await getEmbedClient();
-  if (!client) {
-    console.log('[journal-index] no ollama embedding model; FTS-only');
-    return 0;
-  }
+  if (!client) return 0;
   const pending = index.rowsNeedingEmbed();
   if (!pending.length) {
     const stats = index.stats();
@@ -249,7 +268,7 @@ export function journalTags(options: { includeSingletons?: boolean; limit?: numb
 
 export function journalStats() {
   const index = requireJournal();
-  return { ...index.stats(), indexing: rebuilding, vec: index.hasVec() };
+  return { ...index.stats(), indexing: rebuilding, vec: index.hasVec(), search: embedStatus() };
 }
 
 export function recentJournalIndex(options: {

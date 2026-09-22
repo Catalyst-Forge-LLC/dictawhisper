@@ -1,9 +1,22 @@
-import { runPrompt } from 'ollanet';
+import { loadConfig as loadOllanetConfig, lookupAlias, resolveTarget, runPrompt, type HostTarget } from 'ollanet';
 import { config } from '../config.ts';
 import { parseJSON } from './jsonLib.ts';
 
 const DEFAULT_RETRIES = 3;
 const BACKOFF_MS = [2_000, 8_000, 20_000];
+
+/** `ollanet.machine` as set, or '' when empty or still the example placeholder. */
+export function configuredMachine(machine: string): string {
+  const name = machine.trim();
+  return name && !name.startsWith('YOUR-') ? name : '';
+}
+
+/** Resolve a machine name the way cleanup's runPrompt does: ollanet alias first, then resolveTarget. */
+export async function resolveOllanetMachine(machine: string): Promise<HostTarget> {
+  const app = await loadOllanetConfig();
+  const alias = lookupAlias(app, machine);
+  return resolveTarget(alias?.machine || machine, app);
+}
 
 export async function cleanWithOllanet(
   prompt: string,

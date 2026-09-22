@@ -36,6 +36,7 @@
   "journal": {
     "index": "./data/journal.sqlite",
     "search": "hybrid",
-    "embedModel": ""
+    "embedModel": "",
+    "embedHost": "local"
   }
 }

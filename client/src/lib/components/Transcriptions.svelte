@@ -292,7 +292,7 @@
   }
 
   function hasEmbeddings() {
-    return Number(journalMeta?.embedded || 0) > 0;
+    return Number(journalMeta?.embedded || 0) > 0 && journalMeta?.search?.semantic !== false;
   }
 
   function effectiveSort() {

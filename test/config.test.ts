@@ -18,6 +18,7 @@ test('empty config file gets defaults', () => {
   assert.equal(parsed.watch.browserSettleMs, 0);
   assert.equal(parsed.ollanet.required, false);
   assert.equal(parsed.audio.preprocess, true);
+  assert.equal(parsed.journal.embedHost, 'local');
 });
 
 test('unknown keys are stripped', () => {

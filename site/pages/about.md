@@ -37,7 +37,7 @@ If a phone app is also dropping files into a folder, those wait until the copy i
 
 <div class="mesh-panel">
   <p>Transcription happens on your desktop. Tidying the prose can happen here too, or on another machine with a stronger writing model. <a href="https://ollanet.dev">ollanet</a> is how DictaWhisper finds that helper.</p>
-  <p>The recording stays. Only text moves. Cleanup goes to the computer you name in <code>ollanet.machine</code>. Search embeddings use an Ollama embedding model on this computer if there is one, otherwise the first computer ollanet finds that has one.</p>
+  <p>The recording and its notes stay on this computer. Cleanup text goes only to the computer you name in <code>ollanet.machine</code>. Search indexing embeds note text on this computer, and uses another computer only if you set <code>journal.embedHost</code>. If this computer has no embedding model, search matches words only.</p>
 </div>
 
 ## Where the files live

@@ -127,6 +127,9 @@
         {:else}
           · FTS only
         {/if}
+        {#if journal.search && !journal.search.semantic}
+          · semantic search off: {journal.search.reason}
+        {/if}
         {#if journal.lastRebuild}
           · rebuilt {String(journal.lastRebuild).slice(0, 16).replace('T', ' ')}
         {/if}

@@ -1,11 +1,13 @@
 import { spawnSync } from 'child_process';
 import fs from 'fs';
 import net from 'net';
-import { ollamaBaseUrl, ollamaTags, resolveTarget } from 'ollanet';
+import { ollamaBaseUrl, ollamaTags } from 'ollanet';
 import { configPath, type DictaConfig } from '../config.ts';
 import { apiListenHost, discoverTailscale, inboxUrls } from './tailscaleLib.ts';
 import { getWhisperWorkerStatus, resolveWhisperModel } from './whisperLib.ts';
 import { getJournalIndex, openJournalIndex } from './journalIndexLib.ts';
+import { resolveEmbedClient, type EmbedResolution } from './journalEmbedLib.ts';
+import { configuredMachine, resolveOllanetMachine } from './ollanetLib.ts';
 
 export type HealthLevel = 'ok' | 'warn' | 'fail';
 
@@ -113,7 +115,7 @@ async function probeOllanet(
 ): Promise<{ reachable: boolean; message: string; level: HealthLevel }> {
   try {
     const host = await withTimeout(
-      resolveTarget(machine),
+      resolveOllanetMachine(machine),
       OLLANET_RESOLVE_MS,
       `timed out resolving ${machine}`
     );
@@ -139,6 +141,44 @@ async function probeOllanet(
       message: `ollanet ${machine} unreachable (${detail}) — cleanup degraded; raw transcripts still work`,
     };
   }
+}
+
+/** Only reads /api/tags on allowed hosts; never sends note text. */
+async function probeJournalSearch(config: DictaConfig): Promise<{ level: HealthLevel; message: string }> {
+  let result: EmbedResolution;
+  try {
+    result = await withTimeout(
+      resolveEmbedClient({
+        search: config.journal.search,
+        embedHost: config.journal.embedHost,
+        embedModel: config.journal.embedModel,
+        machine: config.ollanet.machine,
+      }),
+      OLLANET_RESOLVE_MS + OLLANET_TAGS_MS,
+      'timed out looking for an embedding model',
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { level: 'warn', message: `semantic search off: ${detail}; search uses words only` };
+  }
+  return describeJournalSearch(result, config.journal);
+}
+
+export function describeJournalSearch(
+  result: EmbedResolution,
+  { search, embedHost }: Pick<DictaConfig['journal'], 'search' | 'embedHost'>,
+): { level: HealthLevel; message: string } {
+  if (result.client) {
+    const where = result.mode.kind === 'local' ? 'this computer' : result.client.host;
+    return {
+      level: 'ok',
+      message: `semantic search on: note text is embedded with ${result.client.model} on ${where} (journal.embedHost=${embedHost})`,
+    };
+  }
+  if (search === 'lex') {
+    return { level: 'ok', message: `semantic search off: ${result.reason}` };
+  }
+  return { level: 'warn', message: `semantic search off: ${result.reason}; search uses words only` };
 }
 
 export async function collectHealth(
@@ -242,8 +282,7 @@ export async function collectHealth(
 
   const machine = config.ollanet.machine.trim();
   const model = config.ollanet.cleanModel.trim();
-  const configured =
-    machine.length > 0 && !machine.startsWith('YOUR-') && model.length > 0 && !model.startsWith('YOUR-');
+  const configured = configuredMachine(machine).length > 0 && model.length > 0 && !model.startsWith('YOUR-');
   let ollanetReachable = false;
   if (!configured) {
     add(checks, 'ollanet', 'warn', 'ollanet machine/model not configured — cleanup skipped; raw transcripts still work');
@@ -283,6 +322,9 @@ export async function collectHealth(
       if (closeAfter) opened?.close();
     }
   }
+
+  const search = await probeJournalSearch(config);
+  add(checks, 'journal-search', search.level, search.message);
 
   if (config.http.tailscale) {
     const self = discoverTailscale();
