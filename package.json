@@ -62,7 +62,7 @@
     "prepublishOnly": "node scripts/publish-gate.mjs && pnpm test && pnpm typecheck && pnpm --dir client build"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.6.0"
   },
   "packageManager": "pnpm@8.14.1",
   "pnpm": {

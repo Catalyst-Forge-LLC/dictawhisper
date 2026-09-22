@@ -2,13 +2,13 @@
 title: Install
 ---
 
-The npm package is a name hold (`dictawhisper` `0.0.10`). Clone this repo. There is no desktop installer.
+The npm package (`dictawhisper` `0.1.4`) does not start from an install: its bin runs TypeScript from `node_modules`, which Node will not strip. Clone this repo. There is no desktop installer.
 
 ## Before you clone
 
 | Need | Status |
 | --- | --- |
-| Node 20+ and [pnpm](https://pnpm.io) | Required |
+| Node 22.6+ (scripts use `--experimental-strip-types`) and [pnpm](https://pnpm.io) | Required |
 | Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) | Required. Set `whisper.python` |
 | NVIDIA GPU + CUDA, `whisper.device` = `cuda` | Exercised path |
 | `whisper.device` = `cpu` | Supported, slow, doctor warning |

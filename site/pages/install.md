@@ -1,14 +1,14 @@
 ---
 title: Install
-description: Hardware and runtimes first, then a git clone. The npm name is a hold.
+description: Hardware and runtimes first, then a git clone. The npm package does not start yet.
 order: 1
 ---
 
-You run this on a computer you leave turned on. It is not a website that holds your audio. There is no installer. The npm package `dictawhisper` `0.0.10` is a **name hold**. Clone the repo.
+You run this on a computer you leave turned on. It is not a website that holds your audio. There is no installer. The npm package `dictawhisper` `0.1.4` **does not start** from an install (Node will not strip TypeScript under `node_modules`). Clone the repo.
 
 ## Before you clone
 
-Exercised path: **Windows**, **Node 20+**, **pnpm**, a **Python** interpreter with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper), and an **NVIDIA GPU** with CUDA (`whisper.device` = `cuda`). Point `whisper.python` at that interpreter.
+Exercised path: **Windows**, **Node 22.6+** (the scripts use `--experimental-strip-types`), **pnpm**, a **Python** interpreter with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper), and an **NVIDIA GPU** with CUDA (`whisper.device` = `cuda`). Point `whisper.python` at that interpreter.
 
 Also required for the default denoise path: `ffmpeg` on PATH.
 

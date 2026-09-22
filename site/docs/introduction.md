@@ -6,7 +6,7 @@ title: Introduction
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on this computer. The `.json` next to each recording is the note: no database, no account.
 
-The npm package (`dictawhisper` `0.0.10`) is a name hold. Clone this repo. There is no installer. Hardware and runtimes belong on [Install](/docs/install) before the clone.
+The npm package (`dictawhisper` `0.1.4`) does not start from an install yet. Clone this repo. There is no installer. Hardware and runtimes belong on [Install](/docs/install) before the clone.
 
 ## Why it exists
 
@@ -22,7 +22,7 @@ Voice notes are easy to make and hard to keep. Phone recordings pile up as undat
 
 **The Whisper model stays loaded.** The worker loads the model once and keeps it for the next file. That is the normal path, not a special command.
 
-**Audio never leaves this computer.** Faster-whisper runs here. If you point ollanet at Ollama on another machine on your own network, only the transcript text crosses the network. If ollanet is unreachable, doctor and `/health` report it and you still have the raw words.
+**Audio never leaves this computer.** Faster-whisper runs here. If you point ollanet at Ollama on another machine on your own network, only text crosses the network. If ollanet is unreachable, doctor and `/health` report it and you still have the raw words.
 
 **Playback aligned to word timestamps.** Cleanup drops fillers and collapses repeated phrases, but playback cues map back to Whisper word timestamps rather than being inferred from the cleaned wording.
 
@@ -32,7 +32,7 @@ Voice notes are easy to make and hard to keep. Phone recordings pile up as undat
 
 - **No telemetry.** Nothing contacts an external analytics or telemetry service.
 - **Audio stays here.** Faster-whisper processes files on this GPU or CPU.
-- **Text only, and only on your network.** If cleanup runs on another machine you already use, only the transcript text is sent there.
+- **Text only, and only to Ollama hosts ollanet can reach.** Cleanup sends transcript text to `ollanet.machine` and is skipped when that is empty. Journal search sends note text (up to 8,000 characters) to an Ollama embedding model: one on this computer first, otherwise the first host ollanet discovers from config or Tailscale that has one. `journal.embedModel` names the model, not the host.
 - **Loopback by default.** API (`8008`) and UI (`7777`) bind to `127.0.0.1`. With `http.tailscale`, the inbox also binds to this machine's Tailscale address, not to every interface.
 - **Path allowlisting.** File routes resolve realpaths and reject anything outside `watch.roots` and `browserDropFolder` with a `403`.
 

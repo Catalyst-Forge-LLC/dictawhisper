@@ -8,7 +8,7 @@ Voice notes pile up. **DictaWhisper** turns a recording into a note you can rere
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. There is no account. Each recording keeps a small notes file beside it. That file is the journal.
 
-There is no installer. The npm name is a hold. You need Node, pnpm, Python with faster-whisper, and (for the exercised path) an NVIDIA GPU. [Install](/install) lists that before the clone.
+There is no installer, and the npm package does not start yet. Clone the repo. You need Node 22.6+, pnpm, Python with faster-whisper, and (for the exercised path) an NVIDIA GPU. [Install](/install) lists that before the clone.
 
 <div class="cta-row">
   <a class="cta cta-primary" href="/install">Get started →</a>
@@ -37,7 +37,7 @@ If a phone app is also dropping files into a folder, those wait until the copy i
 
 <div class="mesh-panel">
   <p>Transcription happens on your desktop. Tidying the prose can happen here too, or on another machine with a stronger writing model. <a href="https://ollanet.dev">ollanet</a> is how DictaWhisper finds that helper.</p>
-  <p>The recording stays. Only the text moves, and only if you asked another computer to help.</p>
+  <p>The recording stays. Only text moves. Cleanup goes to the computer you name in <code>ollanet.machine</code>. Search embeddings use an Ollama embedding model on this computer if there is one, otherwise the first computer ollanet finds that has one.</p>
 </div>
 
 ## Where the files live
