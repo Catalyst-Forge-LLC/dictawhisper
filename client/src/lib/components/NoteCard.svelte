@@ -90,8 +90,9 @@
   }
 
   function playCue(event, cue) {
+    if (!event?.isTrusted || event.type !== 'click') return;
     if (!cueHasTime(cue)) return;
-    const article = event.currentTarget.closest('.note');
+    const article = event.currentTarget?.closest('.note');
     const audio = article?.querySelector('audio');
     if (!audio) return;
     audio.currentTime = Math.max(0, Number(cue.start) || 0);
