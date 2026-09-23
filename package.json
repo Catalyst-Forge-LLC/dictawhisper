@@ -1,6 +1,6 @@
 {
   "name": "dictawhisper",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "description": "Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.",
   "homepage": "https://dictawhisper.com",
