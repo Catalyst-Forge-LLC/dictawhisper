@@ -24,6 +24,7 @@ export default defineFilepressConfig({
 		{ label: 'GitHub', href: github, icon: 'github' }
 	],
 	footerLinks: [
+		{ label: 'See the rest of the Catalyst Forge shelf.', href: 'https://catalystforge.com/tools/' },
 		{ label: 'Docs', href: '/docs' },
 		{ label: 'RSS', href: '/rss.xml' },
 		{ label: 'Topics', href: '/topics' },
