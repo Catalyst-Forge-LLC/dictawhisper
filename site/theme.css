@@ -285,7 +285,7 @@ main.wrap > header.post-header:first-child {
 
 .home-page .page-header h1 {
 	font-family: var(--font-serif);
-	font-size: clamp(2.6rem, 6.5vw, 4rem);
+	font-size: clamp(2.5rem, 6.25vw, 3.875rem);
 	font-weight: 600;
 	letter-spacing: -0.035em;
 	line-height: 1.05;
