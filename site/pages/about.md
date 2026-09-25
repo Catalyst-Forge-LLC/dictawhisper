@@ -1,5 +1,5 @@
 ---
-title: A voice journal that stays on your computer.
+title: A local voice journal. Audio stays on your computer.
 description: Record or drop a file, get a readable note. Nothing is uploaded to a cloud account.
 order: 1
 ---
