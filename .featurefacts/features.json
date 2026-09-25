@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "0.2.0",
+  "scan_id": "scan-init",
+  "product": {
+    "name": "dictawhisper",
+    "type": "unknown",
+    "status": "unknown"
+  },
+  "features": [],
+  "redirects": []
+}

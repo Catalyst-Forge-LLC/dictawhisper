@@ -1,0 +1,67 @@
+schemaVersion: 0.2.0
+include:
+  - package.json
+  - README.md
+  - CHANGELOG.md
+  - src/**
+  - app/**
+  - lib/**
+  - bin/**
+  - docs/**
+  - tests/**
+  - test/**
+exclude:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.git/**"
+  - "**/.env"
+  - "**/.env.*"
+  - "**/*.pem"
+  - "**/*.key"
+  - .featurefacts/**
+  - FEATURE_FACTS.md
+  - site/**
+  - examples/**
+  - skill/**
+  - tests/fixtures/**
+  - docs/featurefacts-spec-v0.2.0-with-review/**
+  - docs/haulout-*.md
+adapters:
+  - id: typescript-tree
+    kind: tree
+    enabled: true
+  - id: typescript-node-surface
+    kind: surface
+    enabled: true
+  - id: markdown-document
+    kind: document
+    enabled: true
+  - id: typescript-test
+    kind: test
+    enabled: true
+externals: []
+curation:
+  selected_ids: []
+  overrides: {}
+publication:
+  target: internal
+  include_counts: true
+  include_assessments: true
+  map_link: .featurefacts/FEATURES.md
+policy:
+  enabled: false
+  rules:
+    - id: released-test-links
+      level: fail
+    - id: locked-locators-resolve
+      level: warn
+    - id: unconfirmed-selection
+      level: fail
+  unassessed: warn
+waivers: []
+safety:
+  max_file_bytes: 1048576
+  follow_symlinks: false
+  network: false
+  execute_target_code: false

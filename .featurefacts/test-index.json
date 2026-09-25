@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "0.2.0",
+  "scan_id": "scan-init",
+  "kind": "tests",
+  "assessments": []
+}
