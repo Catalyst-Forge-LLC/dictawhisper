@@ -291,7 +291,7 @@ main.wrap > header.post-header:first-child {
 	line-height: 1.05;
 	color: var(--ink);
 	margin: 0;
-	max-width: 24ch;
+	max-width: none;
 }
 
 .home-page .prose {
