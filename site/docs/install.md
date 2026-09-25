@@ -21,10 +21,25 @@ Record or drag files at [localhost:7777](http://localhost:7777). Run it on a com
 
 ## From a checkout
 
+Bash:
+
 ```bash
 git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
 cd dictawhisper
 cp config.example.json config.json
+```
+
+PowerShell: copy the example configuration to the working configuration file, then edit the server settings before starting it.
+
+```powershell
+git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
+cd dictawhisper
+Copy-Item config.example.json config.json
+```
+
+Then, in either shell:
+
+```bash
 # edit whisper.python, whisper.promptTerms, ollanet.machine / cleanModel
 # watch.roots is optional: record or drop files in the UI without Syncthing
 pnpm install

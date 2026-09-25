@@ -2,7 +2,11 @@
 title: Introduction
 ---
 
+Your phone or browser sends audio to the DictaWhisper server you configure. That computer transcribes it. If refinement is enabled, transcript text goes to the configured Ollama host.
+
 **DictaWhisper** is a local voice journal. Record in the browser, drop a file, or (optionally) sync a phone folder. It transcribes on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), then turns the raw speech into readable notes and tags via [ollanet](https://ollanet.dev) on localhost or another box with a cleanup model.
+
+Open the transcript as text. Use the accompanying JSON when you need the structured recording and transcription data.
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on this computer. The `.json` next to each recording is the note: no database, no account.
 
