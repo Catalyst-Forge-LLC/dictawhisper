@@ -108,8 +108,8 @@ importers:
   site:
     devDependencies:
       getfilepress:
-        specifier: ^0.1.40
-        version: 0.1.40
+        specifier: ^0.1.43
+        version: 0.1.43
       wrangler:
         specifier: ^4.28.0
         version: 4.132.0
@@ -2301,8 +2301,8 @@ packages:
       es-object-atoms: 1.1.2
     dev: false
 
-  /getfilepress@0.1.40:
-    resolution: {integrity: sha512-FGEe0JluqDjT+GBjXk6erXAamGWlJ92too0g7SCSBLAMQGXy0wfmAZBXuRQxPoIh32HTv/0TU5W6KL18ROnG6Q==}
+  /getfilepress@0.1.43:
+    resolution: {integrity: sha512-gBTULeNh9uzCzBtmwa1rTK7eEK39i9/NDQOqnjopAiT9fcgyEiIya7nxCa7899+FqI7BHzMIADoI+AxW3kPZCQ==}
     engines: {node: '>=20'}
     hasBin: true
     requiresBuild: true
