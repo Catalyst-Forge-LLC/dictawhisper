@@ -1,8 +1,74 @@
 schemaVersion: 0.2.0
-scan_id: scan-init
+scan_id: scan-add
 product:
   name: dictawhisper
-  type: unknown
+  type: CLI tool
   status: unknown
-features: []
+  license: MIT
+features:
+  - id: dictawhisper
+    name: dictawhisper
+    description: Local voice journal. Record or drop audio, transcribe with
+      faster-whisper, keep the .json next to the file.
+    type: feature
+    recognition: candidate
+    lifecycle: unknown
+    availability:
+      state: unknown
+      conditions: []
+      reason: Availability was not declared.
+    maturity: unknown
+    audiences:
+      state: unknown
+      values: []
+      reason: Audience was not declared.
+    discovery:
+      state: unassessed
+      surfaces: []
+      adapter_ids: []
+      reason: No command surface was extracted.
+    intent: unknown
+    publication:
+      scope: internal
+      reason: A scan candidate stays internal until a maintainer publishes it.
+    entry_points: []
+    implements: []
+    dependencies: []
+    docs:
+      state: unassessed
+      result: unknown
+      adapter_ids: []
+      links: []
+      reason: Documentation was not assessed.
+    tests:
+      state: unassessed
+      result: unknown
+      adapter_ids: []
+      links: []
+      reason: Tests were not assessed.
+    observation:
+      state: current
+      last_seen_scan_id: scan-add
+      reason: Written by Add labels from package.json.
+    evidence:
+      - id: ev-package
+        kind: declared
+        state: current
+        assertion:
+          field: capability
+          value: Local voice journal. Record or drop audio, transcribe with
+            faster-whisper, keep the .json next to the file.
+          claim: package.json names this package. This is not a confirmed capability list.
+        declaration:
+          actor: xfacts-add-labels
+          source: package.json
+          recorded_at: 2026-09-29T19:41:11.490Z
+    editorial:
+      locked: []
+      aliases: []
+      notes: Candidate only. FeatureFacts scan found no capability to confirm.
+    uncertainty_reasons:
+      lifecycle: package.json does not establish release status.
+      maturity: No maturity was declared.
+      intent: Discovery intent was not declared.
 redirects: []
