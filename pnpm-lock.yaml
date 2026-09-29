@@ -108,8 +108,8 @@ importers:
   site:
     devDependencies:
       getfilepress:
-        specifier: ^0.1.44
-        version: 0.1.44
+        specifier: ^0.1.45
+        version: 0.1.45
       wrangler:
         specifier: ^4.28.0
         version: 4.132.0
@@ -610,6 +610,14 @@ packages:
 
   /@fontsource-variable/newsreader@5.3.0:
     resolution: {integrity: sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==}
+    dev: true
+
+  /@fontsource/ibm-plex-mono@5.3.0:
+    resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
+    dev: true
+
+  /@fontsource/sora@5.3.0:
+    resolution: {integrity: sha512-SqW3OpKxxfKvxDLPlbdrWf2KooPfbd+W3jaYn483o+Y/JrmU87vjFPNptDqwP428c3vY+gnranLhjcbRaXB0Jw==}
     dev: true
 
   /@hono/node-server@2.1.1(hono@4.13.7):
@@ -2301,14 +2309,16 @@ packages:
       es-object-atoms: 1.1.2
     dev: false
 
-  /getfilepress@0.1.44:
-    resolution: {integrity: sha512-6y4kNfmvo06qfEVWToD/81LvW4AXiNfNRHL1c2eBBDSBZsufUkWyRuYkB2Etq8PDoU4AEtXXZa+QD4hXM/TuhA==}
+  /getfilepress@0.1.45:
+    resolution: {integrity: sha512-k2TrCBwRYcPYWGNU56sQQqtpfT5WKEWRVR4K1WZzSsvdiwZBRv0P9IOvqQHNpN/wXuUQ2WPuzgt68XsdaEifJA==}
     engines: {node: '>=20'}
     hasBin: true
     requiresBuild: true
     dependencies:
       '@fontsource-variable/inter': 5.3.0
       '@fontsource-variable/newsreader': 5.3.0
+      '@fontsource/ibm-plex-mono': 5.3.0
+      '@fontsource/sora': 5.3.0
       '@sveltejs/adapter-static': 3.0.10(@sveltejs/kit@2.70.3)
       '@sveltejs/kit': 2.70.3(@sveltejs/vite-plugin-svelte@7.3.0)(svelte@5.57.0)(typescript@6.0.3)(vite@8.3.0)
       '@sveltejs/vite-plugin-svelte': 7.3.0(svelte@5.57.0)(vite@8.3.0)
