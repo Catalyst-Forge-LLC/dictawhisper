@@ -2,7 +2,7 @@
 feature_facts_version: 0.2.0
 mode: map-backed
 audience: internal
-name: dictawhisper
+name: DictaWhisper
 type: unknown
 status: unknown
 selection_state: not-curated
@@ -16,7 +16,7 @@ generated:
   date: 2026-09-25
   generator: featurefacts
   generator_version: 0.2.0
-  projection_fingerprint: 1dc53bac59edc5f806b3baf2857220d90425141b56a46a19309e46277629728e
+  projection_fingerprint: 5aff45107bec9e8d0c5932f229a2e66284bf3b758d7c4c1dd7af704ef104fd05
 counts:
   scope: eligible-confirmed-active
   registered: 0
@@ -43,11 +43,11 @@ assessments:
     undisclosed: 0
 ---
 
-# Feature Facts: dictawhisper
+# Feature Facts: DictaWhisper
 
 What can this product do?
 
-Curation has not been approved. The scanner does not select rows.
+No confirmed non-retired capabilities are eligible for this publication target.
 
 Zero rows is a valid label. Candidates are not confirmed capabilities.
 Within the eligible confirmed scope: 0 registered, 0 selected, and 0 not selected.

@@ -1,4 +1,4 @@
-# Feature register: dictawhisper
+# Feature register: DictaWhisper
 
 Scan `scan-init`. Candidates are not confirmed capabilities.
 
