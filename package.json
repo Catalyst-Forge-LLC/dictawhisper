@@ -1,6 +1,6 @@
 {
   "name": "dictawhisper",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": false,
   "description": "Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.",
   "homepage": "https://dictawhisper.com",
@@ -28,14 +28,17 @@
   },
   "files": [
     "bin",
-    "src",
+    "dist",
     "scripts/transcribe_faster_whisper.py",
-    "dist/ui",
     "config.example.json",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
+    "build:runtime": "tsc -p tsconfig.build.json",
+    "build": "pnpm build:runtime && pnpm --dir client build",
+    "prepack": "pnpm build",
+    "pack:smoke": "pnpm build && node scripts/pack-smoke.mjs",
     "start": "node --experimental-strip-types src/server.ts",
     "cli": "node --experimental-strip-types src/cli.ts",
     "dev": "node --experimental-strip-types src/dev.ts",
@@ -59,10 +62,10 @@
     "site:build": "pnpm --dir site build",
     "site:deploy": "pnpm --dir site run ship",
     "ship": "pnpm --dir site run ship",
-    "prepublishOnly": "node scripts/publish-gate.mjs && pnpm test && pnpm typecheck && pnpm --dir client build"
+    "prepublishOnly": "node scripts/publish-gate.mjs && pnpm test && pnpm typecheck && pnpm build"
   },
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=22.13.0"
   },
   "packageManager": "pnpm@8.14.1",
   "pnpm": {

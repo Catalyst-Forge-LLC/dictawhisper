@@ -2,13 +2,13 @@
 title: Install
 ---
 
-The npm package (`dictawhisper` `0.1.4`) does not start from an install: its bin runs TypeScript from `node_modules`, which Node will not strip. Clone this repo. There is no desktop installer.
+Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites. There is no desktop installer.
 
 ## Before you clone
 
 | Need | Status |
 | --- | --- |
-| Node 22.6+ (scripts use `--experimental-strip-types`) and [pnpm](https://pnpm.io) | Required |
+| Node 22.13+ (scripts use `--experimental-strip-types`) and [pnpm](https://pnpm.io) | Required |
 | Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) | Required. Set `whisper.python` |
 | NVIDIA GPU + CUDA, `whisper.device` = `cuda` | Exercised path |
 | `whisper.device` = `cpu` | Supported, slow, doctor warning |

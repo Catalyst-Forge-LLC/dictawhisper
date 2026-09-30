@@ -5,10 +5,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const runtimeFile = fileURLToPath(import.meta.url);
+const runtimeDir = path.dirname(runtimeFile);
+const runtimeExtension = path.extname(runtimeFile);
+const packageRoot = path.resolve(runtimeDir, '..');
 const exampleConfig = path.join(packageRoot, 'config.example.json');
-const serverPath = path.join(packageRoot, 'src', 'server.ts');
-const doctorPath = path.join(packageRoot, 'src', 'doctor.ts');
+const serverPath = path.join(runtimeDir, `server${runtimeExtension}`);
+const doctorPath = path.join(runtimeDir, `doctor${runtimeExtension}`);
 const uiDir = path.join(packageRoot, 'dist', 'ui');
 
 function usage(): string {
@@ -27,7 +30,7 @@ Config (first hit wins):
   ./config.json
   ~/.dictawhisper/config.json
 
-Requires Node 20+ and a Python with faster-whisper. See dictawhisper.com
+Requires Node 22.13+ and a Python with faster-whisper. See dictawhisper.com
 `;
 }
 
@@ -38,7 +41,10 @@ function fail(message: string, code = 1): never {
 
 function resolveExistingConfig(): string | null {
   const fromEnv = process.env.DICTA_CONFIG?.trim();
-  if (fromEnv) return path.resolve(fromEnv);
+  if (fromEnv) {
+    const requested = path.resolve(fromEnv);
+    return existsSync(requested) ? requested : null;
+  }
   const inCwd = path.resolve(process.cwd(), 'config.json');
   if (existsSync(inCwd)) return inCwd;
   const inHome = path.join(os.homedir(), '.dictawhisper', 'config.json');
@@ -63,11 +69,17 @@ function init(home: boolean): void {
 }
 
 function runNode(script: string, extraEnv: NodeJS.ProcessEnv): ChildProcess {
-  return spawn(process.execPath, ['--experimental-strip-types', script], {
+  const nodeArgs = script.endsWith('.ts') ? ['--experimental-strip-types', script] : [script];
+  const child = spawn(process.execPath, nodeArgs, {
     stdio: 'inherit',
     env: { ...process.env, ...extraEnv },
-    windowsHide: false,
+    windowsHide: true,
   });
+  child.on('error', (error) => {
+    console.error(`Could not start ${path.basename(script)}: ${error.message}`);
+    process.exitCode = 1;
+  });
+  return child;
 }
 
 function start(): void {

@@ -40,6 +40,7 @@ test("prepublishOnly runs the login and bump gate", () => {
 	assert.match(pkg.scripts.prepublishOnly, /publish-gate/);
 	assert.equal(pkg.bin.dictawhisper, "bin/dictawhisper.js");
 	assert.ok(pkg.files.includes("bin"));
-	assert.ok(pkg.files.includes("src"));
-	assert.ok(pkg.files.includes("dist/ui"));
+	assert.ok(pkg.files.includes("dist"));
+	assert.ok(!pkg.files.includes("src"));
+	assert.match(pkg.scripts.prepack, /pnpm build/);
 });

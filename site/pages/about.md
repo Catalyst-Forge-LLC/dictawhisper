@@ -8,7 +8,7 @@ Voice notes pile up. **DictaWhisper** turns a recording into a note you can rere
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. There is no account. Each recording keeps a small notes file beside it. That file is the journal.
 
-There is no installer, and the npm package does not start yet. Clone the repo. You need Node 22.6+, pnpm, Python with faster-whisper, and (for the exercised path) an NVIDIA GPU. [Install](/install) lists that before the clone.
+Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites. You need Node 22.13+, pnpm, Python with faster-whisper, and (for the exercised path) an NVIDIA GPU. [Install](/install) lists that before the clone.
 
 <div class="cta-row">
   <a class="cta cta-primary" href="/install">Get started →</a>

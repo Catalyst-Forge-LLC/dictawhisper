@@ -10,7 +10,7 @@ Open the transcript as text. Use the accompanying JSON when you need the structu
 
 The name is **dicta** (dictation, a dictaphone) plus **Whisper**. Audio stays on this computer. The `.json` next to each recording is the note: no database, no account.
 
-The npm package (`dictawhisper` `0.1.4`) does not start from an install yet. Clone this repo. There is no installer. Hardware and runtimes belong on [Install](/docs/install) before the clone.
+Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites. There is no installer. Hardware and runtimes belong on [Install](/docs/install) before the clone.
 
 ## Why it exists
 

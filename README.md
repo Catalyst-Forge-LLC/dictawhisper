@@ -6,13 +6,13 @@
 
 **A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. Transcribe on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Clean the note with [ollanet](https://ollanet.dev). The `.json` next to each recording is the journal.
 
-Install from a Git checkout ([below](#from-a-checkout)). The npm package `dictawhisper` 0.1.4 does not start yet: its bin runs TypeScript from `node_modules`, and Node refuses to strip types there. It would not install Python or faster-whisper either.
+Install from a Git checkout ([below](#from-a-checkout)). Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites.
 
 **Docs:** [dictawhisper.com/docs](https://dictawhisper.com/docs) · **Site:** [dictawhisper.com](https://dictawhisper.com)
 
 ## Before you clone
 
-Exercised path: Windows, Node 22.6+ (the scripts use `--experimental-strip-types`), pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` is required when denoise is on. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
+Exercised path: Windows, Node 22.13+ (checkout scripts use `--experimental-strip-types`), pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` is required when denoise is on. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
 
 ## From a checkout
 
@@ -54,6 +54,7 @@ Files are the database. Each note is the recording plus a neighboring `.json`. T
 ```bash
 pnpm test
 pnpm typecheck
+pnpm build       # compiled runtime and packaged inbox
 pnpm site:dev
 ```
 
