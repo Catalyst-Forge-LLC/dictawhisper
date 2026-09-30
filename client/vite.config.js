@@ -5,6 +5,7 @@ import net from "net";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveApiListenPort } from "../src/lib/devPorts.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -20,11 +21,11 @@ function localslipGet(name) {
   return Number.isInteger(n) && n > 0 && n <= 65535 ? n : undefined;
 }
 
-const UI_PORT = localslipGet("dictawhisper") ?? 7777;
+const UI_PORT = Number(process.env.DICTA_UI_PORT) || localslipGet("dictawhisper") || 7777;
 
 function readHttp() {
   try {
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, "config.json"), "utf8"));
+    const cfg = JSON.parse(fs.readFileSync(process.env.DICTA_CONFIG || path.join(root, "config.json"), "utf8"));
     return {
       port: cfg.http?.port ?? 8008,
       host: cfg.http?.host && cfg.http.host !== "0.0.0.0" ? cfg.http.host : "127.0.0.1",
@@ -84,7 +85,10 @@ const http = readHttp();
 const tailscaleOn =
   http.tailscale || process.env.DICTA_TAILSCALE === "1" || process.env.DICTA_TAILSCALE === "true";
 const tailscaleIp = tailscaleOn ? tailscaleIpv4() : null;
-const target = `http://${http.host}:${http.port}`;
+const API_PORT = Number(process.env.DICTA_API_PORT) || resolveApiListenPort(process.env.PORT, UI_PORT, localslipGet("dictawhisper-api"), http.port);
+const apiBind = process.env.DICTA_API_HOST || process.env.HOST || http.host;
+const API_HOST = apiBind === "0.0.0.0" || apiBind === "::" ? "127.0.0.1" : apiBind;
+const target = `http://${API_HOST.includes(":") ? `[${API_HOST}]` : API_HOST}:${API_PORT}`;
 
 if (tailscaleOn && !tailscaleIp) {
   console.warn(

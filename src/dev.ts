@@ -1,42 +1,37 @@
-import { execSync, spawn, type ChildProcess } from 'child_process';
+import { execSync, type ChildProcess } from 'child_process';
 import { localslipGet } from './lib/localslipGet.ts';
+import { config, configPath } from './config.ts';
+import { checkoutDevEnv } from './lib/devPorts.ts';
+import { spawnDevChild } from './lib/devChild.ts';
 
 const children: ChildProcess[] = [];
 
-function apiEnv(): NodeJS.ProcessEnv {
-  return {
-    ...process.env,
-    PORT: String(localslipGet('dictawhisper-api') ?? 8008),
-  };
-}
+const devEnv = checkoutDevEnv(
+  process.env,
+  { port: config.http.port, host: config.http.host, path: configPath },
+  localslipGet('dictawhisper'),
+  localslipGet('dictawhisper-api')
+);
+console.log(`[dev] UI 127.0.0.1:${devEnv.DICTA_UI_PORT}; API ${devEnv.DICTA_API_HOST}:${devEnv.DICTA_API_PORT}`);
 
 function run(command: string, args: string[], hide = true, env: NodeJS.ProcessEnv = process.env) {
-  const child = spawn(command, args, {
-    stdio: 'inherit',
-    env,
-    windowsHide: hide,
+  const child = spawnDevChild(command, args, env, hide, (message, code) => {
+    console.error(`[dev] ${message}`);
+    shutdown(code);
   });
   children.push(child);
-  child.on('error', (error) => {
-    console.error(`[dev] failed to start ${command}:`, error.message);
-    shutdown(1);
-  });
-  child.on('exit', (code, signal) => {
-    if (signal) return;
-    if (code && code !== 0) shutdown(code);
-  });
 }
 
 // windowsHide hides Node stdout in Git Bash; the API child must stay visible.
 // Do not inherit the UI lease PORT (7777) — the API is dictawhisper-api (8008).
-run(process.execPath, ['--experimental-strip-types', 'src/server.ts'], false, apiEnv());
+run(process.execPath, ['--experimental-strip-types', 'src/server.ts'], false, devEnv);
 
 if (process.platform === 'win32') {
   // pnpm is a .cmd on PATH; CreateProcess cannot run it without cmd.exe.
   // Args are fixed literals — not user input.
-  run('cmd.exe', ['/d', '/s', '/c', 'pnpm --dir client dev']);
+  run('cmd.exe', ['/d', '/s', '/c', 'pnpm --dir client dev'], true, devEnv);
 } else {
-  run('pnpm', ['--dir', 'client', 'dev']);
+  run('pnpm', ['--dir', 'client', 'dev'], true, devEnv);
 }
 
 function killTree(child: ChildProcess) {

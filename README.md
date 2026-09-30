@@ -27,6 +27,8 @@ pnpm dev
 
 Ready signal: `pnpm run doctor` exits 0, or only warnings remain. Then open [http://localhost:7777](http://localhost:7777). Point `whisper.python` at the interpreter that has CUDA Whisper. Cleanup host and model are optional; raw transcripts still work.
 
+LocalSlip is optional. `pnpm dev` and `pnpm serve` read existing `dictawhisper` and `dictawhisper-api` claims when available; they do not create claims. Without LocalSlip, the UI uses 7777 and the API uses `http.port` (8008 by default). Startup names both endpoints and gives the UI proxy the same API port. Claim ports separately if you want named assignments.
+
 ## Quick start
 
 ```bash

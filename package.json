@@ -38,8 +38,8 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "cli": "node --experimental-strip-types src/cli.ts",
-    "dev": "localslip claim dictawhisper --port 7777 && localslip claim dictawhisper-api --port 8008 && node --experimental-strip-types src/dev.ts",
-    "serve": "localslip claim dictawhisper --port 7777 && localslip claim dictawhisper-api --port 8008 && node --experimental-strip-types src/dev.ts",
+    "dev": "node --experimental-strip-types src/dev.ts",
+    "serve": "node --experimental-strip-types src/dev.ts",
     "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
     "ui": "pnpm --dir client dev",
     "typecheck": "tsc --noEmit -p tsconfig.json",

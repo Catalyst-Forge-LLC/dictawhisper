@@ -3,6 +3,8 @@ import os from 'os';
 import path from 'path';
 import { z } from 'zod';
 import { localslipGet } from './lib/localslipGet.ts';
+import { resolveApiListenPort } from './lib/devPorts.ts';
+export { resolveApiListenPort } from './lib/devPorts.ts';
 
 export function resolveConfigPath(
   env: NodeJS.ProcessEnv = process.env,
@@ -153,18 +155,6 @@ export function applyConfigToEnv(config: DictaConfig): void {
   process.env.WHISPER_PYTHON = config.whisper.python;
   process.env.WHISPER_DEVICE = config.whisper.device;
   process.env.WHISPER_COMPUTE_TYPE = config.whisper.computeType;
-}
-
-/** LocalSlip start on the UI lease sets PORT=7777. That must not become the API. */
-export function resolveApiListenPort(
-  envPort: string | undefined,
-  uiPort: number | undefined,
-  apiLeasePort: number | undefined,
-  configPort: number
-): number {
-  const n = Number(envPort);
-  if (Number.isInteger(n) && n > 0 && n !== uiPort) return n;
-  return apiLeasePort || configPort;
 }
 
 /** Combined inbox+API (npm CLI) binds the UI port so the page and /note share origin. */
