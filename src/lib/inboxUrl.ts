@@ -2,6 +2,7 @@ export type InboxSort = 'recent' | 'oldest' | 'relevance' | '';
 export type InboxMode = 'lex' | 'hybrid' | '';
 
 export type InboxUrlState = {
+  view: 'recent' | 'all' | 'unfiled' | 'holding';
   q: string;
   tags: string[];
   year: string;
@@ -21,6 +22,7 @@ const MODES = new Set(['lex', 'hybrid']);
 
 export function emptyInboxUrl(): InboxUrlState {
   return {
+    view: 'recent',
     q: '',
     tags: [],
     year: '',
@@ -45,6 +47,7 @@ export function parseInboxUrl(search: string | URLSearchParams): InboxUrlState {
   const monthRaw = (params.get('month') || '').trim();
   const month = /^\d{1,2}$/.test(monthRaw) ? monthRaw.padStart(2, '0') : '';
   return {
+    view: ['recent', 'all', 'unfiled', 'holding'].includes(params.get('view') || '') ? params.get('view') as InboxUrlState['view'] : 'recent',
     q: params.get('q') || '',
     tags: params.getAll('tag').map((tag) => tag.trim()).filter(Boolean),
     year: /^\d{4}$/.test(year) ? year : '',
@@ -69,6 +72,7 @@ export function parseCueHash(hash: string): number | null {
 
 export function buildInboxSearch(state: InboxUrlState): string {
   const params = new URLSearchParams();
+  if (state.view && state.view !== 'recent') params.set('view', state.view);
   if (state.q.trim()) params.set('q', state.q.trim());
   for (const tag of state.tags) {
     if (tag.trim()) params.append('tag', tag.trim());

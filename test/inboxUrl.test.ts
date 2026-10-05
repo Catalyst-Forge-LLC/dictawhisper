@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildInboxSearch, emptyInboxUrl, inboxPath, parseCueHash, parseInboxUrl, tightenFilenameHits } from '../src/lib/inboxUrl.ts';
 
+test('library views round-trip with search and starred filters', () => {
+  const state = { ...emptyInboxUrl(), view: 'unfiled' as const, q: 'journal', starred: true };
+  const parsed = parseInboxUrl(buildInboxSearch(state));
+  assert.equal(parsed.view, 'unfiled');
+  assert.equal(parsed.q, 'journal');
+  assert.equal(parsed.starred, true);
+  assert.equal(parseInboxUrl('view=unexpected').view, 'recent');
+  assert.equal(buildInboxSearch(emptyInboxUrl()), '');
+});
+
 test('round-trips q, tags, year, and file', () => {
   const state = {
     ...emptyInboxUrl(),

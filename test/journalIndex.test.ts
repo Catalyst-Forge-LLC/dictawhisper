@@ -44,6 +44,25 @@ test('FTS search finds words and AND-filters tags', () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test('folder search combines with words, stars, and dates', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-folder-'));
+  const index = new JournalIndex(path.join(root, 'journal.sqlite'));
+  try {
+    writeNote(path.join(root, '_unfiled'), '2026-08-01_unfiled.json', { cleanedTranscription: 'journal plans', tags: ['plans'], starred: true });
+    writeNote(path.join(root, '_holding'), '2026-08-01_holding.json', { cleanedTranscription: 'journal plans', tags: ['plans'], starred: true });
+    writeNote(path.join(root, '2026', '08'), '2026-08-01_dated.json', { cleanedTranscription: 'journal plans', tags: ['plans'], starred: true });
+    index.rebuildFromRoots([root]);
+    const hits = index.search({ query: 'journal', folder: 'unfiled', starred: true, tags: ['plans'], year: '2026' });
+    assert.equal(hits.length, 1);
+    assert.match(hits[0].basename, /unfiled/);
+    assert.equal(index.search({ folder: 'holding' }).length, 1);
+    assert.equal(index.search({ query: 'journal', folder: 'unfiled', year: '2010' }).length, 0);
+  } finally {
+    index.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('sqlite-vec hybrid ranks a nearby vector first', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-vec-'));
   const dbPath = path.join(root, 'journal.sqlite');

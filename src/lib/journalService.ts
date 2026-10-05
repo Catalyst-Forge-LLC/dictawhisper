@@ -220,6 +220,7 @@ export async function searchJournalIndex(options: {
   limit?: number;
   unreadable?: boolean;
   starred?: boolean;
+  folder?: 'unfiled' | 'holding';
 }): Promise<IndexSearchHit[]> {
   const index = requireJournal();
   const query = String(options.query || '').trim();

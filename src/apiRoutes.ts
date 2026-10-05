@@ -175,7 +175,9 @@ export const apiRoutes = [
         const year = typeof req.query.year === 'string' ? req.query.year.trim() : '';
         const month = typeof req.query.month === 'string' ? req.query.month.trim() : '';
         const limit = Number(req.query.limit);
+        const folder = req.query.folder === 'unfiled' || req.query.folder === 'holding' ? req.query.folder : undefined;
         const hits = await searchJournalIndex({
+          folder,
           query,
           tags,
           since: since || undefined,

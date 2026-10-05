@@ -467,6 +467,7 @@ export class JournalIndex {
     limit?: number;
     unreadable?: boolean;
     starred?: boolean;
+    folder?: 'unfiled' | 'holding';
     queryEmbedding?: number[] | null;
     synonyms?: string[];
   }): IndexSearchHit[] {
@@ -484,8 +485,9 @@ export class JournalIndex {
       until,
       unreadable: options.unreadable,
       starred: options.starred,
+      folder: options.folder,
     };
-    if (!query && !tags.length && !options.unreadable && !options.starred && !since && !until) {
+    if (!query && !tags.length && !options.unreadable && !options.starred && !options.folder && !since && !until) {
       return [];
     }
 
@@ -512,6 +514,7 @@ export class JournalIndex {
       until?: string;
       unreadable?: boolean;
       starred?: boolean;
+      folder?: 'unfiled' | 'holding';
       limit: number;
       synonyms?: string[];
     },
@@ -575,7 +578,7 @@ export class JournalIndex {
 
   private searchSemantic(
     embedding: number[],
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; limit: number },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; folder?: 'unfiled' | 'holding'; limit: number },
   ): IndexSearchHit[] {
     const { extra, params } = this.filterSql(options);
     const rows = this.db
@@ -594,7 +597,7 @@ export class JournalIndex {
   }
 
   private filterRows(
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; folder?: 'unfiled' | 'holding' },
     limit: number,
   ): NoteRow[] {
     const { extra, params } = this.filterSql(options);
@@ -609,6 +612,7 @@ export class JournalIndex {
     until?: string;
     unreadable?: boolean;
     starred?: boolean;
+    folder?: 'unfiled' | 'holding';
   }): {
     extra: string;
     params: Array<string | number>;
@@ -628,6 +632,10 @@ export class JournalIndex {
     }
     if (options.starred) {
       extra.push('AND n.starred = 1');
+    }
+    if (options.folder) {
+      extra.push('AND n.folder = ?');
+      params.push(options.folder);
     }
     for (const tag of options.tags) {
       extra.push('AND lower(n.tags) LIKE ?');
