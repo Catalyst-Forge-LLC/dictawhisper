@@ -1,7 +1,6 @@
 <script>
   import io from 'socket.io-client';
   import AppHeader from '../lib/components/AppHeader.svelte';
-  import AudioRecorder from '../lib/components/AudioRecorder.svelte';
   import CollapsibleAside from '../lib/components/CollapsibleAside.svelte';
   import ToolsAside from '../lib/components/ToolsAside.svelte';
   import Transcriptions from '../lib/components/Transcriptions.svelte';
@@ -24,7 +23,6 @@
     }}
   />
   <main class="dw-main">
-    <AudioRecorder />
     <Transcriptions {socket} bind:noteFilter />
   </main>
   <CollapsibleAside bind:open={helpOpen} />

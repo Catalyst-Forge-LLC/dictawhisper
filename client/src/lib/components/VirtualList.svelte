@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { afterUpdate, onMount } from 'svelte';
   import { heightAt, virtualSlice } from '../virtualWindow.js';
 
   export let items = [];
@@ -12,6 +12,12 @@
   let scrollTop = 0;
   let viewport = 640;
   let sizes = {};
+  let measuredItems;
+
+  $: if (items !== measuredItems) {
+    measuredItems = items;
+    sizes = {};
+  }
 
   function measure(node, index) {
     const write = () => {
@@ -36,9 +42,15 @@
   }
 
   function onScroll() {
-    scrollTop = scrollRoot ? scrollRoot.scrollTop : window.scrollY;
+    if (!root) return;
+    const offset = scrollRoot
+      ? root.getBoundingClientRect().top - scrollRoot.getBoundingClientRect().top + scrollRoot.scrollTop
+      : root.getBoundingClientRect().top + window.scrollY;
+    scrollTop = Math.max(0, (scrollRoot ? scrollRoot.scrollTop : window.scrollY) - offset);
     viewport = scrollRoot ? scrollRoot.clientHeight : window.innerHeight;
   }
+
+  afterUpdate(onScroll);
 
   $: slice =
     items.length <= 16

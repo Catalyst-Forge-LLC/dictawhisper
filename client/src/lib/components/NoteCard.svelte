@@ -174,7 +174,7 @@
     >
       <span class="note-title">
         <span class="name">{displayName(transcription.jsonFile)}</span>
-        {#if variant === 'hit' && transcription.day}
+        {#if transcription.day}
           <span class="day">{transcription.day}</span>
         {/if}
         {#if transcription.transcriptionJson?.elapsed}
@@ -220,7 +220,7 @@
 
   {#if tags.length || expanded}
     <div class="note-tags">
-      {#each tags as tag}
+      {#each (expanded ? tags : [...tags.filter(tag => selectedTags.includes(tag)), ...tags.filter(tag => !selectedTags.includes(tag))].slice(0, 4)) as tag}
         {#if expanded}
           <span class="dw-chip" class:is-active={selectedTags.includes(tag)}>
             <button type="button" class="chip-label" on:click={() => dispatch('tag', tag)}>{tag}</button>
@@ -239,6 +239,7 @@
           </button>
         {/if}
       {/each}
+      {#if !expanded && tags.length > 4}<button class="dw-text-btn" on:click={() => dispatch('toggle', transcription.jsonFile)}>+{tags.length - 4} more</button>{/if}
     </div>
   {/if}
 

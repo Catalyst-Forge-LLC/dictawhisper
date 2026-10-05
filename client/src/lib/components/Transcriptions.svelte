@@ -25,7 +25,13 @@
 
   let expanded = {};
   let showRaw = {};
-  let yearOpen = {};
+  let libraryView = 'recent';
+  let navigationOpen = false;
+  let filtersOpen = false;
+  let tagSearch = '';
+  let browseRequest = 0;
+  let filterRequest = 0;
+  let browseBusy = false;
   let selectedTags = [];
   let showSingletons = false;
   let showAllFrequent = false;
@@ -56,12 +62,10 @@
   let lastBrowseKey = '';
   let tagRows = [];
   let yearCounts = [];
-  let loadedYears = {};
   let noteBusy = {};
   let journalMeta = null;
   let applyingUrl = false;
-  let datesOpen = false;
-  const TAG_CLOUD_CAP = 40;
+  const TAG_CLOUD_CAP = 12;
 
   function folderOf(jsonFile) {
     const norm = String(jsonFile || '').replace(/\\/g, '/');
@@ -249,14 +253,6 @@
     transcriptions = [...map.values()];
   }
 
-  function markLoadedYears(notes) {
-    for (const note of notes || []) {
-      const folder = folderOf(note.jsonFile);
-      if (folder.year) loadedYears[folder.year] = true;
-    }
-    loadedYears = loadedYears;
-  }
-
   async function fetchJson(url) {
     const response = await fetch(url);
     const data = await response.json().catch(() => ({}));
@@ -311,6 +307,7 @@
     return {
       q: searchQuery,
       tags: selectedTags,
+      view: libraryView,
       year: filterYear,
       month: filterMonth,
       since,
@@ -339,6 +336,7 @@
     const parsed = parseInboxUrl(search);
     searchQuery = parsed.q;
     selectedTags = parsed.tags;
+    libraryView = parsed.view || 'recent';
     filterYear = parsed.year;
     filterMonth = parsed.month;
     since = parsed.since;
@@ -353,45 +351,37 @@
   }
 
   async function loadBrowse() {
+    const request = ++browseRequest;
+    const browseKey = [libraryView, filterYear, filterMonth].join('|');
+    browseBusy = true;
     const params = new URLSearchParams();
-    if (!isHitMode() && filterYear) {
+    if (filterYear) {
       params.set('year', filterYear);
       if (filterMonth) params.set('month', filterMonth);
+    } else if (libraryView === 'all') params.set('all', '1');
+    try {
+      const data = await fetchJson('/notes/index?' + params);
+      if (request !== browseRequest) return;
+      pagedIndex = Boolean(data.paged);
+      indexing = Boolean(data.indexing);
+      mergeNotes(data.notes, { replace: true });
+      lastBrowseKey = browseKey;
+      await loadMeta();
+    } finally {
+      if (request === browseRequest) browseBusy = false;
     }
-    const qs = params.toString();
-    const data = await fetchJson(qs ? `/notes/index?${qs}` : '/notes/index');
-    pagedIndex = Boolean(data.paged);
-    indexing = Boolean(data.indexing);
-    mergeNotes(data.notes, { replace: true });
-    markLoadedYears(data.notes);
-    lastBrowseKey = `${!isHitMode() && filterYear ? filterYear : ''}|${!isHitMode() && filterMonth ? filterMonth : ''}`;
-    await loadMeta();
-  }
-
-  async function ensureYearLoaded(year) {
-    if (!year || !pagedIndex || loadedYears[year]) return;
-    const data = await fetchJson(`/notes/index?year=${encodeURIComponent(year)}`);
-    mergeNotes(data.notes);
-    loadedYears[year] = true;
-    loadedYears = loadedYears;
   }
 
   async function runRemoteFilter() {
+    const request = ++filterRequest;
+    inboxError = '';
     if (!isHitMode()) {
       remoteHits = null;
-      const browseKey = `${filterYear}|${filterMonth}`;
+      const browseKey = [libraryView, filterYear, filterMonth].join('|');
       if (browseKey !== lastBrowseKey) {
-        lastBrowseKey = browseKey;
-        try {
-          await loadBrowse();
-        } catch (error) {
-          inboxError = error.message || String(error);
-        }
-      }
-      if (filterYear) {
-        yearOpen[filterYear] = true;
-        yearOpen = yearOpen;
-      }
+        try { await loadBrowse(); }
+        catch (error) { inboxError = error.message || String(error); }
+      } else browseBusy = false;
       return;
     }
     try {
@@ -399,6 +389,8 @@
       const params = new URLSearchParams();
       const q = searchQuery.trim();
       if (q) params.set('q', q);
+      params.set('limit', '50');
+      if (libraryView === 'unfiled' || libraryView === 'holding') params.set('folder', libraryView);
       for (const tag of selectedTags) params.append('tag', tag);
       if (noteFilter === 'unreadable') params.set('unreadable', '1');
       if (starredOnly) params.set('starred', '1');
@@ -410,14 +402,23 @@
       if (q && !isFilenameQuery(q)) params.set('mode', effectiveMode());
       else if (q) params.set('mode', 'lex');
       const data = await fetchJson(`/notes/search?${params}`);
+      if (request !== filterRequest) return;
       remoteHits = tightenFilenameHits(q, (data.hits || data.notes || []).map(noteFromHit));
     } catch (error) {
-      inboxError = error.message || String(error);
+      if (request === filterRequest) {
+        inboxError = error.message || String(error);
+        remoteHits = [];
+      }
     }
   }
 
   function scheduleFilter(key) {
     lastSearchKey = key;
+    filterRequest += 1;
+    browseRequest += 1;
+    browseBusy = !isHitMode();
+    remoteHits = null;
+    document.querySelector('.dw-main')?.scrollTo({ top: 0 });
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       writeInboxUrl();
@@ -427,6 +428,7 @@
 
   $: searchKey = [
     searchQuery,
+    libraryView,
     selectedTags.join('\t'),
     noteFilter,
     filterYear,
@@ -438,14 +440,7 @@
     starredOnly ? '1' : '',
   ].join('\0');
   $: if (indexReady && searchKey !== lastSearchKey) scheduleFilter(searchKey);
-  $: showHits = Boolean(
-    searchQuery.trim() ||
-      since ||
-      until ||
-      starredOnly ||
-      selectedTags.length ||
-      noteFilter === 'unreadable'
-  );
+  $: showHits = isHitMode(searchKey);
   $: groups = groupTranscriptions(transcriptions);
   $: tagCloud = tagRows.length
     ? (() => {
@@ -460,160 +455,41 @@
   $: frequentTags = tagCloud.filter((item) => item.count > 1);
   $: singletonTags = tagCloud.filter((item) => item.count === 1);
   $: visibleTags = (() => {
-    const pool = showSingletons ? tagCloud : frequentTags;
-    const capped = showAllFrequent ? pool : pool.slice(0, TAG_CLOUD_CAP);
+    const pool = tagSearch.trim()
+      ? tagCloud.filter(item => item.tag.toLowerCase().includes(tagSearch.trim().toLowerCase()))
+      : showSingletons ? tagCloud : frequentTags;
+    const capped = showAllFrequent || tagSearch.trim() ? pool : pool.slice(0, TAG_CLOUD_CAP);
     const extraSelected = tagCloud.filter(
       (item) => selectedTags.includes(item.tag) && !capped.some((shown) => shown.tag === item.tag)
     );
     return [...capped, ...extraSelected];
   })();
-  let monthPage = 1;
-  $: specialGroups = groups.filter((group) => group.key === 'holding' || group.key === 'unfiled');
-  $: datedGroups = groups.filter((group) => group.key !== 'holding' && group.key !== 'unfiled');
-  $: pagedGroups = showHits ? groups : [...specialGroups, ...datedGroups.slice(0, monthPage)];
-  $: hiddenMonths = showHits ? 0 : Math.max(0, datedGroups.length - monthPage);
-  $: newestDatedYear = datedGroups[0]?.year;
-  $: yearSections = nestByYear(groups);
-  $: datedYearCount = yearSections.filter((section) => section.kind === 'year').length;
-  $: pagedKeys = new Set(pagedGroups.map((group) => group.key));
-  let pagedYearInit = false;
-  $: if (!pagedYearInit && newestDatedYear) {
-    pagedYearInit = true;
-    pageThroughYear(newestDatedYear);
-  }
-  $: newestYearCount = yearCounts.find((row) => row.year === (filterYear || newestDatedYear))?.count || 0;
+  $: newestDatedYear = yearCounts[0]?.year || groups.find(group => group.year)?.year;
+  $: browseItems = groups.filter(group => {
+    if (libraryView === 'unfiled' || libraryView === 'holding') return group.key === libraryView;
+    if (filterYear) return group.year === filterYear && (!filterMonth || group.month === filterMonth);
+    if (libraryView === 'all') return true;
+    return group.year === newestDatedYear;
+  }).flatMap(group => group.items).sort((a, b) => {
+    const order = (b.day || displayName(b.jsonFile)).localeCompare(a.day || displayName(a.jsonFile)) || b.jsonFile.localeCompare(a.jsonFile);
+    return effectiveSort(searchKey) === 'oldest' ? -order : order;
+  });
+  $: visibleItems = showHits ? remoteHits || [] : browseItems;
   $: statusLine = showHits
-    ? remoteHits == null
-      ? 'Searching…'
-      : `${remoteHits.length} hit${remoteHits.length === 1 ? '' : 's'}`
-    : filterYear
-      ? `Browsing ${filterYear}${filterMonth ? ` · ${MONTHS[Number(filterMonth) - 1] || filterMonth}` : ''} · ${newestYearCount} notes`
-      : `Showing newest year · ${newestYearCount} notes`;
+    ? remoteHits == null ? 'Searching…' : remoteHits.length + (remoteHits.length === 50 ? ' matches shown · first 50' : ' matching notes')
+    : browseBusy ? 'Loading notes…' : (filterYear ? 'Browsing ' + filterYear + (filterMonth ? ' · ' + MONTHS[Number(filterMonth) - 1] : '') : libraryView === 'all' ? 'All notes' : libraryView === 'unfiled' ? 'Unfiled' : libraryView === 'holding' ? 'Holding' : 'Recent · ' + (newestDatedYear || '')) + ' · ' + browseItems.length + ' notes';
 
-  function nestByYear(monthGroups) {
-    const sections = [];
-    const yearMap = new Map();
-    for (const group of monthGroups) {
-      if (group.key === 'holding' || group.key === 'unfiled' || group.key === 'other') {
-        sections.push({
-          kind: 'special',
-          key: group.key,
-          label: groupLabel(group),
-          months: [group],
-          count: group.items.length,
-        });
-        continue;
-      }
-      if (!yearMap.has(group.year)) {
-        const section = {
-          kind: 'year',
-          key: group.year,
-          label: group.year,
-          months: [],
-          count: 0,
-        };
-        yearMap.set(group.year, section);
-        sections.push(section);
-      }
-      const section = yearMap.get(group.year);
-      section.months.push(group);
-      section.count += group.items.length;
-    }
-    for (const row of yearCounts) {
-      if (yearMap.has(row.year)) {
-        const section = yearMap.get(row.year);
-        if (section.count < row.count) section.count = row.count;
-        continue;
-      }
-      const section = {
-        kind: 'year',
-        key: row.year,
-        label: row.year,
-        months: [],
-        count: row.count,
-      };
-      yearMap.set(row.year, section);
-      sections.push(section);
-    }
-    const specials = sections.filter((section) => section.kind === 'special');
-    const years = sections.filter((section) => section.kind === 'year').sort((a, b) => b.key.localeCompare(a.key));
-    return [...specials, ...years];
-  }
-
-  function defaultYearOpen(key, kind) {
-    if (kind === 'special') return true;
-    if (filterYear) return key === filterYear;
-    const currentYear = String(new Date().getFullYear());
-    return key === currentYear || key === newestDatedYear;
-  }
-
-  function isYearOpen(section) {
-    if (Object.prototype.hasOwnProperty.call(yearOpen, section.key)) return yearOpen[section.key];
-    return defaultYearOpen(section.key, section.kind);
-  }
-
-  function monthsToShow(section) {
-    if (showHits || filterYear) return section.months;
-    return section.months.filter((group) => pagedKeys.has(group.key));
-  }
-
-  function pageThroughYear(year) {
-    if (!year) return;
-    let lastIndex = -1;
-    for (let i = 0; i < datedGroups.length; i++) {
-      if (datedGroups[i].year === year) lastIndex = i;
-    }
-    if (lastIndex >= 0 && monthPage < lastIndex + 1) monthPage = lastIndex + 1;
-  }
-
-  function toggleYear(section) {
-    const nextOpen = !isYearOpen(section);
-    yearOpen[section.key] = nextOpen;
-    yearOpen = yearOpen;
-    if (nextOpen && section.kind === 'year') {
-      pageThroughYear(section.key);
-      void ensureYearLoaded(section.key).catch((error) => {
-        inboxError = error.message || String(error);
-      });
-    }
-  }
-
-  function jumpYear(year) {
+  function jumpYear(year, month = '') {
+    libraryView = 'all';
     filterYear = year;
-    filterMonth = '';
-    if (!searchQuery.trim() && !since && !until) {
-      yearOpen[year] = true;
-      yearOpen = yearOpen;
-      void ensureYearLoaded(year).then(() => loadBrowse()).catch((error) => {
-        inboxError = error.message || String(error);
-      });
-    }
+    filterMonth = month;
   }
 
-  function focusRecentYears() {
-    const currentYear = String(new Date().getFullYear());
-    const next = {};
-    for (const section of yearSections) {
-      next[section.key] =
-        section.kind === 'special' || section.key === currentYear || section.key === newestDatedYear;
-    }
-    yearOpen = next;
-  }
-
-  async function expandAllYears() {
-    if (pagedIndex) {
-      try {
-        const data = await fetchJson('/notes/index?all=1');
-        mergeNotes(data.notes);
-        markLoadedYears(data.notes);
-      } catch (error) {
-        inboxError = error.message || String(error);
-      }
-    }
-    const next = {};
-    for (const section of yearSections) next[section.key] = true;
-    yearOpen = next;
-    if (datedGroups.length) monthPage = datedGroups.length;
+  function chooseLibrary(view) {
+    clearFilters();
+    sortChoice = '';
+    libraryView = view;
+    if (view === 'starred') { libraryView = 'all'; starredOnly = true; }
   }
 
   function applyNote(data) {
@@ -660,30 +536,6 @@
     writeInboxUrl();
   }
 
-  function lazyMore(node, remaining) {
-    const bump = (left) => {
-      if (left > 0) monthPage += 1;
-    };
-    const root = node.closest('.dw-main');
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) bump(remaining);
-      },
-      { root: root || null, rootMargin: '800px' }
-    );
-    observer.observe(node);
-    return {
-      update(left) {
-        remaining = left;
-        const top = node.getBoundingClientRect().top;
-        const limit = (root?.clientHeight || window.innerHeight) + 800;
-        if (left > 0 && top < limit) bump(left);
-      },
-      destroy() {
-        observer.disconnect();
-      },
-    };
-  }
 
   async function withNoteBusy(jsonFile, work) {
     noteBusy[jsonFile] = true;
@@ -747,6 +599,8 @@
     await withNoteBusy(jsonFile, async () => {
       const data = await postJson('/note', { file: jsonFile, starred: next });
       applyNote(data);
+      await loadMeta();
+      if (isHitMode()) await runRemoteFilter();
     });
   }
 
@@ -755,6 +609,7 @@
       const data = await postJson('/note', { file: jsonFile, tags });
       applyNote(data);
       await loadMeta();
+      if (isHitMode()) await runRemoteFilter();
     });
   }
 
@@ -770,6 +625,7 @@
 
   function clearFilters() {
     selectedTags = [];
+    libraryView = 'recent';
     filterYear = '';
     filterMonth = '';
     since = '';
@@ -805,7 +661,7 @@
     indexing = Boolean(data?.indexing);
     if (data?.reload) {
       pagedIndex = true;
-      void loadBrowse().catch((error) => {
+      void (isHitMode() ? runRemoteFilter() : loadBrowse()).catch((error) => {
         inboxError = error.message || String(error);
       });
       return;
@@ -813,10 +669,8 @@
     if (data?.paged) {
       pagedIndex = true;
       mergeNotes(data.notes);
-      markLoadedYears(data.notes);
     } else if (data?.notes) {
       mergeNotes(data.notes, { replace: !pagedIndex });
-      markLoadedYears(data.notes);
     }
     const open = Object.keys(expanded).filter((key) => expanded[key]);
     for (const jsonFile of open) void hydrateNote(jsonFile);
@@ -825,6 +679,7 @@
 
   function onTranscription(data) {
     upsertNote(data);
+    if (isHitMode()) scheduleFilter(searchKey);
     if (data?.jsonFile && expanded[data.jsonFile]) void hydrateNote(data.jsonFile);
   }
 
@@ -864,115 +719,29 @@
       socket.off('notes-index', onNotesIndex);
       socket.off('transcription', onTranscription);
       window.removeEventListener('popstate', onPopState);
+      clearTimeout(searchTimer);
+      filterRequest += 1;
+      browseRequest += 1;
     };
   });
 </script>
 
 <section class="transcriptions">
-  <div class="dw-card search-card">
-    <div class="search">
-      <span class="search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </span>
-      <input
-        class="dw-input"
-        type="search"
-        bind:value={searchQuery}
-        placeholder="Search notes, tags, filenames…"
-        aria-label="Search notes"
-      />
-      {#if searchQuery}
-        <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={clearSearch}>Clear search</button>
-      {/if}
-    </div>
-
-    <div class="filters">
-      <p class="dw-eyebrow">Filters</p>
-      <div class="filter-row">
-        <label class="filter-field">
-          <span>Year</span>
-          <select class="dw-input dw-select" bind:value={filterYear} on:change={() => (filterMonth = filterYear ? filterMonth : '')}>
-            <option value="">All years</option>
-            {#each yearCounts as row}
-              <option value={row.year}>{row.year} · {row.count}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="filter-field">
-          <span>Month</span>
-          <select class="dw-input dw-select" bind:value={filterMonth} disabled={!filterYear}>
-            <option value="">All months</option>
-            {#each MONTHS as name, index}
-              <option value={String(index + 1).padStart(2, '0')}>{name}</option>
-            {/each}
-          </select>
-        </label>
-        <div class="dates" class:is-open={datesOpen}>
-          <button type="button" class="dw-text-btn dates-toggle" on:click={() => (datesOpen = !datesOpen)}>
-            Dates
-          </button>
-          <label class="filter-field">
-            <span>From</span>
-            <input class="dw-input dw-select" type="date" bind:value={since} />
-          </label>
-          <label class="filter-field">
-            <span>To</span>
-            <input class="dw-input dw-select" type="date" bind:value={until} />
-          </label>
-        </div>
-        <div class="dw-segmented" role="group" aria-label="Sort">
-          <button type="button" class:is-on={effectiveSort() === 'recent'} on:click={() => (sortChoice = 'recent')}>Recent</button>
-          <button type="button" class:is-on={effectiveSort() === 'oldest'} on:click={() => (sortChoice = 'oldest')}>Oldest</button>
-          <button type="button" class:is-on={effectiveSort() === 'relevance'} on:click={() => (sortChoice = 'relevance')}>
-            Best match
-          </button>
-        </div>
-        {#if hasEmbeddings()}
-          <div class="dw-segmented" role="group" aria-label="Search mode">
-            <button type="button" class:is-on={effectiveMode() === 'lex'} on:click={() => (modeChoice = 'lex')}>Words</button>
-            <button type="button" class:is-on={effectiveMode() === 'hybrid'} on:click={() => (modeChoice = 'hybrid')}>
-              Hybrid
-            </button>
-          </div>
-        {/if}
-        <button
-          type="button"
-          class="dw-chip"
-          class:is-active={starredOnly}
-          on:click={() => (starredOnly = !starredOnly)}
-        >
-          Starred
-          {#if journalMeta?.starred}
-            <span class="dw-chip-count">{journalMeta.starred}</span>
-          {/if}
-        </button>
-        {#if noteFilter === 'unreadable'}
-          <button type="button" class="dw-chip is-active" on:click={() => (noteFilter = 'all')}>Unreadable</button>
-        {/if}
-        {#if selectedTags.length || filterYear || since || until || starredOnly || noteFilter === 'unreadable'}
-          <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={clearFilters}>Clear filters</button>
-        {/if}
-      </div>
-    </div>
-    <p class="dw-muted status-line">{statusLine}</p>
-  </div>
-
-  {#if inboxError}
-    <p class="dw-error">{inboxError}</p>
-  {/if}
-
-  {#if !transcriptions.length && !indexReady}
-    <p class="dw-empty">Loading notes…</p>
-  {:else if !transcriptions.length && indexing}
-    <p class="dw-empty">Indexing notes…</p>
-  {:else if !transcriptions.length}
-    <p class="dw-empty">No notes yet. Record or drop a file above.</p>
-  {/if}
-
-  {#if tagCloud.length}
-    <section class="dw-card tags-card">
+  <aside class="library dw-card" class:is-open={navigationOpen} aria-label="Library navigation">
+    <button type="button" class="dw-btn-secondary dw-btn-compact navigation-toggle" aria-expanded={navigationOpen} on:click={() => (navigationOpen = !navigationOpen)}>Library & dates</button>
+    <div class="library-body">
+      <p class="dw-eyebrow">Library</p>
+      <nav class="library-links" aria-label="Library views">
+        <button class:is-active={libraryView === 'recent' && !filterYear && !showHits} on:click={() => chooseLibrary('recent')}>Recent</button>
+        <button class:is-active={(libraryView === 'all' || (libraryView === 'recent' && showHits)) && !filterYear && !starredOnly} on:click={() => chooseLibrary('all')}>All notes</button>
+        <button class:is-active={starredOnly} on:click={() => chooseLibrary('starred')}>★ Starred <span>{journalMeta?.starred || 0}</span></button>
+        <button class:is-active={libraryView === 'unfiled'} on:click={() => chooseLibrary('unfiled')}>Unfiled</button>
+        <button class:is-active={libraryView === 'holding'} on:click={() => chooseLibrary('holding')}>Holding</button>
+      </nav>
+        {#if tagCloud.length}
+    <details class="tags-card">
+      <summary>Tags</summary>
+      <input class="dw-input tag-search" type="search" bind:value={tagSearch} placeholder="Find a tag…" aria-label="Find a tag" />
       <div class="tags-head">
         <p class="dw-eyebrow">Tags</p>
         <p class="dw-muted">
@@ -1014,6 +783,9 @@
             {showSingletons ? 'Hide single-use tags' : `Show ${singletonTags.length} single-use tags`}
           </button>
         {/if}
+      </div>
+      <details class="tag-management"><summary>Manage tags</summary>
+      <div class="tag-cloud-more">
         <label class="model-toggle">
           <input type="checkbox" bind:checked={useModelForTags} disabled={consolidateBusy || applyBusy} />
           Ask model for synonyms
@@ -1090,25 +862,75 @@
           {/if}
         </div>
       {/if}
-    </section>
+      </details>
+    </details>
   {/if}
+      <p class="dw-eyebrow date-heading">Dates</p>
+      <nav class="date-nav" aria-label="Browse by date">
+        {#each yearCounts as row}
+          <details open={filterYear === row.year}>
+            <summary><button type="button" class="year-select" class:is-active={filterYear === row.year} on:click={(event) => { event.preventDefault(); jumpYear(row.year); }}>{row.year}</button><span class="dw-chip-count">{row.count}</span></summary>
+            <button class:is-active={filterYear === row.year && !filterMonth} on:click={() => jumpYear(row.year)}>All of {row.year}</button>
+            {#each MONTHS as month, index}
+              <button class:is-active={filterYear === row.year && filterMonth === String(index + 1).padStart(2, '0')} on:click={() => jumpYear(row.year, String(index + 1).padStart(2, '0'))}>{month}</button>
+            {/each}
+          </details>
+        {/each}
+      </nav>
 
-  {#if showHits}
-    <section class="hits" aria-label="Search hits">
-      {#if remoteHits == null}
-        <p class="dw-empty">Searching…</p>
-      {:else if !remoteHits.length}
-        <p class="dw-empty">
-          No notes matched
-          {#if searchQuery.trim()}
-            “{searchQuery.trim()}”
-          {/if}.
-        </p>
-      {:else}
-        <div class="notes">
-          <NoteList
-            items={remoteHits}
-            variant="hit"
+
+
+    </div>
+  </aside>
+  <div class="results-column">
+    <div class="dw-card search-card">
+      <div class="search">
+        <input class="dw-input" type="search" bind:value={searchQuery} placeholder="Search notes, tags, filenames…" aria-label="Search notes" />
+        {#if searchQuery}<button class="dw-text-btn" on:click={clearSearch}>Clear search</button>{/if}
+      </div>
+      <div class="results-toolbar">
+        <p class="dw-muted status-line" role="status">{statusLine}</p>
+        <button class="dw-chip" class:is-active={starredOnly} aria-pressed={starredOnly} on:click={() => (starredOnly = !starredOnly)}>★ Starred</button>
+        <button class="dw-btn-secondary dw-btn-compact" aria-expanded={filtersOpen} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}>Filters</button>
+        <label class="sort-label">Sort
+          <select class="dw-input dw-select" value={effectiveSort(searchKey)} on:change={event => (sortChoice = event.target.value)}>
+            <option value="recent">Newest first</option><option value="oldest">Oldest first</option>
+            {#if searchQuery.trim()}<option value="relevance">Best match</option>{/if}
+          </select>
+        </label>
+      </div>
+      {#if filterYear || selectedTags.length || since || until || starredOnly || noteFilter === 'unreadable' || libraryView === 'unfiled' || libraryView === 'holding'}
+        <div class="active-filters" aria-label="Active filters">
+          {#if filterYear}<button class="dw-chip is-active" aria-label="Remove date filter" on:click={() => { filterYear = ''; filterMonth = ''; }}>{filterYear}{filterMonth ? ' · ' + MONTHS[Number(filterMonth) - 1] : ''} ×</button>{/if}
+          {#each selectedTags as tag}<button class="dw-chip is-active" aria-label={'Remove tag ' + tag} on:click={() => toggleTag(tag)}>{tag} ×</button>{/each}
+          {#if since}<button class="dw-chip is-active" on:click={() => (since = '')}>From {since} ×</button>{/if}
+          {#if until}<button class="dw-chip is-active" on:click={() => (until = '')}>To {until} ×</button>{/if}
+          {#if starredOnly}<button class="dw-chip is-active" on:click={() => (starredOnly = false)}>Starred ×</button>{/if}
+          {#if noteFilter === 'unreadable'}<button class="dw-chip is-active" on:click={() => (noteFilter = 'all')}>Unreadable ×</button>{/if}
+          {#if libraryView === 'unfiled' || libraryView === 'holding'}<button class="dw-chip is-active" on:click={() => (libraryView = 'all')}>{libraryView} ×</button>{/if}
+          <button class="dw-text-btn" on:click={clearFilters}>Clear filters</button>
+        </div>
+      {/if}
+      {#if filtersOpen}
+        <div class="filter-row" id="note-filters">
+          <label class="filter-field">Year<select class="dw-input dw-select" bind:value={filterYear} on:change={() => { filterMonth = ''; libraryView = 'all'; }}><option value="">All years</option>{#each yearCounts as row}<option value={row.year}>{row.year}</option>{/each}</select></label>
+          <label class="filter-field">Month<select class="dw-input dw-select" bind:value={filterMonth} disabled={!filterYear}><option value="">All months</option>{#each MONTHS as month, index}<option value={String(index + 1).padStart(2, '0')}>{month}</option>{/each}</select></label>
+          <label class="filter-field">From<input class="dw-input dw-select" type="date" bind:value={since} /></label>
+          <label class="filter-field">To<input class="dw-input dw-select" type="date" bind:value={until} /></label>
+          {#if hasEmbeddings()}<label class="filter-field">Search mode<select class="dw-input dw-select" value={effectiveMode()} on:change={event => (modeChoice = event.target.value)}><option value="lex">Words</option><option value="hybrid">Hybrid</option></select></label>{/if}
+        </div>
+      {/if}
+    </div>
+    {#if inboxError}<p class="dw-error" role="alert">{inboxError}</p>{/if}
+    {#if (showHits && remoteHits == null) || (!showHits && (browseBusy || !indexReady))}
+      <p class="dw-empty">{showHits ? 'Searching…' : 'Loading notes…'}</p>
+    {:else if !visibleItems.length}
+      <p class="dw-empty">{indexing ? 'Indexing notes…' : 'No notes match this view.'} {#if searchQuery || filterYear || selectedTags.length || starredOnly}<button class="dw-text-btn" on:click={() => { clearSearch(); clearFilters(); }}>Reset search and filters</button>{/if}</p>
+    {:else}
+      <section class="notes" aria-label={showHits ? 'Matching notes' : 'Journal entries'}>
+                  <NoteList
+            items={visibleItems}
+            variant={showHits ? 'hit' : 'note'}
             query={searchQuery}
             {selectedTags}
             {expanded}
@@ -1131,229 +953,50 @@
             on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
             on:delete={(event) => deleteTranscription(event.detail)}
           />
-        </div>
-      {/if}
-    </section>
-  {/if}
-
-  {#if yearCounts.length}
-    <div class="years-strip">
-      <p class="dw-eyebrow">Years</p>
-      <div class="year-jump">
-        {#each yearCounts as row}
-          <button
-            type="button"
-            class="dw-text-btn"
-            class:dw-text-btn-accent={filterYear === row.year}
-            on:click={() => jumpYear(row.year)}
-          >
-            {row.year}
-            <span class="dw-chip-count">{row.count}</span>
-          </button>
-        {/each}
-      </div>
-    </div>
-  {/if}
-
-  {#if !showHits && datedYearCount > 1}
-    <div class="archive-tools">
-      <p class="dw-eyebrow">Notes</p>
-      <div>
-        <button type="button" class="dw-text-btn dw-text-btn-accent" on:click={focusRecentYears}>Focus</button>
-        <button type="button" class="dw-text-btn" on:click={expandAllYears}>All years</button>
-      </div>
-    </div>
-  {/if}
-
-  {#if !showHits}
-  <div class="archive">
-    {#each yearSections as section (section.key)}
-      <section class="year-block">
-        <button
-          type="button"
-          class="year-head"
-          aria-expanded={isYearOpen(section)}
-          on:click={() => toggleYear(section)}
-        >
-          <svg class="chevron" class:is-closed={!isYearOpen(section)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          <span class="year-label">{section.label}</span>
-          <span class="year-count">{section.count} note{section.count === 1 ? '' : 's'}</span>
-        </button>
-        {#if isYearOpen(section)}
-          <div class="year-body">
-            {#each monthsToShow(section) as group (group.key)}
-              <div class="month-block">
-                {#if section.kind === 'year'}
-                  <div class="month-rail">
-                    <span>{groupLabel(group)}</span>
-                    <span>{group.items.length}</span>
-                  </div>
-                {/if}
-                <div class="notes">
-                  <NoteList
-                    items={group.items}
-                    {selectedTags}
-                    {expanded}
-                    {showRaw}
-                    {noteBusy}
-                    landFile={Object.keys(expanded).find((key) => expanded[key]) || ''}
-                    {landCue}
-                    on:toggle={(event) => toggleExpanded(event.detail)}
-                    on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
-                    on:tag={(event) => toggleTag(event.detail)}
-                    on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
-                    on:raw={(event) => {
-                      showRaw[event.detail.jsonFile] = event.detail.show;
-                      showRaw = showRaw;
-                    }}
-                    on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
-                    on:copy={(event) => copyTranscription(event.detail)}
-                    on:retry={(event) => retryCleanup(event.detail)}
-                    on:skip={(event) => skipNoteCleanup(event.detail)}
-                    on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
-                    on:delete={(event) => deleteTranscription(event.detail)}
-                  />
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
       </section>
-    {/each}
-    {#if hiddenMonths > 0}
-      <p class="dw-muted load-more" use:lazyMore={hiddenMonths}>
-        {hiddenMonths} older month{hiddenMonths === 1 ? '' : 's'} — scroll to load
-      </p>
     {/if}
   </div>
-  {/if}
 </section>
 
 <style lang="scss">
-  .transcriptions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    margin-top: 0.85rem;
-  }
-
-  .search-card,
-  .tags-card {
-    padding: 0.85rem;
-  }
-
-  .search {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    position: relative;
-  }
-
-  .search-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    width: 1.0625rem;
-    height: 1.0625rem;
-    color: rgb(251 191 36 / 0.7);
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-
-  .search-icon svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  .search .dw-input {
-    padding-left: 2.4rem;
-  }
-
-  .filters {
-    margin-top: 0.75rem;
-  }
-
-  .filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    gap: 0.45rem 0.55rem;
-    margin-top: 0.4rem;
-  }
-
-  .filter-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgb(113 113 122);
-  }
-
-  .dw-select {
-    width: auto;
-    min-width: 8.5rem;
-    padding: 0.4rem 0.65rem;
-    font-size: 0.8125rem;
-    letter-spacing: 0;
-    text-transform: none;
-    font-weight: 500;
-  }
-
-  .dates {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    gap: 0.45rem;
-  }
-
-  .dates-toggle {
-    display: none;
-  }
-
-  .status-line {
-    margin-top: 0.65rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .tags-head,
-  .tags-filter,
-  .archive-tools,
-  .years-strip {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.4rem 0.75rem;
-    margin-bottom: 0.55rem;
-  }
-
-  .year-jump {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.15rem;
-  }
-
-  .tag-cloud-body {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .tag-cloud-more {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.65rem;
-  }
-
-  .model-toggle {
+  .transcriptions { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+  .library { position: sticky; top: 0; padding: 1rem; max-height: calc(100dvh - 6rem); overflow-y: auto; box-shadow: none; }
+  .library-body { display: flex; flex-direction: column; gap: 0.65rem; }
+  .library-links { display: flex; flex-direction: column; gap: 0.2rem; }
+  .library-links button, .date-nav button { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; border-radius: 0.5rem; padding: 0.5rem 0.65rem; background: transparent; color: var(--dw-text-muted); font: inherit; font-size: 0.875rem; cursor: pointer; text-align: left; }
+  .library-links button:hover, .date-nav button:hover { background: var(--dw-bg-hover); color: var(--dw-text); }
+  .library-links button.is-active, .date-nav button.is-active { background: rgb(245 158 11 / 0.12); color: var(--dw-accent-bright); }
+  .library-links button span { font-size: 0.75rem; }
+  .date-heading { margin-top: 0.6rem; }
+  summary { cursor: pointer; padding: 0.5rem 0; color: var(--dw-text); font-size: 0.875rem; }
+  .date-nav summary span:last-child { float: right; }
+  .date-nav .year-select { display: inline-flex; width: auto; padding: 0.1rem 0.35rem; font-weight: 600; }
+  .date-nav button { padding-left: 1.1rem; font-size: 0.8125rem; }
+  .tags-card { border-top: 1px solid var(--dw-border); padding-top: 0.35rem; }
+  .tag-search { margin: 0.25rem 0 0.65rem; padding: 0.45rem 0.6rem; font-size: 0.8125rem; }
+  .tags-head { display: none; }
+  .tags-filter { display: none; }
+  .tag-cloud-body, .tag-cloud-more { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .tag-cloud-body { max-height: 20rem; overflow-y: auto; }
+  .tag-cloud-body .dw-chip { max-width: 100%; overflow-wrap: anywhere; text-align: left; white-space: normal; }
+  .tag-cloud-more { margin-top: 0.65rem; }
+  .tag-management { margin-top: 0.65rem; border-top: 1px solid var(--dw-border); }
+  .results-column { min-width: 0; }
+  .search-card { padding: 0.85rem 1rem; margin-bottom: 0.85rem; box-shadow: none; }
+  .search { display: flex; align-items: center; gap: 0.5rem; }
+  .search .dw-input { min-width: 0; }
+  .search .dw-text-btn { flex-shrink: 0; }
+  .results-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }
+  .status-line { margin-right: auto; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+  .sort-label { display: flex; align-items: center; gap: 0.4rem; color: var(--dw-text-muted); font-size: 0.8125rem; }
+  .dw-select { width: auto; min-width: 8rem; padding: 0.4rem 0.6rem; font-size: 0.8125rem; }
+  .active-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.65rem; }
+  .filter-row { display: flex; flex-wrap: wrap; align-items: end; gap: 0.65rem; padding-top: 0.85rem; margin-top: 0.75rem; border-top: 1px solid var(--dw-border); }
+  .filter-field { display: flex; flex-direction: column; gap: 0.25rem; color: var(--dw-text-muted); font-size: 0.75rem; }
+  .navigation-toggle { display: none; }
+  .notes { display: flex; flex-direction: column; gap: 0.5rem; }
+  .dw-error { margin-bottom: 0.75rem; }
+    .model-toggle {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -1409,128 +1052,18 @@
     margin-left: 0.35rem;
   }
 
-  .hits .notes {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+
+  @media (max-width: 800px) {
+    .transcriptions { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+    .library { position: static; padding: 0.65rem; max-height: none; }
+    .navigation-toggle { display: inline-flex; }
+    .library:not(.is-open) .library-body { display: none; }
+    .library-body { margin-top: 0.75rem; max-height: 45dvh; overflow-y: auto; }
+    .status-line { flex-basis: 100%; }
+    .search-card { padding: 0.75rem; }
+    .search { flex-wrap: wrap; }
   }
-
-  .year-block {
-    overflow: hidden;
-    border-radius: 0.75rem;
-    border: 1px solid rgb(255 255 255 / 0.06);
-    background: rgb(0 0 0 / 0.15);
-  }
-
-  .year-block + .year-block {
-    margin-top: 0.55rem;
-  }
-
-  .year-head {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 0.5rem;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    padding: 0.65rem 0.85rem;
-    text-align: left;
-  }
-
-  .year-head:hover {
-    background: rgb(255 255 255 / 0.04);
-  }
-
-  .chevron {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-    color: rgb(113 113 122);
-    transition: transform 0.2s ease;
-  }
-
-  .chevron.is-closed {
-    transform: rotate(-90deg);
-  }
-
-  .year-label {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.875rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .year-count {
-    margin-left: auto;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    color: rgb(113 113 122);
-  }
-
-  .year-body {
-    border-top: 1px solid rgb(255 255 255 / 0.05);
-    padding: 0.5rem 0.55rem 0.75rem;
-  }
-
-  .month-block + .month-block {
-    margin-top: 0.75rem;
-  }
-
-  .month-rail {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.4rem;
-    padding: 0.35rem 0.5rem;
-    border-radius: 0.375rem;
-    background: rgb(9 9 11 / 0.85);
-    backdrop-filter: blur(8px);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgb(161 161 170);
-  }
-
-  .month-rail span:last-child {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-    text-transform: none;
-    color: rgb(82 82 91);
-  }
-
-  .notes {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .load-more {
-    padding: 0.35rem 0.15rem 0.15rem;
-  }
-
-  @media (max-width: 720px) {
-    .dates-toggle {
-      display: inline-flex;
-    }
-
-    .dates:not(.is-open) .filter-field {
-      display: none;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .chevron {
-      transition: none;
-    }
+  @media (min-width: 801px) {
+    .search-card { position: sticky; top: 0; z-index: 5; background: rgb(24 24 27 / 0.96); }
   }
 </style>

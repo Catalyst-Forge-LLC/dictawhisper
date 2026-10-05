@@ -9,6 +9,8 @@
   let mediaRecorder = null;
   let chunks = [];
   let recording = false;
+  let captureOpen = false;
+  let arming = false;
   let dragOver = false;
   let error = '';
   let status = '';
@@ -47,6 +49,8 @@
   onDestroy(() => {
     if (drawId) cancelAnimationFrame(drawId);
     if (mediaRecorder?.state === 'recording') mediaRecorder.stop();
+    mediaRecorder?.stream.getTracks().forEach((track) => track.stop());
+    void audioCtx?.close();
   });
 
   async function armRecorder() {
@@ -68,6 +72,8 @@
 
   async function startRecord() {
     error = '';
+    captureOpen = true;
+    arming = true;
     try {
       if (!mediaRecorder) await armRecorder();
       chunks = [];
@@ -76,6 +82,8 @@
     } catch (err) {
       error = 'Microphone access is required to record.';
       console.log('The following error occured: ' + err);
+    } finally {
+      arming = false;
     }
   }
 
@@ -98,8 +106,10 @@
   }
 
   function handleDragOver(event) {
+    if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
     event.preventDefault();
     dragOver = true;
+    captureOpen = true;
   }
 
   function handleDragLeave() {
@@ -107,6 +117,7 @@
   }
 
   function handleDrop(event) {
+    if (!event.dataTransfer?.files.length) return;
     event.preventDefault();
     dragOver = false;
     uploadAudioFiles(event.dataTransfer.files);
@@ -118,6 +129,7 @@
   }
 
   async function uploadAudioFile(file, clipName = null) {
+    captureOpen = true;
     if (clipName === null) {
       clipName = `${file.name.split('.').slice(0, -1).join('.')}_${getFilenameDate()}`;
     }
@@ -188,32 +200,42 @@
   }
 </script>
 
-<section
-  class="dw-card-elevated capture"
+<svelte:window on:dragover={handleDragOver} on:drop={handleDrop} on:keydown={(event) => {
+  if (event.key === 'Escape' && !recording && !arming) captureOpen = false;
+}} />
+
+<section class="capture" aria-label="Record or import audio">
+  <div class="row">
+    <button type="button" class="dw-btn-primary dw-btn-compact" aria-expanded={captureOpen} aria-controls="audio-capture" on:click={() => (captureOpen = !captureOpen)}>{recording ? 'Recording…' : 'Record'}</button>
+    <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => fileInput?.click()}>Import</button>
+  </div>
+  <div
+  id="audio-capture"
+  role="region"
+  aria-label="Audio capture"
+  class="capture-panel dw-card-elevated"
+  class:is-visible={captureOpen || recording}
   class:is-drop={dragOver}
-  aria-label="Record or drop audio"
-  on:dragover={handleDragOver}
   on:dragleave={handleDragLeave}
-  on:drop={handleDrop}
 >
-  <div class="well" bind:this={well}>
+  <div class="well" class:is-visible={captureOpen || dragOver || recording} bind:this={well}>
     <canvas class="visualizer" bind:this={canvas} height="60"></canvas>
   </div>
   <div class="row">
     <button
       type="button"
-      class="dw-btn-primary"
+      class="dw-btn-primary dw-btn-compact"
       class:is-recording={recording}
-      disabled={recording}
+      disabled={recording || arming}
       on:click={startRecord}
     >
-      {recording ? 'Recording…' : 'Record'}
+      {recording ? 'Recording…' : arming ? 'Opening microphone…' : 'Start recording'}
     </button>
-    <button type="button" class="dw-btn-secondary" disabled={!recording} on:click={stopRecord}>
-      Stop
-    </button>
-    <button type="button" class="dw-btn-secondary" on:click={() => fileInput?.click()}>
-      Drop a file
+    {#if recording}
+      <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={stopRecord}>Stop & save</button>
+    {/if}
+    <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => fileInput?.click()}>
+      Import
     </button>
     <input
       bind:this={fileInput}
@@ -224,21 +246,37 @@
       on:change={handleFileUpload}
     />
   </div>
-  <p class="hint">Drag and drop audio here.</p>
+  {#if captureOpen || dragOver || recording}
+    <p class="hint">Drag audio here to import.</p>
+    <button type="button" class="dw-text-btn" disabled={recording || arming} on:click={() => (captureOpen = false)}>Close recorder</button>
+  {/if}
   {#if status}
     <p class="dw-muted">{status}</p>
   {/if}
   {#if error}
     <p class="dw-error">{error}</p>
   {/if}
+  </div>
 </section>
 
 <style lang="scss">
   .capture {
-    padding: 0.85rem;
+    position: static;
   }
 
-  .capture.is-drop {
+  .capture-panel {
+    display: none;
+    position: absolute;
+    right: 1rem;
+    top: calc(100% + 0.5rem);
+    width: min(28rem, calc(100vw - 2rem));
+    padding: 0.85rem;
+    background: rgb(18 18 21 / 0.98);
+  }
+
+  .capture-panel.is-visible { display: block; }
+
+  .capture-panel.is-drop {
     border-color: rgb(251 191 36 / 0.45);
     box-shadow: 0 0 0 3px rgb(251 191 36 / 0.14);
   }
@@ -248,7 +286,13 @@
     border-radius: 0.75rem;
     border: 1px solid rgb(255 255 255 / 0.08);
     background: rgb(0 0 0 / 0.35);
+    height: 0;
+    visibility: hidden;
+  }
+
+  .well.is-visible {
     height: 60px;
+    visibility: visible;
   }
 
   canvas {
@@ -261,6 +305,10 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    margin-top: 0;
+  }
+
+  .capture-panel .row {
     margin-top: 0.75rem;
   }
 

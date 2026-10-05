@@ -1,4 +1,5 @@
 <script>
+  import AudioRecorder from './AudioRecorder.svelte';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 
   const dispatch = createEventDispatcher();
@@ -77,6 +78,7 @@
       </span>
     </div>
     <div class="tools">
+      <AudioRecorder />
       <div class="pills" aria-label="Health">
         <span class={pillClass(whisper.state)} title={whisper.title}>{whisper.label}</span>
         <span class={pillClass(ollanet.state)} title={ollanet.title}>{ollanet.label}</span>
@@ -109,6 +111,7 @@
     max-width: var(--dw-max);
     margin: 0 auto;
     padding: 0.5rem 0.85rem;
+    flex-wrap: wrap;
   }
 
   @media (min-width: 800px) {
@@ -207,7 +210,7 @@
     gap: 0.35rem;
   }
 
-  @media (min-width: 640px) {
+  @media (min-width: 1100px) {
     .pills {
       display: flex;
     }
