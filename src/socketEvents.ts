@@ -1,7 +1,6 @@
-import fs from 'fs';
-import { audioExtensions, saveAudioFile } from './lib/audioLib.ts';
+import { saveAudioFile } from './lib/audioLib.ts';
 import { Socket } from 'socket.io';
-import { emitNotesIndex, forgetTranscription, process } from './lib/transcriptionLib.ts';
+import { emitNotesIndex, process } from './lib/transcriptionLib.ts';
 import { resolveAllowedPath } from './lib/pathAllowLib.ts';
 
 export function socketConnect(socket: Socket, transcriptions: Record<string, any>) {
@@ -48,25 +47,6 @@ export const socketEvents = [
   },
   {
     event: 'delete-transcription',
-    handler: (msg: any) => {
-      if (!msg.jsonFile) return;
-      const allowed = resolveAllowedPath(msg.jsonFile);
-      if (!allowed.ok) {
-        console.warn(`[socket-delete-transcription] rejected: ${allowed.error} (${msg.jsonFile})`);
-        return;
-      }
-      if (!fs.existsSync(allowed.path)) return;
-      console.log(`[socket-delete-transcription] Deleting transcription file: ${allowed.path}`);
-      fs.unlinkSync(allowed.path);
-      forgetTranscription(allowed.path);
-      audioExtensions.forEach((ext) => {
-        const audioFile = allowed.path.replace(/\.json$/i, `.${ext}`);
-        const audioAllowed = resolveAllowedPath(audioFile);
-        if (audioAllowed.ok && fs.existsSync(audioAllowed.path)) {
-          console.log(`[socket-delete-transcription] Deleting associated audio file: ${audioAllowed.path}`);
-          fs.unlinkSync(audioAllowed.path);
-        }
-      });
-    },
+    handler: () => { console.warn('[socket-delete-transcription] Deprecated. Use acknowledged POST /notes/trash/remove. No files were removed.'); },
   },
 ];

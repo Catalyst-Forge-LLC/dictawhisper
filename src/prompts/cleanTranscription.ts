@@ -1,4 +1,5 @@
 export { CLEAN_PROMPT_VERSION } from '../types/transcription.ts';
+import { MAY_DO_INSTRUCTIONS } from './mayDos.ts';
 
 export function buildCleanTranscriptionPrompt(rawText: string, preferredTags: string[] = []): string {
   const preferred =
@@ -15,7 +16,7 @@ ${preferredTags.join(', ')}
   return `
 <AGENT_ROLE>
 You are an expert transcription editor specializing in audio journals.
-Clean the raw Whisper transcript in RAW_TRANSCRIPTION so it is readable, then return cleanedTranscription and tags.
+Clean the raw Whisper transcript in RAW_TRANSCRIPTION so it is readable, then return cleanedTranscription, tags, and mayDos.
 This is a cleanup pass only. It is not a summary, rewrite, or interpretation.
 </AGENT_ROLE>
 
@@ -43,11 +44,13 @@ Generate topic tags based solely on the content. Tags MUST:
 - Be concise, relevant, and non-redundant (aim for 5-15 tags, depending on content length).
 </TOPIC_TAGS>
 ${preferred}
+${MAY_DO_INSTRUCTIONS}
 
 <OUTPUT_JSON_FORMAT>
 {
   "cleanedTranscription": "Cleaned transcription text here",
-  "tags": ["tag-one", "tag-two", "tag-three"]
+  "tags": ["tag-one", "tag-two", "tag-three"],
+  "mayDos": []
 }
 </OUTPUT_JSON_FORMAT>
 

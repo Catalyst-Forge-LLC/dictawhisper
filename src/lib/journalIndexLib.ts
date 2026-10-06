@@ -1,20 +1,24 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { getLoadablePath } from 'sqlite-vec';
 import { isSkippedWatchPath } from './fileSettleLib.ts';
+import { mayDoSummary, validMayDos, type MayDoFilter } from './mayDoLib.ts';
 import { dayOf } from './journalQueryLib.ts';
 
-const SCHEMA_VERSION = '2';
+const SCHEMA_VERSION = '5';
 const PREVIEW_LIMIT = 200;
 
 export type SearchMode = 'lex' | 'semantic' | 'hybrid';
 export type SearchSort = 'recent' | 'oldest' | 'relevance';
+export type IndexFolder = 'active' | 'unfiled' | 'holding';
 
 export type IndexSearchHit = {
+  entryId?: string;
   jsonFile: string;
   basename: string;
+  displayTitle?: string;
   day: string;
   tags: string[];
   preview: string;
@@ -24,11 +28,37 @@ export type IndexSearchHit = {
   hasCleaned: boolean;
   audioError: string | null;
   starred: boolean;
+  mayDoTotalCount: number;
+  mayDoStatusCounts: Record<string, number>;
+  mayDoCount: number;
+  mayDoActiveCount: number;
+  mayDoStatuses: string[];
 };
 
+export type EntryPageOptions = {
+  query?: string; tags?: string[]; since?: string; until?: string; year?: string; month?: string;
+  mode?: SearchMode; sort?: SearchSort; limit?: number; cursor?: string;
+  unreadable?: boolean; starred?: boolean; folder?: IndexFolder; attention?: boolean;
+  mayDos?: MayDoFilter; queryEmbedding?: number[] | null; synonyms?: string[];
+};
+export type EntryPage = {
+  items: IndexSearchHit[]; total: number; countKind: 'exact' | 'ranked';
+  hasMore: boolean; nextCursor: string | null; candidateLimit?: number;
+  mode: SearchMode; expiresAt?: number;
+};
+export class EntryCursorError extends Error {
+  code: 'invalid_cursor' | 'cursor_expired';
+  constructor(code: 'invalid_cursor' | 'cursor_expired') {
+    super(code === 'cursor_expired' ? 'Results changed or expired. Refresh results to continue.' : 'This cursor does not match the current search.');
+    this.code = code;
+  }
+}
+
 export type IndexSummary = {
+  entryId?: string;
   jsonFile: string;
   basename: string;
+  displayTitle?: string;
   day: string;
   year: string;
   month: string;
@@ -38,6 +68,11 @@ export type IndexSummary = {
   hasCleaned: boolean;
   audioError: string | null;
   starred: boolean;
+  mayDoTotalCount: number;
+  mayDoStatusCounts: Record<string, number>;
+  mayDoCount: number;
+  mayDoActiveCount: number;
+  mayDoStatuses: string[];
 };
 
 export type IndexStats = {
@@ -45,6 +80,7 @@ export type IndexStats = {
   notes: number;
   unreadable: number;
   starred: number;
+  mayDos: number;
   embedded: number;
   embedModel: string | null;
   embedDim: number | null;
@@ -57,9 +93,14 @@ export type IndexListOptions = {
   unreadable?: boolean;
   starred?: boolean;
   all?: boolean;
+  folder?: IndexFolder;
+  attention?: boolean;
+  mayDos?: MayDoFilter;
 };
 
 type NoteRow = {
+  display_title: string;
+  entry_id?: string;
   json_file: string;
   basename: string;
   day: string;
@@ -71,6 +112,8 @@ type NoteRow = {
   has_cleaned: number;
   audio_error: string | null;
   starred: number;
+  may_dos: string;
+  cleanup_error: string | null;
   mtime_ms: number;
   text_hash: string;
   body: string;
@@ -90,7 +133,12 @@ export class JournalIndex {
   readonly dbPath: string;
   private db: DatabaseSync;
 
-  constructor(dbPath: string) {
+  private cursorSecret = randomBytes(32);
+  private snapshots = new Map<string, { key: string; hits: IndexSearchHit[]; expiresAt: number; mode: SearchMode }>();
+  private now: () => number;
+
+  constructor(dbPath: string, options: { now?: () => number } = {}) {
+    this.now = options.now || Date.now;
     this.dbPath = path.resolve(dbPath);
     fs.mkdirSync(path.dirname(this.dbPath), { recursive: true });
     this.db = new DatabaseSync(this.dbPath, { allowExtension: true });
@@ -138,10 +186,39 @@ export class JournalIndex {
     if (!noteCols.includes('starred')) {
       this.db.exec('ALTER TABLE notes ADD COLUMN starred INTEGER NOT NULL DEFAULT 0');
     }
+    if (!noteCols.includes('display_title')) {
+      this.db.exec("ALTER TABLE notes ADD COLUMN display_title TEXT NOT NULL DEFAULT ''");
+      const update = this.db.prepare('UPDATE notes SET display_title = ? WHERE json_file = ?');
+      for (const row of this.db.prepare('SELECT json_file FROM notes').all() as { json_file: string }[]) {
+        try { update.run(String(JSON.parse(fs.readFileSync(row.json_file, 'utf8')).displayTitle || ''), row.json_file); } catch { /* Reconciled during refresh. */ }
+      }
+    }
+    if (!noteCols.includes('entry_id')) {
+      this.db.exec("ALTER TABLE notes ADD COLUMN entry_id TEXT NOT NULL DEFAULT ''");
+      const update = this.db.prepare('UPDATE notes SET entry_id = ? WHERE json_file = ?');
+      for (const row of this.db.prepare('SELECT json_file FROM notes').all() as {json_file:string}[]) {
+        try { update.run(String(JSON.parse(fs.readFileSync(row.json_file,'utf8')).entryId || ''),row.json_file); } catch {}
+      }
+    }
+    this.db.exec('CREATE INDEX IF NOT EXISTS notes_entry_id ON notes(entry_id)');
     this.db.exec('CREATE INDEX IF NOT EXISTS notes_starred ON notes(starred)');
+    if (!noteCols.includes('may_dos')) this.db.exec("ALTER TABLE notes ADD COLUMN may_dos TEXT NOT NULL DEFAULT '[]'");
+    if (!noteCols.includes('cleanup_error')) {
+      this.db.exec('ALTER TABLE notes ADD COLUMN cleanup_error TEXT');
+      const update = this.db.prepare('UPDATE notes SET cleanup_error = ? WHERE json_file = ?');
+      for (const row of this.db.prepare('SELECT json_file FROM notes').all() as { json_file: string }[]) {
+        try {
+          const json = JSON.parse(fs.readFileSync(row.json_file, 'utf8'));
+          if (json.cleanupError) update.run(String(json.cleanupError), row.json_file);
+        } catch { /* Missing/unreadable sidecars are reconciled by the existing index refresh. */ }
+      }
+    }
+    const ftsCols = (this.db.prepare('PRAGMA table_info(notes_fts)').all() as { name: string }[]).map(row => row.name);
+    const rebuildFts = ftsCols.length > 0 && !ftsCols.includes('display_title');
+    if (rebuildFts) this.db.exec('DROP TRIGGER IF EXISTS notes_ai; DROP TRIGGER IF EXISTS notes_ad; DROP TRIGGER IF EXISTS notes_au; DROP TABLE notes_fts');
     this.db.exec(`
       CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
-        basename, tags, body, raw,
+        basename, tags, body, raw, display_title,
         content='notes',
         content_rowid='rowid',
         tokenize='unicode61'
@@ -149,20 +226,21 @@ export class JournalIndex {
     `);
     this.db.exec(`
       CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
-        INSERT INTO notes_fts(rowid, basename, tags, body, raw)
-        VALUES (new.rowid, new.basename, new.tags, new.body, new.raw);
+        INSERT INTO notes_fts(rowid, basename, tags, body, raw, display_title)
+        VALUES (new.rowid, new.basename, new.tags, new.body, new.raw, new.display_title);
       END;
       CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
-        INSERT INTO notes_fts(notes_fts, rowid, basename, tags, body, raw)
-        VALUES ('delete', old.rowid, old.basename, old.tags, old.body, old.raw);
+        INSERT INTO notes_fts(notes_fts, rowid, basename, tags, body, raw, display_title)
+        VALUES ('delete', old.rowid, old.basename, old.tags, old.body, old.raw, old.display_title);
       END;
       CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
-        INSERT INTO notes_fts(notes_fts, rowid, basename, tags, body, raw)
-        VALUES ('delete', old.rowid, old.basename, old.tags, old.body, old.raw);
-        INSERT INTO notes_fts(rowid, basename, tags, body, raw)
-        VALUES (new.rowid, new.basename, new.tags, new.body, new.raw);
+        INSERT INTO notes_fts(notes_fts, rowid, basename, tags, body, raw, display_title)
+        VALUES ('delete', old.rowid, old.basename, old.tags, old.body, old.raw, old.display_title);
+        INSERT INTO notes_fts(rowid, basename, tags, body, raw, display_title)
+        VALUES (new.rowid, new.basename, new.tags, new.body, new.raw, new.display_title);
       END;
     `);
+    if (rebuildFts) this.db.exec("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')");
     const version = this.meta('schema_version');
     if (version !== SCHEMA_VERSION) this.setMeta('schema_version', SCHEMA_VERSION);
   }
@@ -200,6 +278,7 @@ export class JournalIndex {
       notes,
       unreadable,
       starred,
+      mayDos: Number((this.db.prepare('SELECT COUNT(*) AS n FROM notes WHERE json_array_length(may_dos) > 0').get() as { n: number }).n),
       embedded,
       embedModel: this.meta('embed_model'),
       embedDim: dimRaw ? Number(dimRaw) : null,
@@ -227,19 +306,21 @@ export class JournalIndex {
   upsertSidecar(jsonFile: string): { rowid: number; changed: boolean; skipEmbed: boolean } | null {
     const parsed = readSidecarRow(jsonFile);
     if (!parsed) return null;
-    const existing = this.db.prepare('SELECT rowid, text_hash, mtime_ms FROM notes WHERE json_file = ?').get(
+    const existing = this.db.prepare('SELECT rowid, text_hash, mtime_ms, display_title, entry_id FROM notes WHERE json_file = ?').get(
       parsed.json_file,
-    ) as { rowid: number; text_hash: string; mtime_ms: number } | undefined;
-    if (existing && existing.text_hash === parsed.text_hash && existing.mtime_ms === parsed.mtime_ms) {
+    ) as { rowid: number; text_hash: string; mtime_ms: number; display_title: string; entry_id: string } | undefined;
+    if (existing && existing.text_hash === parsed.text_hash && existing.mtime_ms === parsed.mtime_ms && existing.display_title === parsed.display_title && existing.entry_id === (parsed.entry_id || '')) {
       return { rowid: rowId(existing.rowid), changed: false, skipEmbed: Boolean(parsed.audio_error) };
     }
     if (existing) {
       this.db
         .prepare(
-          `UPDATE notes SET basename=?, day=?, year=?, month=?, folder=?, tags=?, preview=?,
-           has_cleaned=?, audio_error=?, starred=?, mtime_ms=?, text_hash=?, body=?, raw=? WHERE json_file=?`,
+          `UPDATE notes SET entry_id=?, display_title=?, basename=?, day=?, year=?, month=?, folder=?, tags=?, preview=?,
+           has_cleaned=?, audio_error=?, starred=?, may_dos=?, cleanup_error=?, mtime_ms=?, text_hash=?, body=?, raw=? WHERE json_file=?`,
         )
         .run(
+          parsed.entry_id || '',
+          parsed.display_title,
           parsed.basename,
           parsed.day,
           parsed.year,
@@ -250,6 +331,8 @@ export class JournalIndex {
           parsed.has_cleaned,
           parsed.audio_error,
           parsed.starred,
+          parsed.may_dos,
+          parsed.cleanup_error,
           parsed.mtime_ms,
           parsed.text_hash,
           parsed.body,
@@ -263,15 +346,17 @@ export class JournalIndex {
           // vec table may be empty
         }
       }
-      return { rowid: rowId(existing.rowid), changed: true, skipEmbed: Boolean(parsed.audio_error) || !parsed.body };
+      return { rowid: rowId(existing.rowid), changed: true, skipEmbed: Boolean(parsed.audio_error) || !parsed.body || existing.text_hash === parsed.text_hash };
     }
     this.db
       .prepare(
-        `INSERT INTO notes (json_file, basename, day, year, month, folder, tags, preview, has_cleaned,
-         audio_error, starred, mtime_ms, text_hash, body, raw)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO notes (entry_id, display_title, json_file, basename, day, year, month, folder, tags, preview, has_cleaned,
+         audio_error, starred, may_dos, cleanup_error, mtime_ms, text_hash, body, raw)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
+        parsed.entry_id || '',
+        parsed.display_title,
         parsed.json_file,
         parsed.basename,
         parsed.day,
@@ -283,6 +368,8 @@ export class JournalIndex {
         parsed.has_cleaned,
         parsed.audio_error,
         parsed.starred,
+        parsed.may_dos,
+        parsed.cleanup_error,
         parsed.mtime_ms,
         parsed.text_hash,
         parsed.body,
@@ -308,6 +395,14 @@ export class JournalIndex {
       }
     }
     this.db.prepare('DELETE FROM notes WHERE json_file = ?').run(key);
+  }
+  relocateSidecar(oldFile: string, newFile: string) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      if (!this.upsertSidecar(newFile)) throw new Error('Moved entry could not be indexed.');
+      if (path.resolve(oldFile) !== path.resolve(newFile)) this.removeSidecar(oldFile);
+      this.db.exec('COMMIT');
+    } catch(error) { this.db.exec('ROLLBACK'); throw error; }
   }
 
   putEmbedding(rowid: number, values: number[]) {
@@ -392,7 +487,8 @@ export class JournalIndex {
       | undefined;
     if (exact) return exact.json_file;
     const rows = this.db.prepare('SELECT json_file FROM notes WHERE basename = ? COLLATE NOCASE').all(path.basename(wanted)) as {
-      json_file: string;
+      entry_id?: string;
+  json_file: string;
     }[];
     return rows.length === 1 ? rows[0].json_file : null;
   }
@@ -446,8 +542,13 @@ export class JournalIndex {
         params.push(newest.year);
       }
     }
-    const sql = `SELECT json_file, basename, day, year, month, folder, tags, preview, has_cleaned, audio_error, starred
-      FROM notes ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    if (options.mayDos || options.folder || options.attention) {
+      const filter = this.filterSql({ tags: [], mayDos: options.mayDos, folder: options.folder, attention: options.attention });
+      where.push(filter.extra.replace(/^AND /, ''));
+      params.push(...filter.params);
+    }
+    const sql = `SELECT entry_id, json_file, display_title, basename, day, year, month, folder, tags, preview, has_cleaned, audio_error, starred, may_dos
+      FROM notes n ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
       ORDER BY day DESC, basename DESC`;
     const rows = this.db.prepare(sql).all(...params) as Array<
       Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'body' | 'raw'>
@@ -455,55 +556,104 @@ export class JournalIndex {
     return rows.map(toSummary);
   }
 
-  search(options: {
-    query?: string;
-    tags?: string[];
-    since?: string;
-    until?: string;
-    year?: string;
-    month?: string;
-    mode?: SearchMode;
-    sort?: SearchSort;
-    limit?: number;
-    unreadable?: boolean;
-    starred?: boolean;
-    folder?: 'unfiled' | 'holding';
-    queryEmbedding?: number[] | null;
-    synonyms?: string[];
-  }): IndexSearchHit[] {
-    const limit = Math.min(50, Math.max(1, options.limit || 20));
-    const tags = (options.tags || []).map((tag) => tag.trim()).filter(Boolean);
-    const query = String(options.query || '').trim();
-    const range = yearMonthRange(options.year, options.month);
-    const since = options.since || range.since;
-    const until = options.until || range.until;
-    const filenameQuery = isFilenameQuery(query);
-    const mode = filenameQuery ? 'lex' : options.mode || 'lex';
-    const filters = {
-      tags,
-      since,
-      until,
-      unreadable: options.unreadable,
-      starred: options.starred,
-      folder: options.folder,
-    };
-    if (!query && !tags.length && !options.unreadable && !options.starred && !options.folder && !since && !until) {
-      return [];
-    }
+  /** Legacy callers keep their capped array response. New clients use searchPage. */
+  search(options: EntryPageOptions): IndexSearchHit[] {
+    if (!options.query?.trim() && !options.tags?.length && !options.since && !options.until && !options.year &&
+      !options.month && !options.folder && !options.starred && !options.unreadable && !options.attention && !options.mayDos) return [];
+    return this.searchPage({ ...options, limit: options.limit || 20, cursor: undefined }).items;
+  }
 
-    let hits: IndexSearchHit[];
-    if (!query) {
-      hits = this.filterRows(filters, limit).map((row) => toHit(row, 0));
-    } else {
-      const lexHits = this.searchLex(query, { ...filters, limit: 80, synonyms: options.synonyms });
-      if (mode === 'lex' || !options.queryEmbedding || !this.hasVec()) {
-        hits = lexHits.slice(0, limit);
-      } else {
-        const semHits = this.searchSemantic(options.queryEmbedding, { ...filters, limit: 80 });
-        hits = mode === 'semantic' ? semHits.slice(0, limit) : rrfMerge(lexHits, semHits, limit);
+  private encodeCursor(value: object): string {
+    const body = Buffer.from(JSON.stringify(value)).toString('base64url');
+    return body + '.' + createHmac('sha256', this.cursorSecret).update(body).digest('base64url');
+  }
+
+  private decodeCursor(cursor: string): { key: string; offset: number; revision?: string; snapshot?: string } {
+    try {
+      if (cursor.length > 2048) throw new Error();
+      const [body, signature, extra] = cursor.split('.');
+      const expected = createHmac('sha256', this.cursorSecret).update(body).digest();
+      const actual = Buffer.from(signature, 'base64url');
+      if (extra || actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error();
+      const value = JSON.parse(Buffer.from(body, 'base64url').toString());
+      if (!Number.isSafeInteger(value.offset) || value.offset < 1 || typeof value.key !== 'string') throw new Error();
+      return value;
+    } catch { throw new EntryCursorError('invalid_cursor'); }
+  }
+
+  searchPage(options: EntryPageOptions): EntryPage {
+    const limit = Math.min(50, Math.max(1, Math.floor(options.limit || 50)));
+    const query = String(options.query || '').trim();
+    const range = options.since || options.until ? {} : yearMonthRange(options.year, options.month);
+    const filters = {
+      tags: [...new Set((options.tags || []).map(tag => tag.trim().toLowerCase()).filter(Boolean))].sort(),
+      since: options.since || range.since, until: options.until || range.until,
+      unreadable: Boolean(options.unreadable), starred: Boolean(options.starred), folder: options.folder,
+      attention: Boolean(options.attention),
+      mayDos: Array.isArray(options.mayDos) ? [...new Set(options.mayDos)].sort() : options.mayDos,
+    };
+    const requestedMode = !query || isFilenameQuery(query) ? 'lex' : options.mode || 'lex';
+    const sort = options.sort || (query ? 'relevance' : 'recent');
+    const key = createHash('sha256').update(JSON.stringify({ query, filters, requestedMode, sort, synonyms: options.synonyms || [] })).digest('hex');
+    const cursor = options.cursor ? this.decodeCursor(options.cursor) : null;
+    if (cursor && cursor.key !== key) throw new EntryCursorError('invalid_cursor');
+    const offset = cursor?.offset || 0;
+    const now = this.now();
+    for (const [id, snapshot] of this.snapshots) if (snapshot.expiresAt <= now) this.snapshots.delete(id);
+    let snapshot = cursor?.snapshot ? this.snapshots.get(cursor.snapshot) : undefined;
+    if (cursor?.snapshot && !snapshot) throw new EntryCursorError('cursor_expired');
+    if (!cursor && requestedMode !== 'lex' && options.queryEmbedding && this.hasVec()) {
+      const lex = this.searchLex(query, { ...filters, limit: 500, synonyms: options.synonyms });
+      const sem = this.searchSemantic(options.queryEmbedding, { ...filters, limit: 500 });
+      const hits = sortHits(requestedMode === 'semantic' ? sem : rrfMerge(lex, sem, 500), sort);
+      const id = randomUUID();
+      snapshot = { key, hits, expiresAt: now + 60_000, mode: requestedMode };
+      // Bound both lifetime and memory, even when callers repeatedly create new searches.
+      while (this.snapshots.size >= 32) this.snapshots.delete(this.snapshots.keys().next().value!);
+      this.snapshots.set(id, snapshot);
+      return this.snapshotPage(id, snapshot, 0, limit);
+    }
+    if (snapshot) return this.snapshotPage(cursor!.snapshot!, snapshot, offset, limit);
+    // Offset paging is valid only while this index is unchanged. Never silently skip/duplicate after an edit.
+    const revision = JSON.stringify(this.db.prepare('SELECT total_changes() AS writes').get()) +
+      JSON.stringify(this.db.prepare('PRAGMA data_version').get());
+    if (cursor && cursor.revision !== revision) throw new EntryCursorError('cursor_expired');
+    const { extra, params } = this.filterSql(filters);
+    let from = 'notes n'; let where = `1=1 ${extra}`; let args: (string | number)[] = params;
+    let rank = '0'; let snippet = 'NULL';
+    if (query) {
+      const match = buildFtsQuery(query, options.synonyms);
+      if (match) {
+        from = 'notes_fts JOIN notes n ON n.rowid = notes_fts.rowid';
+        where = `notes_fts MATCH ? ${extra}`; args = [match, ...params];
+        rank = 'bm25(notes_fts)'; snippet = "snippet(notes_fts, 2, '', '', '…', 24)";
+        try { this.db.prepare(`SELECT COUNT(*) AS total FROM ${from} WHERE ${where}`).get(...args); }
+        catch { from = 'notes n'; }
+      }
+      if (from === 'notes n') {
+        const needle = query.replace(/^filename:\s*/i, '').trim().replace(/[!%_]/g, char => `!${char}`);
+        where = needle.replace(/!/g, '').length < 2 ? '0' : `lower(n.basename) LIKE ? ESCAPE '!' ${extra}`;
+        args = where === '0' ? [] : [`%${needle.toLowerCase()}%`, ...params];
+        rank = '0'; snippet = 'NULL';
       }
     }
-    return sortHits(hits, options.sort || (query ? 'relevance' : 'recent'));
+    const total = Number((this.db.prepare(`SELECT COUNT(*) AS total FROM ${from} WHERE ${where}`).get(...args) as { total: number }).total);
+    const direction = sort === 'oldest' ? 'ASC' : 'DESC';
+    const order = (sort === 'relevance' && query ? 'rank ASC, ' : '') + `n.day ${direction}, n.basename ${direction}, n.json_file ${direction}`;
+    const rows = this.db.prepare(`SELECT n.*, ${rank} AS rank, ${snippet} AS snippet FROM ${from} WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`)
+      .all(...args, limit, offset) as (NoteRow & { rank: number; snippet?: string })[];
+    const items = rows.map(row => toHit(row, Number(row.rank), { snippet: row.snippet || undefined, cue: query ? cueIndexForQuery(row.body, query) : null }));
+    const hasMore = offset + items.length < total;
+    return { items, total, countKind: 'exact', mode: 'lex', hasMore,
+      nextCursor: hasMore ? this.encodeCursor({ key, revision, offset: offset + items.length }) : null };
+  }
+
+  private snapshotPage(id: string, snapshot: { key: string; hits: IndexSearchHit[]; expiresAt: number; mode: SearchMode }, offset: number, limit: number): EntryPage {
+    const items = snapshot.hits.slice(offset, offset + limit);
+    const hasMore = offset + items.length < snapshot.hits.length;
+    return { items, total: snapshot.hits.length, countKind: 'ranked', candidateLimit: 500,
+      mode: snapshot.mode, expiresAt: snapshot.expiresAt, hasMore,
+      nextCursor: hasMore ? this.encodeCursor({ key: snapshot.key, snapshot: id, offset: offset + items.length }) : null };
   }
 
   private searchLex(
@@ -514,7 +664,9 @@ export class JournalIndex {
       until?: string;
       unreadable?: boolean;
       starred?: boolean;
-      folder?: 'unfiled' | 'holding';
+      folder?: IndexFolder;
+      attention?: boolean;
+      mayDos?: MayDoFilter;
       limit: number;
       synonyms?: string[];
     },
@@ -525,13 +677,13 @@ export class JournalIndex {
       try {
         const rows = this.db
           .prepare(
-            `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
+            `SELECT n.entry_id, n.json_file, n.display_title, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred, n.may_dos,
                     n.body, snippet(notes_fts, 2, '', '', '…', 24) AS snippet,
                     bm25(notes_fts) AS rank
              FROM notes_fts
              JOIN notes n ON n.rowid = notes_fts.rowid
              WHERE notes_fts MATCH ? ${extra}
-             ORDER BY rank
+             ORDER BY rank, n.day DESC, n.json_file DESC
              LIMIT ?`,
           )
           .all(match, ...params, options.limit) as Array<
@@ -564,7 +716,7 @@ export class JournalIndex {
     if (needle.replace(/!/g, '').length < 2) return [];
     const rows = this.db
       .prepare(
-        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred
+        `SELECT n.entry_id, n.json_file, n.display_title, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred, n.may_dos
          FROM notes n
          WHERE lower(n.basename) LIKE ? ESCAPE '!' ${options.extra}
          ORDER BY n.day DESC, n.basename DESC
@@ -578,26 +730,29 @@ export class JournalIndex {
 
   private searchSemantic(
     embedding: number[],
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; folder?: 'unfiled' | 'holding'; limit: number },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; folder?: IndexFolder;
+    attention?: boolean;
+    mayDos?: MayDoFilter; limit: number },
   ): IndexSearchHit[] {
     const { extra, params } = this.filterSql(options);
     const rows = this.db
       .prepare(
-        `SELECT n.json_file, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred,
-                v.distance AS rank
+        `SELECT n.entry_id, n.json_file, n.display_title, n.basename, n.day, n.tags, n.preview, n.has_cleaned, n.audio_error, n.starred, n.may_dos,
+                vec_distance_L2(v.embedding, ?) AS rank
          FROM notes_vec v
          JOIN notes n ON n.rowid = v.rowid
-         WHERE v.embedding MATCH ? AND k = ? ${extra}
-         ORDER BY v.distance`,
+         WHERE 1=1 ${extra}
+         ORDER BY rank, n.day DESC, n.json_file DESC LIMIT ?`,
       )
-      .all(JSON.stringify(embedding), options.limit, ...params) as Array<
+      .all(JSON.stringify(embedding), ...params, options.limit) as Array<
       Omit<NoteRow, 'mtime_ms' | 'text_hash' | 'body' | 'raw' | 'year' | 'month' | 'folder'> & { rank: number }
     >;
     return rows.map((row) => toHit(row, Number(row.rank) || 0));
   }
 
   private filterRows(
-    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; folder?: 'unfiled' | 'holding' },
+    options: { tags: string[]; since?: string; until?: string; unreadable?: boolean; starred?: boolean; folder?: IndexFolder;
+    attention?: boolean; mayDos?: MayDoFilter },
     limit: number,
   ): NoteRow[] {
     const { extra, params } = this.filterSql(options);
@@ -612,7 +767,9 @@ export class JournalIndex {
     until?: string;
     unreadable?: boolean;
     starred?: boolean;
-    folder?: 'unfiled' | 'holding';
+    folder?: IndexFolder;
+    attention?: boolean;
+    mayDos?: MayDoFilter;
   }): {
     extra: string;
     params: Array<string | number>;
@@ -633,19 +790,33 @@ export class JournalIndex {
     if (options.starred) {
       extra.push('AND n.starred = 1');
     }
-    if (options.folder) {
+    if (options.folder === 'active') extra.push("AND n.folder NOT IN ('holding', 'trash')");
+    else if (options.folder) {
       extra.push('AND n.folder = ?');
       params.push(options.folder);
     }
+    if (options.attention) {
+      extra.push("AND (n.folder IN ('holding', 'unfiled') OR COALESCE(n.audio_error, '') != '' OR COALESCE(n.cleanup_error, '') != '')");
+    }
+    if (options.mayDos === 'any') extra.push('AND json_array_length(n.may_dos) > 0');
+    else if (options.mayDos) {
+      const statuses = Array.isArray(options.mayDos) ? options.mayDos : [options.mayDos];
+      if (!statuses.length) extra.push('AND 0');
+      else {
+        extra.push(`AND EXISTS (SELECT 1 FROM json_each(n.may_dos) md WHERE json_extract(md.value, '$.status') IN (${statuses.map(() => '?').join(',')}))`);
+        params.push(...statuses);
+      }
+    }
     for (const tag of options.tags) {
-      extra.push('AND lower(n.tags) LIKE ?');
-      params.push(`%${JSON.stringify(tag.toLowerCase()).slice(1, -1)}%`);
+      extra.push('AND EXISTS (SELECT 1 FROM json_each(n.tags) tag WHERE lower(tag.value) = ?)');
+      params.push(tag.toLowerCase());
     }
     return { extra: extra.join(' '), params };
   }
 }
 
 function toSummary(row: {
+  entry_id?: string;
   json_file: string;
   basename: string;
   day: string;
@@ -656,11 +827,15 @@ function toSummary(row: {
   preview: string;
   has_cleaned: number;
   audio_error: string | null;
+  display_title?: string;
   starred?: number;
+  may_dos?: string;
 }): IndexSummary {
   return {
+    entryId: row.entry_id || undefined,
     jsonFile: row.json_file,
     basename: row.basename,
+    displayTitle: row.display_title || undefined,
     day: row.day,
     year: row.year,
     month: row.month,
@@ -670,26 +845,32 @@ function toSummary(row: {
     hasCleaned: Boolean(row.has_cleaned),
     audioError: row.audio_error,
     starred: Boolean(row.starred),
+    ...mayDoSummary(JSON.parse(row.may_dos || '[]')),
   };
 }
 
 function toHit(
   row: {
-    json_file: string;
+    entry_id?: string;
+  json_file: string;
     basename: string;
     day: string;
     tags: string;
     preview: string;
     has_cleaned: number;
     audio_error: string | null;
+    display_title?: string;
     starred?: number;
+    may_dos?: string;
   },
   score: number,
   extra: { snippet?: string; cue?: number | null } = {},
 ): IndexSearchHit {
   return {
+    entryId: row.entry_id || undefined,
     jsonFile: row.json_file,
     basename: row.basename,
+    displayTitle: row.display_title || undefined,
     day: row.day,
     tags: parseTags(row.tags),
     preview: row.preview,
@@ -699,6 +880,7 @@ function toHit(
     hasCleaned: Boolean(row.has_cleaned),
     audioError: row.audio_error,
     starred: Boolean(row.starred),
+    ...mayDoSummary(JSON.parse(row.may_dos || '[]')),
   };
 }
 
@@ -726,7 +908,7 @@ function previewOf(text: string): string {
 
 export function readSidecarRow(jsonFile: string): NoteRow | null {
   const resolved = path.resolve(jsonFile);
-  if (!fs.existsSync(resolved)) return null;
+  if (isSkippedWatchPath(resolved) || !fs.existsSync(resolved)) return null;
   let json: Record<string, unknown>;
   try {
     json = JSON.parse(fs.readFileSync(resolved, 'utf8'));
@@ -748,11 +930,13 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
     mtimeMs = 0;
   }
   const basename = path.basename(resolved);
-  const day = dayOf(resolved, basename.replace(/\.json$/i, ''), mtimeMs);
+  const day = typeof json.recordedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(json.recordedDate) ? json.recordedDate : dayOf(resolved, basename.replace(/\.json$/i, ''), mtimeMs);
   const starred = json.starred === true || json.starred === 1 ? 1 : 0;
   const textHash = createHash('sha1').update(`${cleaned}\0${raw}\0${tags.join(',')}\0${starred}`).digest('hex');
   return {
+    entry_id: String(json.entryId || ''),
     json_file: resolved,
+    display_title: String(json.displayTitle || ''),
     basename,
     day,
     year: day.slice(0, 4),
@@ -763,6 +947,8 @@ export function readSidecarRow(jsonFile: string): NoteRow | null {
     has_cleaned: cleaned ? 1 : 0,
     audio_error: audioError,
     starred,
+    may_dos: JSON.stringify(validMayDos(json.mayDos)),
+    cleanup_error: json.cleanupError ? String(json.cleanupError) : null,
     mtime_ms: mtimeMs,
     text_hash: textHash,
     body: cleaned || raw,
@@ -893,7 +1079,8 @@ function sortHits(hits: IndexSearchHit[], sort: SearchSort): IndexSearchHit[] {
   copy.sort((a, b) => {
     const day = String(a.day).localeCompare(String(b.day));
     const name = String(a.basename).localeCompare(String(b.basename));
-    return sort === 'oldest' ? day || name : -(day || name);
+    const key = String(a.jsonFile).localeCompare(String(b.jsonFile));
+    return sort === 'oldest' ? day || name || key : -(day || name || key);
   });
   return copy;
 }
@@ -911,7 +1098,7 @@ function rrfMerge(lex: IndexSearchHit[], sem: IndexSearchHit[], limit: number): 
     else scores.set(hit.jsonFile, { hit, score: add });
   });
   return [...scores.values()]
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.score - a.score || b.hit.day.localeCompare(a.hit.day) || b.hit.jsonFile.localeCompare(a.hit.jsonFile))
     .slice(0, limit)
     .map((row) => ({ ...row.hit, score: row.score }));
 }

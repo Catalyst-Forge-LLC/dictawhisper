@@ -163,8 +163,11 @@ export function resolveListenPort(
   uiPort: number | undefined,
   apiLeasePort: number | undefined,
   configPort: number,
-  serveUi = false
+  serveUi = false,
+  explicitUiPort?: string,
 ): number {
+  const requestedUi=Number(explicitUiPort);
+  if(serveUi && Number.isInteger(requestedUi) && requestedUi>0 && requestedUi<=65535)return requestedUi;
   if (serveUi) return uiPort || 7777;
   return resolveApiListenPort(envPort, uiPort, apiLeasePort, configPort);
 }
@@ -180,7 +183,8 @@ export function loadConfig(configPath: string = resolveConfigPath()): DictaConfi
         localslipGet('dictawhisper'),
         localslipGet('dictawhisper-api'),
         parsed.http.port,
-        servePackagedUi()
+        servePackagedUi(),
+        process.env.DICTA_UI_PORT,
       ),
       corsOrigins: parsed.http.corsOrigins,
       tailscale:

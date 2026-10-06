@@ -1,15 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import { allowedRoots } from './pathAllowLib.ts';
+import { resolveAllowedPath } from './pathAllowLib.ts';
 
 function pathInsideWatchRoot(filePath: string): string {
-  const resolved = path.resolve(filePath);
-  for (const root of allowedRoots()) {
-    const rel = path.relative(root, resolved);
-    if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) continue;
-    return resolved;
-  }
-  throw new Error(`path is outside configured watch roots: ${filePath}`);
+  const allowed = resolveAllowedPath(filePath);
+  if (!allowed.ok) throw new Error(allowed.error);
+  return allowed.path;
 }
 
 export async function moveFile(filePath: string, destPath: string): Promise<void> {
@@ -22,9 +18,9 @@ export async function moveFile(filePath: string, destPath: string): Promise<void
     if (fileExists) {
       const error = new Error(`Destination file already exists: ${dest}`);
       console.error(`[fs-move-error] ${error.message}`);
-      return resolve();
+      return reject(error);
     }
-    fs.copyFile(src, dest, (err) => {
+    fs.copyFile(src, dest, fs.constants.COPYFILE_EXCL, (err) => {
       if (err) {
         console.error('[fs-copy-error] copy failed', src, dest, err);
         reject(err);

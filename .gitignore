@@ -5,6 +5,7 @@ data/audio-files/*
 data/*.sqlite
 data/*.sqlite-*
 data/asr-compare/
+data/.dictawhisper/
 !data/audio-files/.gitkeep
 *.log
 .DS_Store

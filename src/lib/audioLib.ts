@@ -4,6 +4,8 @@ import os from 'os';
 import path from 'path';
 import { config } from '../config.ts';
 
+export const MAX_UPLOAD_BYTES = 80 * 1024 * 1024;
+
 export const audioExtensions = ['webm', 'mp3', 'm4a', 'wav', 'ogg'];
 
 export const audioFileRegex = new RegExp(`\\.(${audioExtensions.join('|')})$`, 'i');
@@ -64,29 +66,36 @@ export function findAudioForSidecar(jsonFile: string): string | null {
 }
 
 export function saveAudioFile(dataUrl: string, clipName: string): string {
-  const folder = config.watch.browserDropFolder;
-  fs.mkdirSync(folder, { recursive: true });
-  const safeName = (clipName || 'voice-recording').replace(/[<>:"/\\|?*]/g, '-');
-  const filePath = path.join(folder, `${safeName}.webm`);
   const data = dataUrl.replace(/data:.*?;base64,/i, '');
-  console.log('[save-audio-file] Saving Audio File', { filePath, dataLength: data.length });
-  fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
-  return filePath;
+  return saveUploadedAudio(Buffer.from(data, 'base64'), `${clipName || 'voice-recording'}.webm`, clipName);
 }
 
-export function saveUploadedAudio(buffer: Buffer, originalName: string, clipName?: string): string {
-  const folder = config.watch.browserDropFolder;
-  fs.mkdirSync(folder, { recursive: true });
-  const ext = path.extname(originalName || '').toLowerCase() || '.webm';
-  const safeExt = audioExtensions.includes(ext.slice(1)) ? ext : '.webm';
-  const base = (clipName || path.basename(originalName || 'voice-recording', ext) || 'voice-recording').replace(
-    /[<>:"/\\|?*]/g,
-    '-'
-  );
-  const filePath = path.join(folder, `${base}${safeExt}`);
-  fs.writeFileSync(filePath, buffer);
-  console.log('[save-audio-file] saved upload', { filePath, bytes: buffer.length });
-  return filePath;
+/** Recognize supported containers independently of extension/MIME metadata. */
+export function detectAudioExtension(buffer: Buffer): string | null {
+  if (buffer.subarray(0,4).toString() === 'RIFF' && buffer.subarray(8,12).toString() === 'WAVE') return '.wav';
+  if (buffer.subarray(0,4).toString() === 'OggS') return '.ogg';
+  if (buffer.subarray(0,3).toString() === 'ID3' || (buffer.length > 1 && buffer[0] === 255 && (buffer[1] & 224) === 224)) return '.mp3';
+  if (buffer.length >= 4 && buffer.readUInt32BE(0) === 0x1a45dfa3) return '.webm';
+  if (buffer.subarray(4,8).toString() === 'ftyp') return '.m4a';
+  return null;
+}
+
+export function saveUploadedAudio(buffer: Buffer, originalName: string, clipName?: string, destination = config.watch.browserDropFolder): string {
+  if (!buffer.length || buffer.length > MAX_UPLOAD_BYTES) throw new Error('Audio must be nonempty and at most 80 MiB.');
+  const detected = detectAudioExtension(buffer);
+  if (!detected) throw new Error('Unsupported audio container. Use WebM, MP3, M4A, WAV, or OGG.');
+  fs.mkdirSync(destination, { recursive: true });
+  const originalExt = path.extname(originalName || '');
+  const base = (clipName || path.basename(originalName || 'voice-recording', originalExt) || 'voice-recording')
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/[. ]+$/, '').slice(0, 160) || 'voice-recording';
+  const safeBase = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base) ? '_' + base : base;
+  for (let suffix = 1; suffix < 10_000; suffix++) {
+    const file = path.join(destination, `${safeBase}${suffix > 1 ? ' (' + suffix + ')' : ''}${detected}`);
+    if (fs.existsSync(file.replace(/\.[^.]+$/, '.json'))) continue;
+    try { fs.writeFileSync(file, buffer, { flag: 'wx' }); return file; }
+    catch (error: any) { if (error.code !== 'EEXIST') throw error; }
+  }
+  throw new Error('Too many files have this name. Choose another label.');
 }
 
 export type AudioProbe = {

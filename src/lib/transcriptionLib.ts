@@ -1,5 +1,10 @@
+import { activity } from './activityLib.ts';
+import { preserveHumanEdits } from './humanEditsLib.ts';
 import path from 'path';
+import { mayDoExtractionState } from './mayDoLib.ts';
 import fs from 'fs';
+import { ensureEntryId } from './entryIdentityLib.ts';
+import { assertEntryWritable, entryOperationPending } from './entryOperationLib.ts';
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import z from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -17,6 +22,8 @@ import { ollanetIsConfigured } from './ollanetReadyLib.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
 import { applyCleanupProvenance, dictawhisperVersion } from './cleanupProvenanceLib.ts';
 import { dropSidecar, indexSidecar, notesIndexReload } from './journalService.ts';
+import {getJournalIndex} from './journalIndexLib.ts';
+import { isMayDoStatus, mayDoCandidateSchema, mayDoSourceHash, mayDoSummary, mergeMayDos, validMayDos, MAY_DO_VERSION } from './mayDoLib.ts';
 
 export const transcriptions: Record<string, any> = {};
 
@@ -37,13 +44,12 @@ export function forgetTranscription(jsonFile: string) {
 }
 
 export function relocateTranscription(oldJson: string, newJson: string) {
+  getJournalIndex()?.relocateSidecar(oldJson,newJson);
   if (oldJson === newJson) return;
   if (Object.hasOwn(transcriptions, oldJson)) {
     transcriptions[newJson] = transcriptions[oldJson];
     delete transcriptions[oldJson];
   }
-  dropSidecar(oldJson);
-  if (fs.existsSync(newJson)) indexSidecar(newJson);
 }
 
 const PREVIEW_LIMIT = 200;
@@ -62,6 +68,9 @@ export function summarizeTranscription(jsonFile: string, json: any = transcripti
     jsonFile,
     basename: path.basename(jsonFile),
     transcriptionJson: {
+      ...mayDoSummary(json?.mayDos),
+      entryId: json?.entryId, recordedDate: json?.recordedDate, recordedAtSource: json?.recordedAtSource,
+      displayTitle: json?.displayTitle,
       tags: Array.isArray(json?.tags) ? json.tags : [],
       elapsed: json?.elapsed ?? null,
       cleanupError: json?.cleanupError ?? null,
@@ -106,7 +115,7 @@ export function readTranscription(jsonFile: string) {
     fs.writeFileSync(jsonFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
   }
   transcriptions[jsonFile] = transcriptionJson;
-  return { jsonFile, transcriptionJson };
+  return { jsonFile, transcriptionJson: { ...transcriptionJson, mayDoState: mayDoExtractionState(transcriptionJson) } };
 }
 
 export function emitTranscription(target: Socket | SocketIOServer | null = null, jsonFile: string, elapsed: string | null = null) {
@@ -148,23 +157,39 @@ function normalizeTags(tags: unknown): string[] {
 
 export function patchTranscription(
   jsonFile: string,
-  patch: { tags?: unknown; starred?: boolean },
+  patch: { displayTitle?: string; tags?: unknown; expectedTags?: unknown; starred?: boolean; mayDo?: { id: string; status: unknown; expectedStatus?: unknown } },
 ) {
+  assertEntryWritable(jsonFile);
   if (!fs.existsSync(jsonFile)) {
     throw new Error('note not found');
   }
   const json = JSON.parse(fs.readFileSync(jsonFile, 'utf-8')) as TranscriptionDocument;
+  ensureEntryId(json);
   if (patch.tags !== undefined) {
+    if(patch.expectedTags !== undefined && JSON.stringify(normalizeTags(json.tags)) !== JSON.stringify(normalizeTags(patch.expectedTags))) throw new Error('Tags changed elsewhere. Refresh before Undo.');
     json.tags = normalizeTags(patch.tags);
+    json.tagsEditedAt = new Date().toISOString();
+  }
+  if (patch.displayTitle !== undefined) {
+    if (typeof patch.displayTitle !== 'string' || patch.displayTitle.trim().length > 160) throw new Error('invalid display title');
+    json.displayTitle = patch.displayTitle.trim();
   }
   if (typeof patch.starred === 'boolean') {
     json.starred = patch.starred;
+  }
+  if (patch.mayDo) {
+    if (!isMayDoStatus(patch.mayDo.status)) throw new Error('invalid MayDo status');
+    const row = validMayDos(json.mayDos).find(row => row.id === patch.mayDo?.id);
+    if (!row) throw new Error('MayDo not found');
+    if (patch.mayDo.expectedStatus !== undefined && row.status !== patch.mayDo.expectedStatus) throw new Error('This action changed elsewhere. Refresh the entry before trying again.');
+    row.status = patch.mayDo.status;
+    row.updatedAt = new Date().toISOString();
   }
   fs.writeFileSync(jsonFile, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
   transcriptions[jsonFile] = json;
   indexSidecar(jsonFile);
   liveIo?.emit('transcription', { jsonFile, transcriptionJson: json });
-  return { jsonFile, transcriptionJson: json };
+  return { jsonFile, transcriptionJson: { ...json, mayDoState: mayDoExtractionState(json) } };
 }
 
 export function getTranscriptionFilename(file: string): string {
@@ -190,11 +215,27 @@ export function checkTranscription(file: string): {
   return { isProcessed: false, transcriptionFile, transcriptionExists };
 }
 
+const cleaning = new Map<string, Promise<{ err: Error | null; result?: string }>>();
+
 export async function cleanTranscription(
   file: string,
   callback: (err: Error | null, result?: string) => void,
   options: { reclean?: boolean } = {}
 ) {
+  const key = path.resolve(getTranscriptionFilename(file));
+  if (cleaning.has(key)) { const result = await cleaning.get(key)!; callback(result.err, result.result); return; }
+  let resolve!: (result: { err: Error | null; result?: string }) => void;
+  cleaning.set(key, new Promise(done => { resolve = done; }));
+  activity.update(file, 'cleaning', { hasTranscript: true });
+  await cleanTranscriptionOnce(file, (err, result) => {
+    cleaning.delete(key); resolve({ err, result });
+    const json = readSidecar(key);
+    activity.update(file, err ? 'failed_cleanup' : json?.mayDoError ? 'failed_maydos' : json?.cleanedTranscription ? 'ready' : 'raw_only', { hasTranscript: Boolean(json), error: err?.message || json?.mayDoError });
+    callback(err, result);
+  }, options);
+}
+
+async function cleanTranscriptionOnce(file: string, callback: (err: Error | null, result?: string) => void, options: { reclean?: boolean } = {}) {
   const { isProcessed, transcriptionFile, transcriptionExists } = checkTranscription(file);
   if (isProcessed && !options.reclean) {
     try {
@@ -216,6 +257,7 @@ export async function cleanTranscription(
 
   try {
     const transcriptionJson = JSON.parse(fs.readFileSync(transcriptionFile, 'utf-8'));
+    const initialHumanEdits = structuredClone(transcriptionJson);
     if (!String(transcriptionJson.text || '').trim()) {
       console.log(`[clean-transcription] no speech to clean: ${transcriptionFile}`);
       callback(null);
@@ -235,6 +277,7 @@ export async function cleanTranscription(
       z.object({
         cleanedTranscription: z.string().min(10),
         tags: z.array(z.string().min(1)),
+        mayDos: z.array(mayDoCandidateSchema),
       })
     );
 
@@ -259,6 +302,20 @@ export async function cleanTranscription(
     delete transcriptionJson.cleanupError;
     delete transcriptionJson.cleanupSkipped;
     ensurePlaybackCues(transcriptionJson);
+    // Reload human decisions made while the model was working.
+    const fresh = readSidecar(transcriptionFile);
+    if (!fresh) throw new Error('Entry disappeared during cleanup.');
+    if (fresh.text !== initialHumanEdits.text) throw new Error('Original transcript changed during cleanup; retry.');
+    preserveHumanEdits(transcriptionJson, initialHumanEdits, fresh);
+    if (Array.isArray(jsonCompletion.mayDos)) {
+      transcriptionJson.mayDos = mergeMayDos(fresh?.mayDos, jsonCompletion.mayDos, transcriptionJson.text, transcriptionJson.playbackCues);
+      transcriptionJson.mayDoExtraction = { version: MAY_DO_VERSION, sourceHash: mayDoSourceHash(transcriptionJson.cleanedTranscription.trim()), createdAt: new Date().toISOString(), model: String(meta?.model || config.ollanet.cleanModel), host: String(meta?.machine || config.ollanet.machine) };
+      delete transcriptionJson.mayDoError;
+    } else {
+      transcriptionJson.mayDos = fresh?.mayDos || [];
+      transcriptionJson.mayDoExtraction = fresh?.mayDoExtraction;
+      transcriptionJson.mayDoError = 'The model did not return MayDos. Extract them again from the entry.';
+    }
     fs.writeFileSync(transcriptionFile, JSON.stringify(transcriptionJson, null, 2), { encoding: 'utf-8' });
     console.log(`[clean-transcription] Cleaned transcription file: ${transcriptionFile}`);
     callback(null, transcriptionJson.cleanedTranscription);
@@ -300,23 +357,34 @@ export type ProcessOptions = {
   front?: boolean;
 };
 
+const queuedTranscriptions = new Set<string>();
+const queuedCleanups = new Set<string>();
 export async function process(file: string, options: ProcessOptions = {}) {
+  assertEntryWritable(file); assertEntryWritable(getTranscriptionFilename(file));
+  const key = path.resolve(getTranscriptionFilename(file));
+  if (queuedTranscriptions.has(key) || queuedCleanups.has(key) || cleaning.has(key)) return activity.find(key);
+  const current = activity.find(key);
+  if (current?.stage === 'interrupted' && !options.retry) return current;
   requestWhenSettled(file, () => enqueueTranscription(file, options), {
     force: options.force,
     retry: options.retry,
     settleMs: options.settleMs,
     label: 'voice-transcribe',
+    onWaiting: (status, eligibleAt) => activity.update(file, 'waiting_for_file', { eligibleAt, reason: status.reason }),
   });
+  return activity.find(key);
 }
 
-function enqueueProcessing(file: string, elapsed?: string) {
+function enqueueProcessing(file: string, elapsed?: string, reclean = false) {
   const { transcriptionFile } = checkTranscription(file);
   const sidecar = readSidecar(transcriptionFile);
-  if (sidecarIsProcessed(sidecar)) {
+  if (sidecarIsProcessed(sidecar) && !reclean) {
+    activity.update(file, sidecar?.audioError ? 'failed_transcription' : sidecar?.mayDoError ? 'failed_maydos' : sidecar?.cleanedTranscription ? 'ready' : 'raw_only', { hasTranscript: true, error: sidecar?.audioError || sidecar?.mayDoError });
     emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
   }
   if (!String(sidecar?.text || '').trim()) {
+    activity.update(file, 'raw_only', { hasTranscript: true, reason: 'No speech to clean.' });
     emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
   }
@@ -326,18 +394,35 @@ function enqueueProcessing(file: string, elapsed?: string) {
     } else {
       console.log(`[process] ollanet not configured; leaving raw transcript ${transcriptionFile}`);
     }
+    activity.update(file, config.ollanet.required ? 'failed_cleanup' : 'raw_only', { hasTranscript: true, reason: 'Cleanup is not configured. Original transcript remains available.', error: config.ollanet.required ? 'Configure cleanup host and model.' : undefined });
     emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
   }
   if (!q['processing']) {
+    activity.update(file, 'raw_only', { hasTranscript: true, reason: 'Cleanup queue is disabled.' });
     emitTranscription(null, transcriptionFile, elapsed ?? null);
     return;
   }
   console.log(`[process] Adding file to processing queue: ${file}`);
-  q['processing'].push({ file }, () => {
+  const key = path.resolve(transcriptionFile);
+  if (queuedCleanups.has(key) || cleaning.has(key)) return;
+  queuedCleanups.add(key);
+  activity.update(file, 'queued_cleanup', { hasTranscript: true });
+  q['processing'].push({ file, reclean, audioFile: activity.find(file)?.audioFile || file }, () => {
+    queuedCleanups.delete(key);
     emitTranscription(null, transcriptionFile, elapsed ?? null);
   });
   emitTranscription(null, transcriptionFile, elapsed ?? null);
+}
+
+export function requestCleanup(file: string) {
+  assertEntryWritable(file); assertEntryWritable(getTranscriptionFilename(file));
+  const key = path.resolve(getTranscriptionFilename(file));
+  if (!readSidecar(key)) throw new Error('Transcript not ready yet.');
+  if (queuedCleanups.has(key) || cleaning.has(key)) return activity.find(key);
+  if (!ollanetIsConfigured() || !q.processing) throw new Error('Cleanup is unavailable. Configure its host/model and enable the cleanup queue; original reading still works.');
+  enqueueProcessing(file, undefined, true);
+  return activity.find(key);
 }
 
 export function skipCleanup(file: string): void {
@@ -362,14 +447,22 @@ function enqueueTranscription(file: string, options: ProcessOptions = {}) {
     return;
   }
 
+  const key = path.resolve(transcriptionFile);
+  if (queuedTranscriptions.has(key)) return;
+  activity.update(file, 'queued_transcription', { audioFile: file, hasTranscript: transcriptionExists, reason: !q['transcription'] ? 'Transcription queue is disabled. Audio is saved; enable the queue before retrying.' : undefined });
+  if (!q['transcription']) return;
+  queuedTranscriptions.add(key);
   console.log(`[process] Adding file to transcription queue: ${file}`);
   const enqueue = options.front ? q['transcription'].unshift.bind(q['transcription']) : q['transcription'].push.bind(q['transcription']);
   enqueue(
-    { file, transcriptionFile, transcriptionFolder: path.dirname(transcriptionFile) },
+    { file, transcriptionFile, replacement: transcriptionExists, transcriptionFolder: path.dirname(transcriptionFile) },
     (_err: any, result?: any) => {
-      if (_err instanceof Error) return;
-      if (_err?.err) return;
+      queuedTranscriptions.delete(key);
+      if (_err instanceof Error || _err?.err) { if (fs.existsSync(transcriptionFile)) emitTranscription(null, transcriptionFile); return; }
       const elapsed = result?.elapsed ?? result?.result?.elapsed ?? _err?.result?.elapsed;
+      const originalName = activity.find(transcriptionFile)?.originalName;
+      const document = readSidecar(transcriptionFile);
+      if (document) { ensureEntryId(document); if(originalName) document.originalFilename=originalName; fs.writeFileSync(transcriptionFile,JSON.stringify(document,null,2),'utf8'); }
       enqueueProcessing(file, elapsed);
     }
   );
@@ -389,7 +482,7 @@ export function initTranscriptionWatcher(
     watchDepth,
     ignoreCheck: (filePath) => {
       return (
-        isSkippedWatchPath(filePath) ||
+        entryOperationPending(filePath) || isSkippedWatchPath(filePath) ||
         filePath.includes('archive') ||
         filePath.includes('original') ||
         filePath.includes('_clean')

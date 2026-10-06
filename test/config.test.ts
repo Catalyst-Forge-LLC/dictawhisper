@@ -61,3 +61,10 @@ test('config path prefers env, then cwd, then home', () => {
     path.join(tmp, 'explicit.json'),
   );
 });
+
+test('explicit packaged UI port is validated and does not override checkout API binding', () => {
+  assert.equal(resolveListenPort(undefined, undefined, 8008, 8008, true, '17888'), 17888);
+  assert.equal(resolveListenPort(undefined, undefined, 8008, 8008, true, '65536'), 7777);
+  assert.equal(resolveListenPort(undefined, undefined, 8008, 8008, true, 'invalid'), 7777);
+  assert.equal(resolveListenPort(undefined, undefined, 8008, 8008, false, '17888'), 8008);
+});

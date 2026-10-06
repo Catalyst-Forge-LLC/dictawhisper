@@ -3,6 +3,9 @@ import path from 'node:path';
 import { audioFileRegex, probeAudioFile } from './audioLib.ts';
 import { isSkippedWatchPath } from './fileSettleLib.ts';
 import { checkTranscription, emitNotesIndex, recordAudioFailure } from './transcriptionLib.ts';
+import {resolveAllowedPath} from './pathAllowLib.ts';
+import {assertEntryWritable} from './entryOperationLib.ts';
+import {activity,isWorkingStage} from './activityLib.ts';
 
 export type ProbeHit = { file: string; reason: string };
 
@@ -88,6 +91,31 @@ export async function scanPendingAudio(roots: string[], options: { apply?: boole
 
 export function getProbeJob(): ProbeJob {
   return { ...job, files: job.files.slice() };
+}
+/** Mark only reviewed scan hits, rechecking readability and work state first. */
+export async function markReviewedAudio(files: unknown) {
+  if (job.running || !job.finishedAt || job.apply || !Array.isArray(files) || !files.length) throw new Error('Finish a check-only scan, then review the files to mark.');
+  const known=new Set(job.files.map(row=>row.file));
+  for(const requested of files) {
+    if(typeof requested!=='string'||!known.has(requested))throw new Error('Every file must be from the current check-only scan.');
+    const allowed=resolveAllowedPath(requested);if(!allowed.ok)throw new Error(allowed.error);
+  }
+  const results=[];
+  for(const requested of [...new Set(files)]) {
+    if(typeof requested!=='string'||!known.has(requested))throw new Error('Every file must be from the current check-only scan.');
+    const allowed=resolveAllowedPath(requested);if(!allowed.ok)throw new Error(allowed.error);
+    const {isProcessed,transcriptionFile}=checkTranscription(allowed.path);
+    if(isProcessed || isWorkingStage(activity.find(allowed.path)?.stage || 'ready')) {results.push({file:requested,marked:false,reason:'Already processed or processing; kept unchanged.'});continue;}
+    assertEntryWritable(allowed.path);assertEntryWritable(transcriptionFile);
+    const before=fs.existsSync(allowed.path)?fs.statSync(allowed.path):null;
+    const probe=await probeAudioFile(allowed.path);
+    assertEntryWritable(allowed.path);assertEntryWritable(transcriptionFile);
+    const after=fs.existsSync(allowed.path)?fs.statSync(allowed.path):null;
+    if(!before||!after||before.mtimeMs!==after.mtimeMs||before.size!==after.size||checkTranscription(allowed.path).isProcessed||isWorkingStage(activity.find(allowed.path)?.stage||'ready')){results.push({file:requested,marked:false,reason:'File changed or processing started; kept unchanged.'});continue;}
+    if(probe.ok){results.push({file:requested,marked:false,reason:'Now readable; kept unchanged.'});continue;}
+    recordAudioFailure(transcriptionFile,new Error(`unreadable audio: ${probe.reason}`));results.push({file:requested,marked:true,reason:probe.reason});
+  }
+  emitNotesIndex();return {ok:true,marked:results.filter(row=>row.marked).length,results};
 }
 
 export function startProbeJob(roots: string[], options: { apply?: boolean } = {}): ProbeJob {

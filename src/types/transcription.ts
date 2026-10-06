@@ -1,4 +1,18 @@
-export const CLEAN_PROMPT_VERSION = 1;
+export const CLEAN_PROMPT_VERSION = 2;
+
+export type MayDoStatus = 'suggested' | 'selected' | 'done' | 'dismissed';
+export type MayDo = {
+  id: string;
+  title: string;
+  verb: string;
+  sourceQuote: string;
+  start: number | null;
+  end: number | null;
+  status: MayDoStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+export type MayDoExtraction = { version: number; sourceHash: string; createdAt: string; model?: string; host?: string };
 
 export type WhisperWord = {
   word: string;
@@ -33,9 +47,19 @@ export type CleanupRecord = {
 
 /** Sidecar JSON next to a recording. Disk is the source of truth. */
 export type TranscriptionDocument = {
+  entryId?: string;
+  recordedDate?: string;
+  recordedAt?: string;
+  recordedAtSource?: string;
+  originalFilename?: string;
+  displayTitle?: string;
+  tagsEditedAt?: string;
   text?: string;
   cleanedTranscription?: string;
   tags?: string[];
+  mayDos?: MayDo[];
+  mayDoExtraction?: MayDoExtraction;
+  mayDoError?: string;
   segments?: WhisperSegment[];
   language?: string;
   elapsed?: string;

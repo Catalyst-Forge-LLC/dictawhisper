@@ -1,4 +1,8 @@
+import { organizationPreview, organizeEntry } from './entryOrganizationLib.ts';
+import { entryOperationPending } from './entryOperationLib.ts';
+import {moveEntryBundle,keepBothDestination} from './entryBundleLib.ts';
 import path from 'path';
+import { activity } from './activityLib.ts';
 import fs from 'fs';
 import { audioFileRegex, findAudioForSidecar } from './audioLib.ts';
 import { getSettleMs, inspectFileReadiness, isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
@@ -74,22 +78,36 @@ export async function organizeAudioFile(filePath: string, sourceRoot: string): P
 
   const srcJson = getTranscriptionFilename(filePath);
   console.log(`[voice-pipeline] move ${filePath} -> ${destPath}`);
-  await moveFile(filePath, destPath);
   if (fs.existsSync(srcJson)) {
-    const destJson = getTranscriptionFilename(destPath);
-    await moveFile(srcJson, destJson);
-    relocateTranscription(srcJson, destJson);
+    if(!inspectFileReadiness(filePath,2000).ready) throw new Error('Audio is still changing. Retry after it has settled.');
+    const targetJson=keepBothDestination(srcJson,getTranscriptionFilename(destPath),true);
+    const moved=await moveEntryBundle(srcJson,targetJson,undefined,true);
+    return moved.jsonFile.replace(/\.json$/i,path.extname(filePath));
   }
+  await moveFile(filePath, destPath);
   return destPath;
 }
 
 async function runPipeline(filePath: string, root: string, options: { front?: boolean } = {}) {
-  if (pipelineIdle(filePath, root)) return;
+  if (pipelineIdle(filePath, root) || activity.find(filePath)?.stage === 'interrupted') return;
   const dest = await organizeAudioFile(filePath, root);
   if (!dest) return;
+  if (dest !== filePath) activity.relocate(filePath, dest);
   const { isProcessed, transcriptionExists } = checkTranscription(dest);
   if (transcriptionExists && isProcessed) return;
   await process(dest, { force: true, front: options.front });
+}
+
+/** Explicit retry keeps the same organization path as watched work. */
+export async function requestAudioProcessing(file: string, options: { retry?: boolean; force?: boolean } = {}) {
+  const root = config.watch.roots.find(root => containedRelative(file, path.resolve(root)));
+  if (root) {
+    const dest = await organizeAudioFile(file, root);
+    if (!dest) throw new Error('This file cannot be organized yet.');
+    if (dest !== file) activity.relocate(file, dest);
+    file = dest;
+  }
+  return process(file, options);
 }
 
 /** One watcher per root: settle → organize onto the final path → transcribe that path. */
@@ -109,25 +127,27 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
       watchFolder: folder,
       watchDepth: depth,
       ignoreCheck: (filePath) =>
-        isSkippedWatchPath(filePath) ||
+        entryOperationPending(filePath) || isSkippedWatchPath(filePath) ||
         filePath.includes('archive') ||
         filePath.includes('_original') ||
         filePath.includes('_clean'),
       fileMatchRegex: audioFileRegex,
       addHandler: async (filePath) => {
-        if (pipelineIdle(filePath, folder)) return;
+        if (pipelineIdle(filePath, folder) || activity.find(filePath)?.stage === 'interrupted') return;
         if (inspectFileReadiness(filePath, getSettleMs()).ready) {
           await runPipeline(filePath, folder, { front: liveAdds });
           return;
         }
         requestWhenSettled(filePath, () => runPipeline(filePath, folder, { front: true }), {
           label: 'voice-pipeline',
+          onWaiting: (status, eligibleAt) => activity.update(filePath, 'waiting_for_file', { eligibleAt, reason: status.reason }),
         });
       },
       changeHandler: (filePath) => {
-        if (pipelineIdle(filePath, folder)) return;
+        if (pipelineIdle(filePath, folder) || activity.find(filePath)?.stage === 'interrupted') return;
         requestWhenSettled(filePath, () => runPipeline(filePath, folder, { front: true }), {
           label: 'voice-pipeline',
+          onWaiting: (status, eligibleAt) => activity.update(filePath, 'waiting_for_file', { eligibleAt, reason: status.reason }),
         });
       },
       readyHandler: () => {
@@ -144,46 +164,11 @@ export function watchAndOrganizeAudioFiles(sourceFolders: string[] = []) {
 
 export type HoldingAction = 'overwrite' | 'rename' | 'unfile';
 
-/** Move a holding/unfiled note into YYYY/MM or _unfiled. */
+/** Compatibility route preserves whole bundles; destructive overwrite is gated. */
 export async function resolveHeldFile(filePath: string, action: HoldingAction): Promise<string> {
-  const allowed = resolveAllowedPath(filePath);
-  if (!allowed.ok) throw new Error(allowed.error);
-  filePath = allowed.path;
-  if (!fs.existsSync(filePath)) throw new Error('file not found');
-  if (filePath.toLowerCase().endsWith('.json')) {
-    const audio = findAudioForSidecar(filePath);
-    if (audio) {
-      const audioAllowed = resolveAllowedPath(audio);
-      if (!audioAllowed.ok) throw new Error(audioAllowed.error);
-      filePath = audioAllowed.path;
-    }
-  }
-  const root = config.watch.roots.find((candidate) => containedRelative(filePath, path.resolve(candidate)));
-  if (!root) throw new Error('file is not under a watch root');
-
-  const date = dateFromFilename(filePath);
-  let destFolder: string;
-  if (action === 'unfile' || !date) {
-    destFolder = confirmFolder(path.join(root, '_unfiled'));
-  } else {
-    destFolder = confirmFolder(path.join(root, date.year, date.month));
-  }
-  let destPath = path.join(destFolder, path.basename(filePath));
-  if (action === 'rename' && fs.existsSync(destPath)) {
-    destPath = uniquePath(destPath);
-  }
-  if (action === 'overwrite' && fs.existsSync(destPath) && path.resolve(destPath) !== path.resolve(filePath)) {
-    fs.unlinkSync(destPath);
-    const destJson = getTranscriptionFilename(destPath);
-    if (fs.existsSync(destJson)) fs.unlinkSync(destJson);
-  }
-
-  const srcJson = getTranscriptionFilename(filePath);
-  await moveFile(filePath, destPath);
-  if (fs.existsSync(srcJson)) {
-    const destJson = getTranscriptionFilename(destPath);
-    await moveFile(srcJson, destJson);
-    relocateTranscription(srcJson, destJson);
-  }
-  return destPath;
+  if (action === 'overwrite') throw new Error('Replacement requires a reviewed preview. Use /notes/organization/preview and /apply.');
+  const jsonFile = /\.json$/i.test(filePath) ? filePath : getTranscriptionFilename(filePath);
+  const preview = organizationPreview(jsonFile, undefined, action === 'unfile');
+  const result = await organizeEntry(jsonFile, { action:'keep_both', unfile:action === 'unfile', fingerprint:preview.fingerprint });
+  return 'jsonFile' in result ? findAudioForSidecar(String(result.jsonFile)) || String(result.jsonFile) : jsonFile;
 }

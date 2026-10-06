@@ -27,7 +27,7 @@ export function formatDuration(ms: number): string {
   return `${hours}h`;
 }
 
-const SKIP_FOLDERS = new Set(['__inbox']);
+const SKIP_FOLDERS = new Set(['__inbox', '.dictawhisper']);
 
 /** Syncthing / incomplete-transfer names we should never organize or transcribe. */
 export function isTransientSyncFile(filePath: string): boolean {
@@ -38,6 +38,7 @@ export function isTransientSyncFile(filePath: string): boolean {
     name.includes('~syncthing~') ||
     name.startsWith('.syncthing.') ||
     name.endsWith('.tmp') ||
+    name.endsWith('.replacement.json') ||
     lower.includes('/.stfolder') ||
     lower.includes('/.stversions/')
   );
@@ -121,12 +122,14 @@ function fileKey(filePath: string): string {
 }
 
 export type SettleOptions = {
-  /** Skip the mtime wait. Does not re-run if this file already started this process. */
+  /** Bypass the long sync wait, retaining a two-second quiet-write guard. */
   force?: boolean;
-  /** Skip the wait and allow a file that already ran this process to run again. */
+  /** Bypass the long wait and clear the in-process latch, retaining the quiet-write guard. */
   retry?: boolean;
   label?: string;
   settleMs?: number;
+  onWaiting?: (status: FileReadiness, eligibleAt: number) => void;
+  onReady?: () => void;
 };
 
 /**
@@ -156,6 +159,7 @@ export function requestWhenSettled(
 
   const run = () => {
     if (started.has(key)) return;
+    options.onReady?.();
     started.add(key);
     Promise.resolve(action()).catch((error) => {
       started.delete(key);
@@ -163,22 +167,11 @@ export function requestWhenSettled(
     });
   };
 
-  if (options.retry) {
-    started.delete(key);
-  }
-
-  if (options.force || options.retry) {
-    clearTimer();
-    console.log(
-      `[${label}] ${options.retry ? 'retry' : 'forced'}; skipping settle for ${filePath}`
-    );
-    run();
-    return;
-  }
+  if (options.retry) started.delete(key);
 
   if (started.has(key)) return;
 
-  const status = inspectFileReadiness(filePath, settleMs);
+  const status = inspectFileReadiness(filePath, options.force || options.retry ? 2000 : settleMs);
   if (status.ready) {
     clearTimer();
     console.log(`[${label}] ready (${status.reason}, ${status.size} bytes): ${filePath}`);
@@ -192,6 +185,7 @@ export function requestWhenSettled(
   }
 
   clearTimer();
+  options.onWaiting?.(status, Date.now() + status.waitMs);
   console.log(
     `[${label}] waiting ${formatDuration(status.waitMs)} for ${filePath} (${status.reason}, ${status.size} bytes)`
   );

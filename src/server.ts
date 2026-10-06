@@ -1,11 +1,14 @@
+import { preserveHumanEdits } from './lib/humanEditsLib.ts';
+import { ActivityStore, activity, setActivityStore } from './lib/activityLib.ts';
 import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initMayDoBackfill, getMayDoBackfill } from './lib/mayDoService.ts';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { config } from './config.ts';
+import { config, configPath } from './config.ts';
 import { apiRoutes } from './apiRoutes.ts';
 import { socketConnect, socketEvents } from './socketEvents.ts';
 import {
@@ -58,6 +61,9 @@ const io = new SocketIOServer(server, {
 });
 
 setTranscriptionIo(io);
+setActivityStore(new ActivityStore(path.join(path.dirname(config.journal.index), '.dictawhisper', 'activity.json')));
+activity.setEmitter(event => io.emit('activity-change', event));
+initMayDoBackfill(path.join(path.dirname(config.journal.index), '.dictawhisper', 'maydo-job.json'), () => io.emit('maydo-job-change', getMayDoBackfill()));
 
 function startQueues(): void {
   initQueues({
@@ -76,7 +82,22 @@ function startQueues(): void {
           console.log(
             `[queue-transcription] Transcribing file: ${working} -> ${task.transcriptionFile}`
           );
-          await whisperTranscribe(working, task.transcriptionFile, callback as any);
+          const output = task.replacement ? task.transcriptionFile + '.replacement.json' : task.transcriptionFile;
+          activity.update(task.transcriptionFile, 'transcribing', {audioFile:working});
+          await whisperTranscribe(working, output, (payload) => {
+            try {
+              if (payload.err) { recordAudioFailure(task.transcriptionFile, payload.err); callback(payload.err); return; }
+              if (task.replacement) {
+                const fresh = JSON.parse(fs.readFileSync(task.transcriptionFile, 'utf8'));
+                const replacement = JSON.parse(fs.readFileSync(output, 'utf8'));
+                preserveHumanEdits(replacement, fresh, fresh);
+                replacement.mayDos = fresh.mayDos;
+                replacement.mayDoExtraction = fresh.mayDoExtraction;
+                fs.writeFileSync(output, JSON.stringify(replacement, null, 2), 'utf8'); fs.renameSync(output, task.transcriptionFile);
+              }
+              callback(null, payload.result);
+            } catch (error) { callback(error); }
+          });
         } catch (error) {
           console.error(
             `[queue-transcription] skip unreadable audio ${task.file}:`,
@@ -92,7 +113,7 @@ function startQueues(): void {
     processing: {
       processor: (task, callback) => {
         console.log(`[queue-processing] Processing file: ${task.file}`);
-        cleanTranscription(task.file, callback);
+        cleanTranscription(task.file, callback, { reclean: task.reclean });
       },
       concurrency: config.queues.processing.concurrency,
       active: config.queues.processing.active,
@@ -101,11 +122,13 @@ function startQueues(): void {
 }
 
 for (const route of apiRoutes) {
-  if (route.method === 'GET') app.get(route.path, route.handler);
+  if (route.method === 'GET' && route.path === '/') app.get(route.path,(req,res,next)=>{if(inboxServed)return next();return route.handler(req,res);});
+  else if (route.method === 'GET') app.get(route.path, route.handler);
   else if (route.method === 'POST') app.post(route.path, route.handler);
   else throw new Error(`Unsupported method: ${route.method}`);
 }
 
+let inboxServed=false;
 function mountPackagedUi(): void {
   if (process.env.DICTA_SERVE_UI !== '1' && process.env.DICTA_SERVE_UI !== 'true') return;
   const uiDir =
@@ -123,6 +146,7 @@ function mountPackagedUi(): void {
       if (err) next(err);
     });
   });
+  inboxServed=true;
   console.log(`[ui] serving inbox from ${uiDir}`);
 }
 
@@ -130,6 +154,7 @@ mountPackagedUi();
 
 io.on('connection', (socket) => {
   socketConnect(socket, transcriptions);
+  socket.emit('activity-snapshot', activity.snapshot());
   for (const { event, handler } of socketEvents) {
     socket.on(event, handler);
   }
@@ -141,7 +166,8 @@ function listen(): Promise<void> {
       reject(error);
     });
     server.listen(config.http.port, listenHost, () => {
-      console.log(`listening on ${listenHost}:${config.http.port}`);
+      console.log(`[startup] API http://${listenHost}:${config.http.port} · config ${configPath}`);
+      console.log(`[startup] Inbox ${inboxServed ? `http://${listenHost}:${config.http.port}` : 'runs separately; use the UI URL printed by the dev launcher'} · processing Starting; existing entries are readable`);
       if (config.http.tailscale) {
         if (tailscaleSelf) {
           console.log(

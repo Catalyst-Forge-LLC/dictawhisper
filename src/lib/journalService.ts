@@ -1,4 +1,5 @@
 import path from 'node:path';
+import type { MayDoFilter } from './mayDoLib.ts';
 import { config } from '../config.ts';
 import {
   getJournalIndex,
@@ -6,6 +7,8 @@ import {
   openJournalIndex,
   setJournalIndex,
   type IndexListOptions,
+  type EntryPageOptions,
+  type EntryPage,
   type IndexSearchHit,
   type SearchMode,
   type SearchSort,
@@ -208,39 +211,25 @@ async function embedOneWithRetry(
   throw lastError;
 }
 
-export async function searchJournalIndex(options: {
-  query?: string;
-  tags?: string[];
-  since?: string;
-  until?: string;
-  year?: string;
-  month?: string;
-  mode?: SearchMode;
-  sort?: SearchSort;
-  limit?: number;
-  unreadable?: boolean;
-  starred?: boolean;
-  folder?: 'unfiled' | 'holding';
-}): Promise<IndexSearchHit[]> {
-  const index = requireJournal();
+export async function searchJournalIndex(options: EntryPageOptions): Promise<IndexSearchHit[]> {
+  const resolved = await resolvePageSearch(options);
+  return requireJournal().search(resolved);
+}
+
+export async function searchJournalPage(options: EntryPageOptions): Promise<EntryPage> {
+  return requireJournal().searchPage(await resolvePageSearch(options));
+}
+
+async function resolvePageSearch(options: EntryPageOptions): Promise<EntryPageOptions> {
   const query = String(options.query || '').trim();
-  const requested =
-    isFilenameQuery(query) ? 'lex' : options.mode || config.journal.search;
+  const requested = isFilenameQuery(query) ? 'lex' : options.mode || config.journal.search;
   let queryEmbedding: number[] | null = null;
-  if (requested !== 'lex' && query) {
-    try {
-      const client = await getEmbedClient();
-      if (client) queryEmbedding = await client.embed(String(options.query));
-    } catch (error) {
-      console.warn(`[journal-index] query embed failed: ${error instanceof Error ? error.message : error}`);
-    }
+  // Continuation reads a stable snapshot; it must never make another model call.
+  if (!options.cursor && requested !== 'lex' && query) {
+    try { const client = await getEmbedClient(); if (client) queryEmbedding = await client.embed(query); }
+    catch (error) { console.warn(`[journal-index] query embed failed: ${error instanceof Error ? error.message : error}`); }
   }
-  return index.search({
-    ...options,
-    mode: requested,
-    queryEmbedding,
-    synonyms: config.whisper.promptTerms,
-  });
+  return { ...options, mode: requested, queryEmbedding, synonyms: config.whisper.promptTerms };
 }
 
 export function notesIndexReload() {
@@ -282,6 +271,8 @@ export function recentJournalIndex(options: {
 }
 
 export function toInboxSummary(hit: {
+  entryId?: string;
+  displayTitle?: string;
   jsonFile: string;
   basename: string;
   day?: string;
@@ -290,17 +281,29 @@ export function toInboxSummary(hit: {
   hasCleaned: boolean;
   audioError: string | null;
   starred?: boolean;
+  mayDoTotalCount?: number;
+  mayDoStatusCounts?: Record<string, number>;
+  mayDoCount?: number;
+  mayDoActiveCount?: number;
+  mayDoStatuses?: string[];
 }) {
   return {
     jsonFile: hit.jsonFile,
     basename: hit.basename,
     day: hit.day || '',
     transcriptionJson: {
+      entryId: hit.entryId,
+      displayTitle: hit.displayTitle,
       tags: hit.tags,
       preview: hit.preview,
       hasCleaned: hit.hasCleaned,
       audioError: hit.audioError,
       starred: Boolean(hit.starred),
+      mayDoTotalCount: hit.mayDoTotalCount ?? hit.mayDoCount ?? 0,
+      mayDoStatusCounts: hit.mayDoStatusCounts,
+      mayDoCount: hit.mayDoCount || 0,
+      mayDoActiveCount: hit.mayDoActiveCount || 0,
+      mayDoStatuses: hit.mayDoStatuses || [],
       _partial: true,
     },
   };

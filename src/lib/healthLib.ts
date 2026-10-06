@@ -15,6 +15,7 @@ export type HealthCheck = {
   id: string;
   level: HealthLevel;
   message: string;
+  group?: 'transcription' | 'cleanup' | 'search' | 'runtime';
 };
 
 export type HealthMode = 'doctor' | 'startup' | 'live';
@@ -186,9 +187,9 @@ export async function collectHealth(
   options: { mode: HealthMode } = { mode: 'startup' }
 ): Promise<HealthReport> {
   const checks: HealthCheck[] = [];
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  if (!Number.isFinite(nodeMajor) || nodeMajor < 20) {
-    add(checks, 'node', 'fail', `node ${process.version} (need >= 20)`);
+  const [nodeMajor,nodeMinor] = process.versions.node.split('.').map(Number);
+  if (!Number.isFinite(nodeMajor) || nodeMajor < 22 || nodeMajor===22 && nodeMinor<13) {
+    add(checks, 'node', 'fail', `node ${process.version} (need >= 22.13)`);
   } else {
     add(checks, 'node', 'ok', `node ${process.version}`);
   }
@@ -285,11 +286,11 @@ export async function collectHealth(
   const configured = configuredMachine(machine).length > 0 && model.length > 0 && !model.startsWith('YOUR-');
   let ollanetReachable = false;
   if (!configured) {
-    add(checks, 'ollanet', 'warn', 'ollanet machine/model not configured — cleanup skipped; raw transcripts still work');
+    add(checks, 'ollanet', config.ollanet.required ? 'fail' : 'warn', 'ollanet machine/model not configured — cleanup skipped; raw transcripts still work');
   } else {
     const ping = await probeOllanet(machine, model);
     ollanetReachable = ping.reachable;
-    add(checks, 'ollanet', ping.level, ping.message);
+    add(checks, 'ollanet', config.ollanet.required && ping.level !== 'ok' ? 'fail' : !config.ollanet.required && ping.level === 'fail' ? 'warn' : ping.level, ping.message);
   }
 
   const journalPath = config.journal.index;
@@ -357,6 +358,7 @@ export async function collectHealth(
     );
   }
 
+  for(const check of checks) check.group = ['python','faster-whisper','device','ffmpeg','whisper-worker'].includes(check.id) ? 'transcription' : check.id==='ollanet' ? 'cleanup' : check.id.startsWith('journal-') ? 'search' : 'runtime';
   const failed = checks.some((check) => check.level === 'fail');
   const degraded = checks.some((check) => check.level === 'warn');
 
@@ -377,7 +379,7 @@ export async function collectHealth(
       model,
       reachable: ollanetReachable,
     },
-    http: { host: config.http.host, port: config.http.port },
+    http: { host: bindHost, port: config.http.port },
     checks,
   };
 }
@@ -403,9 +405,12 @@ export async function getHealthReport(
 }
 
 export function printHealthReport(report: HealthReport, prefix = 'health'): void {
-  for (const check of report.checks) {
+  for (const group of ['runtime','transcription','cleanup','search']) {
+  console.log(`[${prefix}] ${group==='transcription'?'Required for transcription':group==='cleanup'?'Cleanup (optional unless ollanet.required)':group==='search'?'Search readiness':'Runtime and folders'}`);
+  for (const check of report.checks.filter(check => (check.group || 'runtime') === group)) {
     const tag = check.level === 'ok' ? 'ok  ' : check.level === 'warn' ? 'WARN' : 'FAIL';
     console.log(`[${prefix}] ${tag}  ${check.message}`);
+  }
   }
   if (!report.ok) {
     console.error(`[${prefix}] fix the failing items above, then retry`);

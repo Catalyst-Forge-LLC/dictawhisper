@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { JournalIndex, buildFtsQuery, cueIndexForQuery } from '../src/lib/journalIndexLib.ts';
 
@@ -11,6 +12,26 @@ function writeNote(dir: string, name: string, body: Record<string, unknown>) {
   fs.writeFileSync(file, JSON.stringify(body));
   return file;
 }
+
+test('existing journal indexes migrate MayDo storage without losing entries', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-maydo-migrate-'));
+  const dbPath = path.join(root, 'journal.sqlite');
+  try {
+    const old = new JournalIndex(dbPath);
+    writeNote(root, '2026-08-01.json', { text: 'An existing journal entry.' });
+    old.rebuildFromRoots([root]);
+    old.close();
+    const db = new DatabaseSync(dbPath);
+    db.exec('ALTER TABLE notes DROP COLUMN may_dos');
+    db.close();
+    const migrated = new JournalIndex(dbPath);
+    try {
+      assert.equal(migrated.stats().notes, 1);
+      assert.equal(migrated.stats().mayDos, 0);
+      assert.equal(migrated.list({ all: true })[0].mayDoCount, 0);
+    } finally { migrated.close(); }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('buildFtsQuery prefix-ANDs tokens', () => {
   assert.match(buildFtsQuery('Kristen sangria'), /sangria\*/);
@@ -173,4 +194,79 @@ test('dated filename query does not throw and hits basename', () => {
   assert.equal(hybrid.length, 1);
   index.close();
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+
+test('MayDo filters combine with text, dates, tags and stars and update without losing embeddings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-maydo-index-'));
+  const index = new JournalIndex(path.join(root, 'journal.sqlite'));
+  const action = { id: 'one', title: 'Call dentist', sourceQuote: 'Need to call dentist', status: 'selected' };
+  try {
+    const file = writeNote(root, '2026-08-01.json', { cleanedTranscription: 'Need to call dentist', tags: ['plans'], starred: true, mayDos: [action] });
+    writeNote(root, '2026-08-02.json', { cleanedTranscription: 'Need to call dentist', tags: ['plans'], mayDos: [{ ...action, status: 'done' }] });
+    writeNote(root, '2026-08-03.json', { cleanedTranscription: 'Need to call dentist', tags: ['plans'] });
+    index.rebuildFromRoots([root]);
+    assert.equal(index.stats().mayDos, 2);
+    assert.equal(index.list({ all: true, mayDos: 'any' }).length, 2);
+    const hits = index.search({ query: 'dentist', mayDos: 'selected', starred: true, tags: ['plans'], year: '2026' });
+    assert.equal(hits.length, 1);
+    assert.equal(hits[0].mayDoCount, 1);
+    assert.deepEqual(hits[0].mayDoStatuses, ['selected']);
+    assert.equal(index.search({ mayDos: 'suggested' }).length, 0);
+    index.ensureVec(4, 'test');
+    const row = index.upsertSidecar(file);
+    index.putEmbedding(row.rowid, [1, 0, 0, 0]);
+    const changed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    changed.mayDos[0].status = 'dismissed';
+    fs.writeFileSync(file, JSON.stringify(changed));
+    assert.equal(index.upsertSidecar(file).skipEmbed, true);
+    assert.equal(index.search({ mayDos: 'selected' }).length, 0);
+    assert.equal(index.search({ mayDos: 'dismissed' }).length, 1);
+    assert.equal(index.stats().embedded, 1);
+  } finally { index.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+
+test('status OR and exact tag AND are applied on the server before the result cap', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-status-set-'));
+  const index = new JournalIndex(path.join(root, 'journal.sqlite'));
+  try {
+    for (let i = 0; i < 70; i++) {
+      writeNote(root, `2026-09-01_${String(i).padStart(3, '0')}.json`, {
+        text: 'Kitchen repair plan', tags: i < 60 ? ['home-improvement', 'budget'] : ['home', 'budget'],
+        mayDos: [{ id: String(i), title: 'Repair', sourceQuote: 'Kitchen repair plan', status: i % 2 ? 'selected' : 'suggested' }],
+      });
+    }
+    const done = writeNote(root, '2025-01-01_done.json', { text: 'Kitchen repair plan', tags: ['home', 'budget'],
+      mayDos: [{ id: 'done', title: 'Repair', sourceQuote: 'Kitchen repair plan', status: 'done' }] });
+    index.rebuildFromRoots([root]);
+    const hits = index.search({ query: 'kitchen', tags: ['home', 'budget'], mayDos: ['suggested', 'selected'], limit: 50 });
+    assert.equal(hits.length, 10);
+    assert.equal(hits.some(hit => hit.jsonFile === done), false);
+    assert.deepEqual(new Set(hits.flatMap(hit => hit.mayDoStatuses)), new Set(['suggested', 'selected']));
+    assert.equal(index.search({ mayDos: 'done', tags: ['home', 'budget'] })[0].jsonFile, done);
+  } finally { index.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('active library spans older entries and unfiled; attention includes real errors and holding', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-scopes-'));
+  const dbPath = path.join(root, 'journal.sqlite');
+  let index = new JournalIndex(dbPath);
+  try {
+    const old = writeNote(path.join(root, '2010', '07'), '2010-07-01.json', { text: 'Kitchen plan' });
+    const unfiled = writeNote(path.join(root, '_unfiled'), 'unfiled.json', { text: 'Kitchen plan' });
+    const holding = writeNote(path.join(root, '_holding'), 'holding.json', { text: 'Kitchen plan' });
+    const failed = writeNote(path.join(root, '2026', '09'), '2026-09-01.json', { text: 'Kitchen plan', cleanupError: 'Host unavailable' });
+    index.rebuildFromRoots([root]);
+    const active = index.list({ all: true, folder: 'active' }).map(note => note.jsonFile);
+    assert(active.includes(old)); assert(active.includes(unfiled)); assert(!active.includes(holding));
+    assert.equal(index.search({ query: 'kitchen', folder: 'active' }).length, 3);
+    const attention = index.search({ attention: true, limit: 50 }).map(note => note.jsonFile);
+    assert.deepEqual(new Set(attention), new Set([unfiled, holding, failed]));
+    assert.equal(index.search({ year: '2010', until: '2026-12-31', folder: 'active', limit: 50 }).length, 3);
+    index.close();
+    const db = new DatabaseSync(dbPath); db.exec('ALTER TABLE notes DROP COLUMN cleanup_error'); db.close();
+    index = new JournalIndex(dbPath);
+    assert(index.search({ attention: true }).some(note => note.jsonFile === failed));
+  } finally { index.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });

@@ -2,7 +2,10 @@ export type InboxSort = 'recent' | 'oldest' | 'relevance' | '';
 export type InboxMode = 'lex' | 'hybrid' | '';
 
 export type InboxUrlState = {
-  view: 'recent' | 'all' | 'unfiled' | 'holding';
+  mayDos: '' | 'any' | 'suggested' | 'selected' | 'done' | 'dismissed';
+  view: 'library' | 'starred' | 'maydos' | 'attention' | 'recent' | 'all' | 'unfiled' | 'holding';
+  folder: '' | 'unfiled' | 'holding';
+  mayDoStatuses: Array<'suggested' | 'selected' | 'done' | 'dismissed'>;
   q: string;
   tags: string[];
   year: string;
@@ -22,7 +25,10 @@ const MODES = new Set(['lex', 'hybrid']);
 
 export function emptyInboxUrl(): InboxUrlState {
   return {
-    view: 'recent',
+    view: 'library',
+    folder: '',
+    mayDoStatuses: [],
+    mayDos: '',
     q: '',
     tags: [],
     year: '',
@@ -46,14 +52,23 @@ export function parseInboxUrl(search: string | URLSearchParams): InboxUrlState {
   const year = (params.get('year') || '').trim();
   const monthRaw = (params.get('month') || '').trim();
   const month = /^\d{1,2}$/.test(monthRaw) ? monthRaw.padStart(2, '0') : '';
+  const legacyView = params.get('view') || '';
+  const view = ['library', 'starred', 'maydos', 'attention'].includes(legacyView) ? legacyView : legacyView === 'holding' ? 'attention' : 'library';
+  const folderRaw = params.get('folder') || (['unfiled', 'holding'].includes(legacyView) ? legacyView : '');
+  const since = (params.get('since') || '').trim();
+  const until = (params.get('until') || '').trim();
+  const customRange = Boolean(since || until);
   return {
-    view: ['recent', 'all', 'unfiled', 'holding'].includes(params.get('view') || '') ? params.get('view') as InboxUrlState['view'] : 'recent',
+    view: view as InboxUrlState['view'],
+    folder: (['unfiled', 'holding'].includes(folderRaw) ? folderRaw : '') as InboxUrlState['folder'],
+    mayDoStatuses: ['suggested', 'selected', 'done', 'dismissed'].filter(status => params.getAll('mayDoStatus').includes(status)) as InboxUrlState['mayDoStatuses'],
+    mayDos: ['any', 'suggested', 'selected', 'done', 'dismissed'].includes(params.get('mayDos') || '') ? params.get('mayDos') as InboxUrlState['mayDos'] : '',
     q: params.get('q') || '',
     tags: params.getAll('tag').map((tag) => tag.trim()).filter(Boolean),
-    year: /^\d{4}$/.test(year) ? year : '',
-    month: year && month && Number(month) >= 1 && Number(month) <= 12 ? month : '',
-    since: (params.get('since') || '').trim(),
-    until: (params.get('until') || '').trim(),
+    year: !customRange && /^\d{4}$/.test(year) ? year : '',
+    month: !customRange && /^\d{4}$/.test(year) && month && Number(month) >= 1 && Number(month) <= 12 ? month : '',
+    since,
+    until,
     sort: SORTS.has(sortRaw) ? (sortRaw as InboxSort) : '',
     mode: MODES.has(modeRaw) ? (modeRaw as InboxMode) : '',
     unreadable: params.get('unreadable') === '1',
@@ -72,13 +87,19 @@ export function parseCueHash(hash: string): number | null {
 
 export function buildInboxSearch(state: InboxUrlState): string {
   const params = new URLSearchParams();
-  if (state.view && state.view !== 'recent') params.set('view', state.view);
+  if (state.mayDos) params.set('mayDos', state.mayDos);
+  const view = ['recent', 'all'].includes(state.view) ? 'library' : state.view;
+  if (view && view !== 'library') params.set('view', view);
+  if (state.folder) params.set('folder', state.folder);
+  for (const status of ['suggested', 'selected', 'done', 'dismissed']) {
+    if (state.mayDoStatuses?.includes(status as InboxUrlState['mayDoStatuses'][number])) params.append('mayDoStatus', status);
+  }
   if (state.q.trim()) params.set('q', state.q.trim());
   for (const tag of state.tags) {
     if (tag.trim()) params.append('tag', tag.trim());
   }
-  if (state.year) params.set('year', state.year);
-  if (state.year && state.month) params.set('month', state.month);
+  if (state.year && !state.since && !state.until) params.set('year', state.year);
+  if (state.year && state.month && !state.since && !state.until) params.set('month', state.month);
   if (state.since) params.set('since', state.since);
   if (state.until) params.set('until', state.until);
   if (state.sort) params.set('sort', state.sort);

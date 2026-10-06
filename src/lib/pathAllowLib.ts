@@ -12,17 +12,13 @@ export function allowedRoots(): string[] {
 
 function existingRealPath(filePath: string): string {
   const resolved = path.resolve(filePath);
-  for (const root of allowedRoots()) {
-    const rel = path.relative(root, resolved);
-    if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) continue;
-    try {
-      if (fs.existsSync(resolved)) return fs.realpathSync(resolved);
-    } catch {
-      // keep the resolved path
-    }
-    return resolved;
+  let parent = resolved;
+  while (!fs.existsSync(parent)) {
+    const next = path.dirname(parent);
+    if (next === parent) return resolved;
+    parent = next;
   }
-  return resolved;
+  return path.resolve(fs.realpathSync(parent), path.relative(parent, resolved));
 }
 
 /** Relative path under `root`, or null if `candidate` escapes it. */

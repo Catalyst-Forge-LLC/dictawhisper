@@ -7,6 +7,10 @@ import { cleanWithOllanet } from './ollanetLib.ts';
 import { parseJSON } from './jsonLib.ts';
 import { resolveAllowedPath } from './pathAllowLib.ts';
 import { buildConsolidateTagsPrompt } from '../prompts/consolidateTags.ts';
+import {getJournalIndex} from './journalIndexLib.ts';
+import {assertEntryWritable} from './entryOperationLib.ts';
+import {randomUUID} from 'node:crypto';
+import {isSkippedWatchPath} from './fileSettleLib.ts';
 
 export type TagCount = { tag: string; count: number };
 
@@ -15,6 +19,7 @@ export type MergeGroup = {
   drop: string[];
   reason: 'spelling' | 'similar' | 'synonym';
   counts: Record<string, number>;
+  affectedEntries?: number;
 };
 
 export type ConsolidatePlan = {
@@ -32,6 +37,8 @@ export type ApplyResult = {
   uniqueBefore: number;
   uniqueAfter: number;
   mapping: Record<string, string>;
+  failed?: number;
+  errors?: {file:string;error:string}[];
 };
 
 export function normalizeTag(tag: string): string {
@@ -145,10 +152,15 @@ class UnionFind {
   }
 }
 
+function inventoryEntries(): [string,any][] {
+  const index=getJournalIndex();
+  if(!index)return Object.entries(transcriptions);
+  return index.list({all:true}).flatMap(note=>{try{if(!resolveAllowedPath(note.jsonFile).ok||isSkippedWatchPath(note.jsonFile))return [];return [[note.jsonFile,JSON.parse(fs.readFileSync(note.jsonFile,'utf8'))] as [string,any]];}catch{return [];}});
+}
 export function collectTagInventory(): { notes: number; counts: Map<string, number> } {
   const counts = new Map<string, number>();
   let notes = 0;
-  for (const json of Object.values(transcriptions)) {
+  for (const [,json] of inventoryEntries()) {
     const tags = Array.isArray(json?.tags) ? json.tags : [];
     const seen = new Set<string>();
     let any = false;
@@ -353,10 +365,11 @@ export async function buildConsolidatePlan(options: { useModel?: boolean } = {})
     modelError = suggested.error;
     groups = unionGroups(local, suggested.merges, counts);
   }
+  const currentEntries=inventoryEntries();
   return {
     unique: counts.size,
     notes,
-    groups,
+    groups:groups.map(group=>({...group,affectedEntries:currentEntries.filter(([,json])=>Array.isArray(json.tags)&&json.tags.some((tag:unknown)=>group.drop.includes(normalizeTag(String(tag))))).length})),
     modelUsed,
     modelError,
   };
@@ -405,8 +418,12 @@ export function applyConsolidateGroups(groups: { keep: string; drop: string[] }[
   const uniqueBefore = collectTagInventory().counts.size;
   let filesChanged = 0;
   let tagsRewritten = 0;
+  const errors:{file:string;error:string}[]=[];
 
-  for (const [jsonFile, json] of Object.entries(transcriptions)) {
+  const entries=inventoryEntries();
+  for(const [jsonFile] of entries)assertEntryWritable(jsonFile);
+  for (const [jsonFile, json] of entries) {
+    try {
     const allowed = resolveAllowedPath(jsonFile);
     if (!allowed.ok) continue;
     const previous: unknown[] = Array.isArray(json?.tags) ? json.tags : [];
@@ -414,9 +431,13 @@ export function applyConsolidateGroups(groups: { keep: string; drop: string[] }[
     if (!nextTags) continue;
     tagsRewritten += previous.filter((tag) => mapping.has(normalizeTag(String(tag)))).length;
     json.tags = nextTags;
-    fs.writeFileSync(allowed.path, JSON.stringify(json, null, 2), { encoding: 'utf-8' });
+    json.tagsEditedAt=new Date().toISOString();
+    const temporary=allowed.path+'.'+randomUUID()+'.tmp';
+    try{fs.writeFileSync(temporary,JSON.stringify(json,null,2),{encoding:'utf8',flag:'wx'});fs.renameSync(temporary,allowed.path);}finally{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}
+    transcriptions[jsonFile]=json;
     indexSidecar(allowed.path);
     filesChanged += 1;
+    }catch(error){errors.push({file:jsonFile,error:error instanceof Error?error.message:String(error)});}
   }
   if (filesChanged) emitNotesIndex();
 
@@ -427,5 +448,6 @@ export function applyConsolidateGroups(groups: { keep: string; drop: string[] }[
     uniqueBefore,
     uniqueAfter: collectTagInventory().counts.size,
     mapping: Object.fromEntries(mapping),
+    failed:errors.length,errors,
   };
 }
