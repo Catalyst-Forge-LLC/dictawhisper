@@ -106,6 +106,7 @@ export default defineConfig({
     proxy: {
       "/socket.io": { target, ws: true },
       "/health": { target },
+      "/settings": { target },
       "/status": { target },
       "/tools": { target },
       "/transcribe": { target },

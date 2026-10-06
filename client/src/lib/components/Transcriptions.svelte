@@ -1,11 +1,30 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte';
   import { inboxPath, isFilenameQuery, parseCueHash, parseInboxUrl, tightenFilenameHits } from '../inboxUrl.js';
+  import { adjacentEntry, chooseCalendarDate, chooseCustomDate, clearOptionalFilters, createWorkspaceSession, MAY_DO_STATUSES, scopeOf, workspaceKey } from '../workspaceState.js';
   import { displayName } from '../markPreview.js';
   import NoteList from './NoteList.svelte';
+  import OrganizationDialog from './OrganizationDialog.svelte';
+  let organizationFile='', organizationMode='date', trashUndo=null, trashTimer, trashBusy=false;
+  const removalReceipts=new Map();
+  onDestroy(()=>{clearTimeout(trashTimer);clearTimeout(tagTimer);});
+  let tagUndo=null, tagTimer, tagBusy=false;
+  import NoteCard from './NoteCard.svelte';
+  import LibraryRail from './LibraryRail.svelte';
+  import EntryListPane from './EntryListPane.svelte';
+  import PendingEntry from './PendingEntry.svelte';
+  import EntryReader from './EntryReader.svelte';
+  import { entryPresentation } from '../entryPresentation.js';
 
+  const dispatch = createEventDispatcher();
+  export let mayDoJob = null;
   export let transcriptions = [];
   export let socket;
+  export let connected = false;
+  export let activityItems = [];
+  export let activityReady = false;
+  export let entryIntent = null;
+  let handledIntent=0, reconcilingPending=false, reconciledVersion='', pendingItem=null;
   export let noteFilter = 'all';
 
   const MONTHS = [
@@ -23,10 +42,38 @@
     'December',
   ];
 
-  let expanded = {};
+  let selectedFile = '';
+  let noteCache = {};
+  let noteList;
+  let entryScroll;
+  let searchInput;
+  let detailHeading;
+  let filterButton;
+  let expandedYears = {};
+  let restoringReader = false;
+  let readerState = { tab: 'transcript', scroll: 0, time: 0 };
+  let session = createWorkspaceSession();
+  let returnFocusFile = '';
+  let committedKey = '';
+  let requestBusy = false;
+  let searchController;
+  let browseController;
+  let historyReplay = false;
+  let navigationRequest = 0;
+  let browseSort = '';
+  let wasSearching = false;
+  let compactMedia;
+  let pendingAnchor = null;
   let showRaw = {};
-  let libraryView = 'recent';
-  let navigationOpen = false;
+  let mayDoFilter = '';
+  let mayDoStatuses = [];
+  let folderFilter = '';
+  let detailLoading = false;
+  let detailError = '';
+  let detailRequest = 0;
+  let detailScroll;
+  let libraryView = 'library';
+  export let navigationOpen = false;
   let filtersOpen = false;
   let tagSearch = '';
   let browseRequest = 0;
@@ -35,14 +82,6 @@
   let selectedTags = [];
   let showSingletons = false;
   let showAllFrequent = false;
-  let useModelForTags = true;
-  let consolidateBusy = false;
-  let consolidatePhase = '';
-  let consolidateError = '';
-  let consolidatePlan = null;
-  let consolidateSelected = {};
-  let applyBusy = false;
-  let applyResult = null;
   let searchQuery = '';
   let filterYear = '';
   let filterMonth = '';
@@ -56,6 +95,14 @@
   let indexing = false;
   let pagedIndex = false;
   let remoteHits = null;
+  let entryPage = null;
+  let pageParams = '';
+  let moreBusy = false;
+  let cursorExpired = false;
+  let moreError = '';
+  let moreController;
+  let pagingComplete;
+  let moreRequest = 0;
   let landCue = null;
   let searchTimer;
   let lastSearchKey = '';
@@ -132,17 +179,6 @@
       : [...selectedTags, tag];
   }
 
-  function reasonLabel(reason) {
-    if (reason === 'spelling') return 'spelling / plural';
-    if (reason === 'similar') return 'close spelling';
-    return 'same topic';
-  }
-
-  function selectedConsolidateGroups() {
-    if (!consolidatePlan?.groups) return [];
-    return consolidatePlan.groups.filter((_, index) => consolidateSelected[index] !== false);
-  }
-
   async function postJson(url, body) {
     const response = await fetch(url, {
       method: 'POST',
@@ -150,67 +186,8 @@
       body: JSON.stringify(body),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `request failed (${response.status})`);
+    if (!response.ok) { const error = new Error(data.error || `request failed (${response.status})`); error.code = data.code; throw error; }
     return data;
-  }
-
-  async function previewConsolidate() {
-    consolidateBusy = true;
-    consolidateError = '';
-    applyResult = null;
-    consolidatePlan = null;
-    try {
-      consolidatePhase = 'Finding spelling twins…';
-      const local = await postJson('/tags/consolidate/preview', { useModel: false });
-      consolidatePlan = local;
-      consolidateSelected = Object.fromEntries((local.groups || []).map((_, index) => [index, true]));
-      consolidateBusy = false;
-      if (useModelForTags) {
-        consolidatePhase = 'Asking the cleanup model for close synonyms…';
-        const full = await postJson('/tags/consolidate/preview', { useModel: true });
-        consolidatePlan = full;
-        consolidateSelected = Object.fromEntries((full.groups || []).map((_, index) => [index, true]));
-        if (full.modelError) consolidateError = `Model skipped: ${full.modelError}`;
-      }
-    } catch (error) {
-      consolidateError = error.message || String(error);
-    } finally {
-      consolidateBusy = false;
-      consolidatePhase = '';
-    }
-  }
-
-  async function applyConsolidate() {
-    const groups = selectedConsolidateGroups().map((group) => ({
-      keep: group.keep,
-      drop: group.drop,
-    }));
-    if (!groups.length) {
-      consolidateError = 'Select at least one merge.';
-      return;
-    }
-    applyBusy = true;
-    consolidateError = '';
-    try {
-      const result = await postJson('/tags/consolidate/apply', { groups });
-      applyResult = result;
-      const mapping = result.mapping || {};
-      selectedTags = [...new Set(selectedTags.map((tag) => mapping[tag] || tag))];
-      await loadMeta();
-      consolidatePlan = { ...consolidatePlan, groups: [] };
-      consolidateSelected = {};
-    } catch (error) {
-      consolidateError = error.message || String(error);
-    } finally {
-      applyBusy = false;
-    }
-  }
-
-  function dismissConsolidate() {
-    consolidatePlan = null;
-    consolidateSelected = {};
-    consolidateError = '';
-    applyResult = null;
   }
 
   function noteFromHit(hit) {
@@ -223,10 +200,17 @@
       snippet: hit.snippet || json.snippet || '',
       cue: hit.cue ?? json.cue ?? null,
       transcriptionJson: {
+        entryId: hit.entryId || json.entryId,
+        displayTitle: hit.displayTitle || json.displayTitle,
         tags: hit.tags || json.tags || [],
         preview: hit.preview || json.preview || '',
         hasCleaned: hit.hasCleaned ?? json.hasCleaned,
         audioError: hit.audioError || json.audioError || null,
+        mayDoActiveCount: hit.mayDoActiveCount ?? json.mayDoActiveCount ?? 0,
+        mayDoCount: hit.mayDoCount ?? json.mayDoCount ?? json.mayDos?.length ?? 0,
+        mayDoTotalCount: hit.mayDoTotalCount ?? json.mayDoTotalCount ?? hit.mayDoCount ?? json.mayDoCount ?? 0,
+        mayDoStatusCounts: hit.mayDoStatusCounts ?? json.mayDoStatusCounts,
+        mayDoStatuses: hit.mayDoStatuses || json.mayDoStatuses || [],
         starred: Boolean(hit.starred ?? json.starred),
         _partial: json._partial !== false,
         ...json,
@@ -237,7 +221,10 @@
   }
 
   function mergeNotes(notes, { replace = false } = {}) {
-    const incoming = (notes || []).map(noteFromHit);
+    const incoming = (notes || []).map(noteFromHit).map(note => {
+      const cached = noteCache[note.jsonFile];
+      return cached ? { ...note, ...cached, day: note.day || cached.day } : note;
+    });
     if (replace) {
       transcriptions = incoming;
       return;
@@ -253,10 +240,10 @@
     transcriptions = [...map.values()];
   }
 
-  async function fetchJson(url) {
-    const response = await fetch(url);
+  async function fetchJson(url, signal) {
+    const response = await fetch(url, { signal });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `request failed (${response.status})`);
+    if (!response.ok) { const error = new Error(data.error || `request failed (${response.status})`); error.code = data.code; throw error; }
     return data;
   }
 
@@ -277,169 +264,199 @@
   }
 
   function isHitMode() {
-    return Boolean(
-      searchQuery.trim() ||
-        since ||
-        until ||
-        starredOnly ||
-        selectedTags.length ||
-        noteFilter === 'unreadable'
-    );
+    return Boolean(searchQuery.trim() || since || until || filterYear || folderFilter || libraryView !== 'library' ||
+      starredOnly || mayDoFilter || mayDoStatuses.length || selectedTags.length || noteFilter === 'unreadable');
   }
 
   function hasEmbeddings() {
     return Number(journalMeta?.embedded || 0) > 0 && journalMeta?.search?.semantic !== false;
   }
 
-  function effectiveSort() {
-    if (sortChoice) return sortChoice;
-    return searchQuery.trim() ? 'relevance' : 'recent';
-  }
-
-  function effectiveMode() {
-    if (modeChoice) return modeChoice;
-    return hasEmbeddings() ? 'hybrid' : 'lex';
-  }
+  function effectiveSort() { return sortChoice || (searchQuery.trim() ? 'relevance' : 'recent'); }
+  function effectiveMode() { return modeChoice || (hasEmbeddings() ? 'hybrid' : 'lex'); }
 
   function inboxState() {
-    const defSort = searchQuery.trim() ? 'relevance' : 'recent';
-    const defMode = hasEmbeddings() ? 'hybrid' : 'lex';
-    return {
-      q: searchQuery,
-      tags: selectedTags,
-      view: libraryView,
-      year: filterYear,
-      month: filterMonth,
-      since,
-      until,
-      sort: sortChoice && sortChoice !== defSort ? sortChoice : '',
-      mode: modeChoice && modeChoice !== defMode ? modeChoice : '',
-      unreadable: noteFilter === 'unreadable',
-      starred: starredOnly,
-      file: Object.keys(expanded).find((key) => expanded[key]) || '',
-      cue: landCue,
-    };
+    return { q: searchQuery, tags: selectedTags, view: libraryView, mayDos: mayDoFilter, mayDoStatuses,
+      folder: folderFilter, year: filterYear, month: filterMonth, since, until, sort: sortChoice, mode: modeChoice,
+      unreadable: noteFilter === 'unreadable', starred: starredOnly, file: selectedFile, cue: landCue };
   }
 
-  function writeInboxUrl() {
-    if (applyingUrl || !indexReady) return;
+  function saveSession() {
+    try { sessionStorage.setItem('dw.workspace.v1', JSON.stringify(session.serialize())); } catch { /* Session is still usable in memory. */ }
+  }
+
+  function saveListAnchor(preferredFile = '') {
+    const captured = noteList?.captureAnchor(preferredFile);
+    const anchor = captured ? { ...captured, loaded: visibleItems.length } : null;
+    if (anchor && committedKey) session.anchors.set(committedKey, anchor);
+    return anchor || session.anchors.get(committedKey) || null;
+  }
+
+  function saveReader(pause = false) {
+    if (!selectedFile || restoringReader) return;
+    const mountedFile = detailScroll?.querySelector('[data-entry-key]')?.dataset.entryKey;
+    const audio = mountedFile === selectedFile ? detailScroll?.querySelector('audio') : null;
+    const current = { ...readerState, scroll: mountedFile === selectedFile ? detailScroll.scrollTop : readerState.scroll,
+      time: audio?.dataset.positionRestored === 'true' ? audio.currentTime : readerState.time };
+    if (pause) audio?.pause();
+    session.readers.set(selectedFile, current);
+    readerState = current;
+  }
+
+  function historySnapshot() {
+    saveReader();
+    saveSession();
+    return { version: 1, anchor: session.anchors.get(committedKey) || null, returnFocusFile,
+      reader: selectedFile ? session.reader(selectedFile) : null, browseSort };
+  }
+
+  function writeInboxUrl(kind = 'replace') {
+    if (applyingUrl || historyReplay || !indexReady || kind === 'none') return;
     const next = inboxPath(inboxState());
     const current = `${location.pathname}${location.search}${location.hash}`;
-    if (current === next || (next === '/' && !location.search && !location.hash && location.pathname === '/')) {
-      return;
-    }
-    history.replaceState(history.state, '', next);
+    const state = { ...history.state, dwWorkspace: historySnapshot() };
+    if (kind === 'push' && current !== next) history.pushState(state, '', next);
+    else history.replaceState(state, '', next);
+  }
+
+  function assignFilters(state) {
+    searchQuery = state.q; selectedTags = state.tags; mayDoFilter = state.mayDos;
+    mayDoStatuses = state.mayDoStatuses; folderFilter = state.folder; libraryView = state.view;
+    filterYear = state.year; filterMonth = state.month; since = state.since; until = state.until;
+    sortChoice = state.sort; modeChoice = state.mode; starredOnly = state.starred;
+    noteFilter = state.unreadable ? 'unreadable' : 'all';
   }
 
   function applyInboxUrl(search = location.search) {
     applyingUrl = true;
     const parsed = parseInboxUrl(search);
-    searchQuery = parsed.q;
-    selectedTags = parsed.tags;
-    libraryView = parsed.view || 'recent';
-    filterYear = parsed.year;
-    filterMonth = parsed.month;
-    since = parsed.since;
-    until = parsed.until;
-    sortChoice = parsed.sort;
-    modeChoice = parsed.mode;
-    starredOnly = parsed.starred;
-    noteFilter = parsed.unreadable ? 'unreadable' : 'all';
-    if (parsed.file) expanded = { ...expanded, [parsed.file]: true };
-    landCue = parseCueHash(typeof location !== 'undefined' ? location.hash : '');
+    assignFilters(parsed);
+    landCue = parseCueHash(location.hash);
     applyingUrl = false;
+    return parsed;
   }
 
-  async function loadBrowse() {
-    const request = ++browseRequest;
-    const browseKey = [libraryView, filterYear, filterMonth].join('|');
-    browseBusy = true;
-    const params = new URLSearchParams();
-    if (filterYear) {
-      params.set('year', filterYear);
-      if (filterMonth) params.set('month', filterMonth);
-    } else if (libraryView === 'all') params.set('all', '1');
-    try {
-      const data = await fetchJson('/notes/index?' + params);
-      if (request !== browseRequest) return;
-      pagedIndex = Boolean(data.paged);
-      indexing = Boolean(data.indexing);
-      mergeNotes(data.notes, { replace: true });
-      lastBrowseKey = browseKey;
-      await loadMeta();
-    } finally {
-      if (request === browseRequest) browseBusy = false;
-    }
+  async function restoreList(anchor) {
+    if (!anchor) { entryScroll?.scrollTo({ top: 0 }); return; }
+    await tick();
+    await noteList?.restoreAnchor(anchor);
+  }
+
+  async function resultsArrived(key) {
+    committedKey = key;
+    await tick();
+    await restoreList(pendingAnchor || session.anchors.get(key));
+    pendingAnchor = null;
+  }
+
+  async function loadBrowse() { return runRemoteFilter(); }
+
+  function searchParams(state) {
+    const params = new URLSearchParams({ page: '1', limit: '50' });
+    const q = state.q.trim();
+    const scope = scopeOf(state);
+    if (q) params.set('q', q);
+    if (scope.mayDos === 'any') params.set('mayDos', 'any');
+    else for (const status of scope.mayDos) params.append('mayDoStatus', status);
+    if (scope.folder) params.set('folder', scope.folder);
+    if (scope.attention) params.set('attention', '1');
+    for (const tag of state.tags) params.append('tag', tag);
+    if (state.unreadable) params.set('unreadable', '1');
+    if (scope.starred) params.set('starred', '1');
+    for (const field of ['since', 'until', 'year', 'month']) if (scope[field]) params.set(field, scope[field]);
+    params.set('sort', effectiveSort());
+    if (q) params.set('mode', isFilenameQuery(q) ? 'lex' : effectiveMode());
+    return params;
   }
 
   async function runRemoteFilter() {
     const request = ++filterRequest;
-    inboxError = '';
-    if (!isHitMode()) {
-      remoteHits = null;
-      const browseKey = [libraryView, filterYear, filterMonth].join('|');
-      if (browseKey !== lastBrowseKey) {
-        try { await loadBrowse(); }
-        catch (error) { inboxError = error.message || String(error); }
-      } else browseBusy = false;
-      return;
-    }
+    const state = inboxState();
+    const key = workspaceKey(state);
+    inboxError = ''; requestBusy = true;
+    searchController?.abort(); moreController?.abort(); moreRequest += 1; moreBusy = false;
+    searchController = new AbortController();
     try {
-      remoteHits = null;
-      const params = new URLSearchParams();
-      const q = searchQuery.trim();
-      if (q) params.set('q', q);
-      params.set('limit', '50');
-      if (libraryView === 'unfiled' || libraryView === 'holding') params.set('folder', libraryView);
-      for (const tag of selectedTags) params.append('tag', tag);
-      if (noteFilter === 'unreadable') params.set('unreadable', '1');
-      if (starredOnly) params.set('starred', '1');
-      if (since) params.set('since', since);
-      if (until) params.set('until', until);
-      if (filterYear) params.set('year', filterYear);
-      if (filterYear && filterMonth) params.set('month', filterMonth);
-      params.set('sort', effectiveSort());
-      if (q && !isFilenameQuery(q)) params.set('mode', effectiveMode());
-      else if (q) params.set('mode', 'lex');
-      const data = await fetchJson(`/notes/search?${params}`);
+      const params = searchParams(state);
+      let data = await fetchJson(`/notes/search?${params}`, searchController.signal);
       if (request !== filterRequest) return;
-      remoteHits = tightenFilenameHits(q, (data.hits || data.notes || []).map(noteFromHit));
-    } catch (error) {
-      if (request === filterRequest) {
-        inboxError = error.message || String(error);
-        remoteHits = [];
+      const wantedAnchor = pendingAnchor || session.anchors.get(key);
+      const items = [...data.items];
+      // Reconstruct only enough pages to restore a previously visited list position.
+      while (wantedAnchor && data.hasMore && items.length < (wantedAnchor.loaded || 50) && !items.some(item => item.jsonFile === wantedAnchor.key)) {
+        const continuation = new URLSearchParams(params); continuation.set('cursor', data.nextCursor);
+        data = await fetchJson(`/notes/search?${continuation}`, searchController.signal);
+        if (request !== filterRequest) return;
+        items.push(...data.items);
       }
-    }
+      saveListAnchor();
+      remoteHits = items.map(noteFromHit);
+      entryPage = data; pageParams = params.toString(); cursorExpired = false; moreError = '';
+      await resultsArrived(key);
+    } catch (error) {
+      if (request === filterRequest && error.name !== 'AbortError') inboxError = error.message || String(error);
+    } finally { if (request === filterRequest) requestBusy = false; }
+  }
+
+  async function loadMore() {
+    if (moreBusy || requestBusy || committedKey !== searchKey || cursorExpired || !entryPage?.hasMore) return false;
+    const request = ++moreRequest; const filter = filterRequest;
+    moreBusy = true; moreError = '';
+    moreController?.abort(); moreController = new AbortController();
+    const keepPagingFocus = Boolean(document.activeElement?.closest('.paging-controls'));
+    const params = new URLSearchParams(pageParams); params.set('cursor', entryPage.nextCursor);
+    try {
+      const data = await fetchJson(`/notes/search?${params}`, moreController.signal);
+      if (request !== moreRequest || filter !== filterRequest) return false;
+      const anchor = saveListAnchor();
+      const existing = new Set(remoteHits.map(note => note.jsonFile));
+      remoteHits = [...remoteHits, ...data.items.map(noteFromHit).filter(note => !existing.has(note.jsonFile))];
+      entryPage = data;
+      await tick(); await restoreList(anchor);
+      if (keepPagingFocus && !data.hasMore) pagingComplete?.focus({ preventScroll: true });
+      return true;
+    } catch (error) {
+      if (request === moreRequest && filter === filterRequest && error.name !== 'AbortError') {
+        cursorExpired = error.code === 'cursor_expired' || error.code === 'invalid_cursor';
+        moreError = error.message || String(error);
+      }
+      return false;
+    } finally { if (request === moreRequest) moreBusy = false; }
+  }
+
+  async function refreshResults() {
+    pendingAnchor = saveListAnchor();
+    await runRemoteFilter();
   }
 
   function scheduleFilter(key) {
+    saveListAnchor();
     lastSearchKey = key;
-    filterRequest += 1;
-    browseRequest += 1;
-    browseBusy = !isHitMode();
-    remoteHits = null;
-    document.querySelector('.dw-main')?.scrollTo({ top: 0 });
+    filterRequest += 1; browseRequest += 1; browseBusy = false;
+    searchController?.abort(); browseController?.abort(); moreController?.abort(); moreRequest += 1; moreBusy = false;
+    requestBusy = true;
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      writeInboxUrl();
-      void runRemoteFilter();
-    }, 150);
+    searchTimer = setTimeout(() => { writeInboxUrl(); void runRemoteFilter(); }, 180);
   }
 
-  $: searchKey = [
-    searchQuery,
-    libraryView,
-    selectedTags.join('\t'),
-    noteFilter,
-    filterYear,
-    filterMonth,
-    since,
-    until,
-    sortChoice,
-    modeChoice,
-    starredOnly ? '1' : '',
-  ].join('\0');
-  $: if (indexReady && searchKey !== lastSearchKey) scheduleFilter(searchKey);
+  function submitSearch() {
+    clearTimeout(searchTimer);
+    lastSearchKey = workspaceKey(inboxState());
+    writeInboxUrl();
+    void runRemoteFilter();
+  }
+
+  $: searching = Boolean(searchQuery.trim());
+  $: if (indexReady && searching !== wasSearching) {
+    if (searching) { browseSort = sortChoice; sortChoice = ''; }
+    else sortChoice = browseSort;
+    wasSearching = searching;
+  }
+  $: filterState = { q: searchQuery, tags: selectedTags, view: libraryView, mayDos: mayDoFilter, mayDoStatuses,
+    folder: folderFilter, year: filterYear, month: filterMonth, since, until, sort: sortChoice, mode: modeChoice,
+    unreadable: noteFilter === 'unreadable', starred: starredOnly };
+  $: searchKey = workspaceKey(filterState);
+  $: if (indexReady && searchKey !== lastSearchKey && !historyReplay) scheduleFilter(searchKey);
   $: showHits = isHitMode(searchKey);
   $: groups = groupTranscriptions(transcriptions);
   $: tagCloud = tagRows.length
@@ -464,50 +481,56 @@
     );
     return [...capped, ...extraSelected];
   })();
-  $: newestDatedYear = yearCounts[0]?.year || groups.find(group => group.year)?.year;
-  $: browseItems = groups.filter(group => {
-    if (libraryView === 'unfiled' || libraryView === 'holding') return group.key === libraryView;
-    if (filterYear) return group.year === filterYear && (!filterMonth || group.month === filterMonth);
-    if (libraryView === 'all') return true;
-    return group.year === newestDatedYear;
-  }).flatMap(group => group.items).sort((a, b) => {
+  $: browseItems = transcriptions.filter(note => folderOf(note.jsonFile).key !== 'holding').sort((a, b) => {
     const order = (b.day || displayName(b.jsonFile)).localeCompare(a.day || displayName(a.jsonFile)) || b.jsonFile.localeCompare(a.jsonFile);
     return effectiveSort(searchKey) === 'oldest' ? -order : order;
   });
-  $: visibleItems = showHits ? remoteHits || [] : browseItems;
-  $: statusLine = showHits
-    ? remoteHits == null ? 'Searching…' : remoteHits.length + (remoteHits.length === 50 ? ' matches shown · first 50' : ' matching notes')
-    : browseBusy ? 'Loading notes…' : (filterYear ? 'Browsing ' + filterYear + (filterMonth ? ' · ' + MONTHS[Number(filterMonth) - 1] : '') : libraryView === 'all' ? 'All notes' : libraryView === 'unfiled' ? 'Unfiled' : libraryView === 'holding' ? 'Holding' : 'Recent · ' + (newestDatedYear || '')) + ' · ' + browseItems.length + ' notes';
+  $: visibleItems = remoteHits !== null ? remoteHits : browseItems;
+  $: selectedNote = selectedFile ? noteCache[selectedFile] || transcriptions.find(note => note.jsonFile === selectedFile) || remoteHits?.find(note => note.jsonFile === selectedFile) : null;
+  $: outsideResults = Boolean(selectedFile && indexReady && !requestBusy && !browseBusy && committedKey === searchKey && !visibleItems.some(note => note.jsonFile === selectedFile));
+  $: scope = scopeOf(filterState);
+  $: activeStatuses = scope.mayDos === 'any' ? [] : scope.mayDos;
+  $: optionalFilters = Boolean(mayDoFilter || mayDoStatuses.length || filterYear || selectedTags.length || since || until || starredOnly || noteFilter === 'unreadable' || folderFilter);
+  $: viewLabel = { library: 'Library', starred: 'Starred', maydos: 'MayDos', attention: 'Needs attention' }[libraryView];
+  $: statusLine = viewLabel + (filterYear ? ' · ' + filterYear + (filterMonth ? ' · ' + MONTHS[Number(filterMonth) - 1] : '') : '') + ' · ' +
+    (requestBusy || browseBusy || !indexReady ? 'Updating entries…' : committedKey !== searchKey ? 'Could not update entries · previous results shown' : entryPage ? (entryPage.countKind === 'ranked' ? visibleItems.length + ' shown from ' + entryPage.total + ' ranked results · maximum ' + entryPage.candidateLimit : visibleItems.length + ' of ' + entryPage.total + ' entries') : 'Loading entries…');
 
-  function jumpYear(year, month = '') {
-    libraryView = 'all';
-    filterYear = year;
-    filterMonth = month;
+  $: selectedActivity = activityItems.find(item=>item.jsonFile===selectedFile) || (pendingItem?.jsonFile===selectedFile ? pendingItem : null);
+  $: if(indexReady && entryIntent && entryIntent.intentId!==handledIntent){handledIntent=entryIntent.intentId;void openEntry(entryIntent.jsonFile,{focus:true});}
+  $: if(indexReady && selectedActivity?.hasTranscript && selectedNote?.transcriptionJson?._pending && !reconcilingPending && reconciledVersion!==selectedActivity.id+':'+selectedActivity.updatedAt) reconcilePending(selectedActivity);
+  async function reconcilePending(item){reconciledVersion=item.id+':'+item.updatedAt;reconcilingPending=true;saveReader(true);restoringReader=true;try{await hydrateNote(item.jsonFile);await tick();if(selectedFile===item.jsonFile)detailScroll.scrollTop=readerState.scroll;}catch(error){if(selectedFile===item.jsonFile)detailError=error.message;}finally{if(selectedFile===item.jsonFile)restoringReader=false;reconcilingPending=false;}}
+
+  function setDates(date) {
+    filterYear = date.year; filterMonth = date.month; since = date.since; until = date.until;
   }
+  function jumpYear(year, month = '') {
+    setDates(chooseCalendarDate(year, month)); if (window.innerWidth < 1200) navigationOpen = false;
+    if (compactMedia?.matches) void tick().then(() => (selectedFile ? detailHeading : searchInput)?.focus({ preventScroll: true }));
+  }
+  function toggleMayDoStatus(status) {
+    const current = scopeOf(inboxState()).mayDos;
+    mayDoStatuses = (Array.isArray(current) ? current : []).includes(status)
+      ? current.filter(value => value !== status) : [...(Array.isArray(current) ? current : []), status];
+    mayDoFilter = mayDoStatuses.length ? '' : libraryView === 'maydos' ? 'any' : '';
+  }
+  function setSort(value) { sortChoice = value; if (!searchQuery.trim()) browseSort = value; }
 
   function chooseLibrary(view) {
-    clearFilters();
-    sortChoice = '';
-    libraryView = view;
-    if (view === 'starred') { libraryView = 'all'; starredOnly = true; }
+    navigationRequest += 1;
+    saveListAnchor(); saveReader(); writeInboxUrl();
+    assignFilters(clearOptionalFilters({ ...inboxState(), view, q: '', sort: '', mode: '' }));
+    browseSort = ''; wasSearching = false; if (window.innerWidth < 1200) navigationOpen = false;
+    writeInboxUrl('push');
+    if (compactMedia?.matches) void tick().then(() => (selectedFile ? detailHeading : searchInput)?.focus({ preventScroll: true }));
   }
 
   function applyNote(data) {
     if (!data?.jsonFile) return data;
-    const i = transcriptions.findIndex((note) => note.jsonFile === data.jsonFile);
-    if (i >= 0) {
-      transcriptions[i] = data;
-      transcriptions = transcriptions;
-    } else {
-      transcriptions = [...transcriptions, data];
-    }
-    if (remoteHits) {
-      const hi = remoteHits.findIndex((note) => note.jsonFile === data.jsonFile);
-      if (hi >= 0) {
-        remoteHits[hi] = { ...remoteHits[hi], ...data, day: remoteHits[hi].day || data.day };
-        remoteHits = remoteHits;
-      }
-    }
+    const summary = transcriptions.find(note => note.jsonFile === data.jsonFile) || remoteHits?.find(note => note.jsonFile === data.jsonFile);
+    data = { ...summary, ...data, day: data.day || summary?.day };
+    noteCache = { ...noteCache, [data.jsonFile]: data };
+    transcriptions = transcriptions.map(note => note.jsonFile === data.jsonFile ? data : note);
+    if (remoteHits) remoteHits = remoteHits.map(note => note.jsonFile === data.jsonFile ? { ...note, ...data } : note);
     return data;
   }
 
@@ -518,26 +541,115 @@
     return applyNote(data);
   }
 
-  async function toggleExpanded(jsonFile) {
-    if (!expanded[jsonFile]) {
-      try {
-        await hydrateNote(jsonFile);
-      } catch (error) {
-        console.error(error);
+  async function openEntry(selection, { kind = 'push', focus = false, keepFocus = false, cue } = {}) {
+    let jsonFile = typeof selection === 'string' ? selection : selection.file;
+    focus = !keepFocus && (focus || Boolean(selection.keyboard) || Boolean(compactMedia?.matches));
+    if (!jsonFile) return;
+    if (selectedFile === jsonFile && !detailError) { if (typeof selection === 'object' && selection.tab) onReaderTab({ detail: { tab: selection.tab } }); return; }
+    if (kind !== 'none') navigationRequest += 1;
+    const anchor = saveListAnchor(jsonFile);
+    saveReader(true);
+    if (kind !== 'none') writeInboxUrl();
+    const request = ++detailRequest;
+    selectedFile = jsonFile;
+    returnFocusFile = jsonFile;
+    const targetReader = { ...session.reader(jsonFile) };
+    if (typeof selection === 'object' && selection.tab) targetReader.tab = selection.tab;
+    else if (kind !== 'none' && libraryView === 'maydos') targetReader.tab = 'maydos';
+    readerState = targetReader; restoringReader = true;
+    const neededHydration = !noteCache[jsonFile];
+    detailLoading = neededHydration; detailError = '';
+    landCue = cue !== undefined ? cue : remoteHits?.find(note => note.jsonFile === jsonFile)?.cue ?? null;
+    writeInboxUrl(kind);
+    await tick();
+    if (request !== detailRequest) return;
+    await restoreList(anchor);
+    if (request !== detailRequest) return;
+    if (!neededHydration) { if (landCue == null) detailScroll.scrollTop = targetReader.scroll; restoringReader = false; }
+    if (focus) detailHeading?.focus({ preventScroll: true });
+    else if (!keepFocus) {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      if (request === detailRequest && (document.activeElement === document.body || entryScroll?.contains(document.activeElement))) noteList?.focusEntry(jsonFile);
+    }
+    try {
+      let item = activityItems.find(item=>item.jsonFile===jsonFile);
+      if (!activityReady && !item) {
+        const snapshot = await fetchJson('/notes/activity');
+        item = snapshot.items?.find(item=>item.jsonFile===jsonFile);
+      }
+      if (request !== detailRequest || selectedFile !== jsonFile) return;
+      if (item && !item.hasTranscript) {
+        pendingItem=item;
+        applyNote({jsonFile,transcriptionJson:{displayTitle:item.originalName || '',_pending:true}});
         return;
       }
-      const hit = (remoteHits || []).find((note) => note.jsonFile === jsonFile);
-      landCue = hit?.cue ?? landCue;
-    } else {
-      landCue = null;
+      await hydrateNote(jsonFile);
+      if (request !== detailRequest || selectedFile !== jsonFile) return;
+    } catch (error) {
+      if (request === detailRequest) detailError = error.message || String(error);
+    } finally {
+      if (request === detailRequest) {
+        detailLoading = false;
+        await tick();
+        if (neededHydration && selectedFile === jsonFile && landCue == null) detailScroll.scrollTop = targetReader.scroll;
+        restoringReader = false;
+      }
     }
-    expanded[jsonFile] = !expanded[jsonFile];
-    expanded = expanded;
-    writeInboxUrl();
   }
 
+  async function restoreCardFocus(file) {
+    await tick();
+    await restoreList(session.anchors.get(committedKey));
+    if (!noteList?.focusEntry(file)) {
+      const nearest = visibleItems.find(note => note.jsonFile === session.anchors.get(committedKey)?.key) || visibleItems[0];
+      if (!nearest || !noteList?.focusEntry(nearest.jsonFile)) searchInput?.focus({ preventScroll: true });
+    }
+  }
+
+  async function closeDetail() {
+    navigationRequest += 1;
+    saveReader(true); saveListAnchor(); writeInboxUrl();
+    const file = returnFocusFile || selectedFile;
+    detailRequest += 1; restoringReader = false; selectedFile = ''; detailLoading = false; detailError = ''; landCue = null;
+    writeInboxUrl('push');
+    await restoreCardFocus(file);
+  }
+
+  async function stepEntry(direction) {
+    const selected = selectedFile; const key = searchKey;
+    let file = adjacentEntry(visibleItems, selected, direction);
+    if (!file && direction === 1 && visibleItems.some(note => note.jsonFile === selected)) {
+      if (await loadMore()) file = adjacentEntry(visibleItems, selected, direction);
+    }
+    if (file && selectedFile === selected && searchKey === key) void openEntry(file, { kind: 'replace', keepFocus: true });
+  }
+
+  function onReaderTab(event) {
+    readerState = { ...readerState, tab: event.detail.tab };
+    session.readers.set(selectedFile, { ...readerState }); saveSession();
+  }
+
+  async function saveTitle(file, displayTitle) {
+    noteBusy = { ...noteBusy, [file]: true };
+    try { const data = await postJson('/note', { file, displayTitle }); applyNote(data); }
+    finally { noteBusy = { ...noteBusy, [file]: false }; }
+  }
+
+  async function extractNoteMayDos(jsonFile) {
+    if (!connected) throw new Error('Reconnect before extracting actions.');
+    const data = await postJson('/notes/may-dos/extract', { file: jsonFile });
+    applyNote(data); await loadMeta();
+    if (isHitMode()) await runRemoteFilter();
+  }
+  async function setMayDoStatus(jsonFile, id, status, expectedStatus) {
+    if (!connected) throw new Error('Reconnect before changing this action.');
+    const data = await postJson('/note', { file: jsonFile, mayDo: { id, status, expectedStatus } });
+    applyNote(data); void loadMeta();
+    if (isHitMode()) void runRemoteFilter();
+  }
 
   async function withNoteBusy(jsonFile, work) {
+    if(!connected){inboxError='Connection lost. Reconnect before changing this entry.';return;}
     noteBusy[jsonFile] = true;
     noteBusy = noteBusy;
     inboxError = '';
@@ -566,17 +678,36 @@
   }
 
   async function resolveHolding(jsonFile, action) {
-    await withNoteBusy(jsonFile, async () => {
-      await postJson('/holding/resolve', { file: jsonFile, action });
-    });
+    organizationMode=action==='unfile'?'unfile':action==='rename'?'file':'date';organizationFile=jsonFile;
   }
 
-  function deleteTranscription(jsonFile) {
-    if (confirm('Are you sure you want to delete this transcription?')) {
-      transcriptions = transcriptions.filter((transcription) => transcription.jsonFile !== jsonFile);
-      if (remoteHits) remoteHits = remoteHits.filter((note) => note.jsonFile !== jsonFile);
-      socket.emit('delete-transcription', { jsonFile });
-    }
+  async function appliedOrganization(data) {
+    if(data.keptExisting){removeAcknowledged(data.jsonFile);return;}
+    const old=data.oldJsonFile,state=session.readers.get(old),wasSelected=selectedFile===old;
+    removeAcknowledged(old,false);if(state)session.readers.set(data.jsonFile,state);applyNote(data);
+    if(wasSelected){selectedFile=data.jsonFile;readerState=state||readerState;history.replaceState(null,'',inboxPath(inboxState()));}
+    await loadMeta();await loadBrowse();
+    if(wasSelected)await openEntry(data.jsonFile,{kind:'none',keepFocus:true});
+  }
+  function removeAcknowledged(file, close=true) {
+    saveListAnchor();transcriptions=transcriptions.filter(note=>note.jsonFile!==file);
+    if(remoteHits)remoteHits=remoteHits.filter(note=>note.jsonFile!==file);
+    delete noteCache[file];noteCache={...noteCache};
+    if(close&&selectedFile===file)closeDetail();
+  }
+  async function deleteTranscription(jsonFile) {
+    await withNoteBusy(jsonFile,async()=>{
+      let requestId=removalReceipts.get(jsonFile);if(!requestId){requestId=crypto.randomUUID();removalReceipts.set(jsonFile,requestId);}
+      const data=await postJson('/notes/trash/remove',{file:jsonFile,requestId});
+      removeAcknowledged(jsonFile);removalReceipts.delete(jsonFile);
+      clearTimeout(trashTimer);trashUndo=data;trashTimer=setTimeout(()=>trashUndo=null,8000);await loadMeta();
+    });
+  }
+  async function undoTrash() {
+    if(!trashUndo||trashBusy)return;clearTimeout(trashTimer);trashBusy=true;inboxError='';
+    try{const data=await postJson('/notes/trash/restore',{id:trashUndo.trashId});applyNote(data);trashUndo=null;await loadMeta();await loadBrowse();}
+    catch(error){inboxError=error.message+' Open Settings → Trash to retry.';}
+    finally{trashBusy=false;}
   }
 
   async function copyTranscription(transcription) {
@@ -606,32 +737,32 @@
 
   async function saveTags(jsonFile, tags) {
     await withNoteBusy(jsonFile, async () => {
+      const previous=[...((await hydrateNote(jsonFile))?.transcriptionJson?.tags||[])];
       const data = await postJson('/note', { file: jsonFile, tags });
       applyNote(data);
+      clearTimeout(tagTimer);tagUndo={file:jsonFile,previous,expected:data.transcriptionJson.tags};tagTimer=setTimeout(()=>tagUndo=null,5000);
       await loadMeta();
       if (isHitMode()) await runRemoteFilter();
     });
   }
+  async function undoTags(){if(!tagUndo||tagBusy)return;clearTimeout(tagTimer);tagBusy=true;
+    try{const data=await postJson('/note',{file:tagUndo.file,tags:tagUndo.previous,expectedTags:tagUndo.expected});applyNote(data);tagUndo=null;await loadMeta();if(isHitMode())await runRemoteFilter();}
+    catch(error){inboxError=error.message;}finally{tagBusy=false;}
+  }
 
   function onAudioTime(item, event) {
     item.transcriptionJson._currentTime = event.currentTarget.currentTime;
-    transcriptions = transcriptions;
-    if (remoteHits) remoteHits = remoteHits;
+    if (!restoringReader && item.jsonFile === selectedFile && event.currentTarget === detailScroll?.querySelector('audio')) { readerState = { ...readerState, time: event.currentTarget.currentTime }; session.readers.set(selectedFile, readerState); }
   }
 
   function clearSearch() {
     searchQuery = '';
   }
 
-  function clearFilters() {
-    selectedTags = [];
-    libraryView = 'recent';
-    filterYear = '';
-    filterMonth = '';
-    since = '';
-    until = '';
-    starredOnly = false;
-    noteFilter = 'all';
+  function clearFilters() { assignFilters(clearOptionalFilters(inboxState())); }
+  function resetView() {
+    assignFilters(clearOptionalFilters({ ...inboxState(), q: '', sort: '', mode: '' }));
+    browseSort = ''; wasSearching = false;
   }
 
   function upsertNote(data) {
@@ -661,82 +792,107 @@
     indexing = Boolean(data?.indexing);
     if (data?.reload) {
       pagedIndex = true;
-      void (isHitMode() ? runRemoteFilter() : loadBrowse()).catch((error) => {
+      const file = selectedFile;
+      void (isHitMode() ? runRemoteFilter() : loadBrowse()).then(() => {
+        if (file && selectedFile === file && !selectedNote?.transcriptionJson?._pending) return hydrateNote(file);
+      }).catch((error) => {
         inboxError = error.message || String(error);
       });
       return;
     }
+    if (remoteHits !== null) { scheduleFilter(searchKey); void loadMeta(); return; }
     if (data?.paged) {
       pagedIndex = true;
       mergeNotes(data.notes);
     } else if (data?.notes) {
       mergeNotes(data.notes, { replace: !pagedIndex });
     }
-    const open = Object.keys(expanded).filter((key) => expanded[key]);
-    for (const jsonFile of open) void hydrateNote(jsonFile);
+    if (selectedFile && !selectedNote?.transcriptionJson?._pending) void hydrateNote(selectedFile).catch(() => {});
     void loadMeta();
   }
 
   function onTranscription(data) {
     upsertNote(data);
-    if (isHitMode()) scheduleFilter(searchKey);
-    if (data?.jsonFile && expanded[data.jsonFile]) void hydrateNote(data.jsonFile);
+    scheduleFilter(searchKey);
+    if (data?.jsonFile && selectedFile === data.jsonFile && !selectedNote?.transcriptionJson?._pending) void hydrateNote(data.jsonFile).catch(error=>detailError=error.message);
   }
 
-  function onPopState() {
-    applyInboxUrl(location.search);
-    lastSearchKey = '';
-    if (indexReady) scheduleFilter(searchKey);
-    const file = parseInboxUrl(location.search).file;
-    if (file) void hydrateNote(file);
+  async function onPopState() {
+    const navigation = ++navigationRequest;
+    saveListAnchor(); saveReader(true);
+    clearTimeout(searchTimer);
+    historyReplay = true;
+    const previousFile = selectedFile;
+    const parsed = applyInboxUrl();
+    const snapshot = history.state?.dwWorkspace;
+    browseSort = snapshot?.browseSort || (!parsed.q.trim() ? parsed.sort : '');
+    wasSearching = Boolean(parsed.q.trim());
+    if (snapshot?.reader && parsed.file && !session.readers.has(parsed.file)) session.readers.set(parsed.file, snapshot.reader);
+    returnFocusFile = snapshot?.returnFocusFile || previousFile;
+    pendingAnchor = snapshot?.anchor || session.anchors.get(workspaceKey(inboxState()));
+    selectedFile = '';
+    if (parsed.file) void openEntry(parsed.file, { kind: 'none', focus: true, cue: landCue });
+    else { detailRequest += 1; restoringReader = false; detailLoading = false; detailError = ''; }
+    await tick();
+    lastSearchKey = workspaceKey(inboxState());
+    historyReplay = false;
+    await runRemoteFilter();
+    if (navigation !== navigationRequest) return;
+    if (!parsed.file) await restoreCardFocus(returnFocusFile);
+  }
+
+  function saveWorkspace() { saveListAnchor(); saveReader(); saveSession(); }
+
+  function onPaneResize() {
+    if (compactMedia.matches && entryScroll?.contains(document.activeElement) && selectedFile) detailHeading?.focus({ preventScroll: true });
   }
 
   onMount(() => {
-    applyInboxUrl(location.search);
-    const pendingFile = parseInboxUrl(location.search).file;
-    socket.on('notes-index', onNotesIndex);
-    socket.on('transcription', onTranscription);
+    navigationOpen = window.innerWidth >= 1200;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('dw.workspace.v1') || '{}');
+      if (saved.version === 1) session = createWorkspaceSession(saved);
+    } catch { /* Ignore obsolete or unavailable storage. */ }
+    compactMedia = window.matchMedia('(max-width: 959px)');
+    compactMedia.addEventListener('change', onPaneResize);
+    const parsed = applyInboxUrl();
+    wasSearching = Boolean(parsed.q.trim());
+    browseSort = !wasSearching ? parsed.sort : '';
+    committedKey = workspaceKey(inboxState());
+    pendingAnchor = history.state?.dwWorkspace?.anchor || session.anchors.get(committedKey);
+    indexReady = true;
+    lastSearchKey = committedKey;
+    socket.on('notes-index', onNotesIndex); socket.on('transcription', onTranscription);
     window.addEventListener('popstate', onPopState);
-    void loadBrowse()
-      .catch((error) => {
-        if (!transcriptions.length) inboxError = error.message || String(error);
-      })
-      .then(async () => {
-        if (pendingFile) {
-          try {
-            await hydrateNote(pendingFile);
-            expanded[pendingFile] = true;
-            expanded = expanded;
-          } catch (error) {
-            inboxError = error.message || String(error);
-          }
-        }
-      })
-      .finally(() => {
-        indexReady = true;
-      });
+    window.addEventListener('pagehide', saveWorkspace);
+    void runRemoteFilter();
+    void loadMeta();
+    if (parsed.file) void openEntry(parsed.file, { kind: 'none', cue: landCue });
+    writeInboxUrl();
     return () => {
-      socket.off('notes-index', onNotesIndex);
-      socket.off('transcription', onTranscription);
-      window.removeEventListener('popstate', onPopState);
-      clearTimeout(searchTimer);
-      filterRequest += 1;
-      browseRequest += 1;
+      saveListAnchor(); saveReader(true); saveSession();
+      socket.off('notes-index', onNotesIndex); socket.off('transcription', onTranscription);
+      window.removeEventListener('popstate', onPopState); window.removeEventListener('pagehide', saveWorkspace); compactMedia.removeEventListener('change', onPaneResize);
+      clearTimeout(searchTimer); filterRequest += 1; browseRequest += 1; detailRequest += 1;
+      searchController?.abort(); browseController?.abort(); moreController?.abort(); moreRequest += 1; moreBusy = false;
     };
   });
 </script>
+<OrganizationDialog bind:file={organizationFile} initialMode={organizationMode} {connected} on:applied={event=>appliedOrganization(event.detail)} />
+{#if tagUndo}<div class="trash-undo tag-undo" role="status">Tags saved. <button class="dw-btn-secondary" disabled={!connected||tagBusy} on:click={undoTags}>{tagBusy?'Restoring tags…':'Undo tag change'}</button></div>{/if}
+{#if trashUndo}<div class="trash-undo" role="status">Entry moved to Trash. <button class="dw-btn-secondary" disabled={!connected||trashBusy} on:click={undoTrash}>{trashBusy?'Restoring…':'Undo'}</button><button class="dw-text-btn" on:click={()=>{trashUndo=null;dispatch('opentrash');}}>Open Trash</button></div>{/if}
 
-<section class="transcriptions">
-  <aside class="library dw-card" class:is-open={navigationOpen} aria-label="Library navigation">
-    <button type="button" class="dw-btn-secondary dw-btn-compact navigation-toggle" aria-expanded={navigationOpen} on:click={() => (navigationOpen = !navigationOpen)}>Library & dates</button>
+<svelte:window on:keydown={event => { if(!event.target.closest?.('input,textarea,select,[contenteditable=true]') && !document.querySelector('dialog[open]')){if(event.key==='/'){event.preventDefault();searchInput?.focus();}else if(event.key==='?'){event.preventDefault();dispatch('help');}}  if (event.key === 'Escape' && filtersOpen && event.target.closest?.('#note-filters')) { filtersOpen = false; filterButton.focus(); } }} />
+
+<section class="transcriptions" class:rail-open={navigationOpen}>
+  <LibraryRail bind:open={navigationOpen}>
     <div class="library-body">
       <p class="dw-eyebrow">Library</p>
       <nav class="library-links" aria-label="Library views">
-        <button class:is-active={libraryView === 'recent' && !filterYear && !showHits} on:click={() => chooseLibrary('recent')}>Recent</button>
-        <button class:is-active={(libraryView === 'all' || (libraryView === 'recent' && showHits)) && !filterYear && !starredOnly} on:click={() => chooseLibrary('all')}>All notes</button>
-        <button class:is-active={starredOnly} on:click={() => chooseLibrary('starred')}>★ Starred <span>{journalMeta?.starred || 0}</span></button>
-        <button class:is-active={libraryView === 'unfiled'} on:click={() => chooseLibrary('unfiled')}>Unfiled</button>
-        <button class:is-active={libraryView === 'holding'} on:click={() => chooseLibrary('holding')}>Holding</button>
+        <button class:is-active={libraryView === 'library'} aria-current={libraryView === 'library' ? 'page' : undefined} on:click={() => chooseLibrary('library')}>Library</button>
+        <button class:is-active={libraryView === 'starred'} aria-current={libraryView === 'starred' ? 'page' : undefined} on:click={() => chooseLibrary('starred')}>★ Starred <span>{journalMeta?.starred || 0}</span></button>
+        <button class:is-active={libraryView === 'maydos'} aria-current={libraryView === 'maydos' ? 'page' : undefined} on:click={() => chooseLibrary('maydos')}>MayDos</button>
+        <button class:is-active={libraryView === 'attention'} aria-current={libraryView === 'attention' ? 'page' : undefined} on:click={() => chooseLibrary('attention')}>Needs attention</button>
       </nav>
         {#if tagCloud.length}
     <details class="tags-card">
@@ -784,161 +940,107 @@
           </button>
         {/if}
       </div>
-      <details class="tag-management"><summary>Manage tags</summary>
-      <div class="tag-cloud-more">
-        <label class="model-toggle">
-          <input type="checkbox" bind:checked={useModelForTags} disabled={consolidateBusy || applyBusy} />
-          Ask model for synonyms
-        </label>
-        <button
-          type="button"
-          class="dw-btn-secondary dw-btn-compact"
-          disabled={consolidateBusy || applyBusy}
-          on:click={previewConsolidate}
-        >
-          {consolidateBusy ? consolidatePhase || 'Reviewing tags…' : 'Consolidate similar tags'}
-        </button>
-      </div>
-      {#if consolidateError}
-        <p class="dw-error">{consolidateError}</p>
-      {/if}
-      {#if applyResult}
-        <p class="dw-muted">
-          Merged tags on {applyResult.filesChanged} notes
-          ({applyResult.uniqueBefore} → {applyResult.uniqueAfter} unique).
-        </p>
-      {/if}
-      {#if consolidatePlan}
-        <div class="dw-card consolidate">
-          <div class="consolidate-head">
-            <strong>
-              {consolidatePlan.groups.length
-                ? `${consolidatePlan.groups.length} merge${consolidatePlan.groups.length === 1 ? '' : 's'} from ${consolidatePlan.unique} tags`
-                : `No close duplicates in ${consolidatePlan.unique} tags`}
-            </strong>
-            {#if consolidatePhase}
-              <span class="dw-muted">{consolidatePhase}</span>
-            {:else if consolidatePlan.modelError}
-              <span class="dw-muted">Model skipped: {consolidatePlan.modelError}</span>
-            {:else if consolidatePlan.modelUsed}
-              <span class="dw-muted">Includes model suggestions</span>
-            {:else}
-              <span class="dw-muted">Spelling pass only</span>
-            {/if}
-          </div>
-          {#if consolidatePlan.groups.length}
-            <ul class="consolidate-list">
-              {#each consolidatePlan.groups as group, index}
-                <li>
-                  <label>
-                    <input type="checkbox" bind:checked={consolidateSelected[index]} />
-                    <span>
-                      <strong>{group.keep}</strong>
-                      <span class="dw-chip-count">{group.counts?.[group.keep] || ''}</span>
-                      ←
-                      {group.drop
-                        .map((tag) => `${tag}${group.counts?.[tag] ? ` (${group.counts[tag]})` : ''}`)
-                        .join(', ')}
-                      <em>{reasonLabel(group.reason)}</em>
-                    </span>
-                  </label>
-                </li>
-              {/each}
-            </ul>
-            <div class="tag-cloud-more">
-              <button type="button" class="dw-btn-primary dw-btn-compact" disabled={applyBusy} on:click={applyConsolidate}>
-                {applyBusy
-                  ? 'Applying…'
-                  : `Apply ${selectedConsolidateGroups().length} merge${selectedConsolidateGroups().length === 1 ? '' : 's'}`}
-              </button>
-              <button type="button" class="dw-btn-secondary dw-btn-compact" disabled={applyBusy} on:click={dismissConsolidate}>
-                Cancel
-              </button>
-            </div>
-          {:else}
-            <div class="tag-cloud-more">
-              <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={dismissConsolidate}>Dismiss</button>
-            </div>
-          {/if}
-        </div>
-      {/if}
-      </details>
+      <button class="dw-text-btn" on:click={()=>dispatch('maintenance')}>Manage tags in Settings</button>
     </details>
   {/if}
       <p class="dw-eyebrow date-heading">Dates</p>
       <nav class="date-nav" aria-label="Browse by date">
         {#each yearCounts as row}
-          <details open={filterYear === row.year}>
-            <summary><button type="button" class="year-select" class:is-active={filterYear === row.year} on:click={(event) => { event.preventDefault(); jumpYear(row.year); }}>{row.year}</button><span class="dw-chip-count">{row.count}</span></summary>
-            <button class:is-active={filterYear === row.year && !filterMonth} on:click={() => jumpYear(row.year)}>All of {row.year}</button>
-            {#each MONTHS as month, index}
-              <button class:is-active={filterYear === row.year && filterMonth === String(index + 1).padStart(2, '0')} on:click={() => jumpYear(row.year, String(index + 1).padStart(2, '0'))}>{month}</button>
-            {/each}
-          </details>
+          <div class="date-year">
+            <div class="year-row">
+              <button class="year-chevron" aria-label={`Show months in ${row.year}`} aria-expanded={Boolean(expandedYears[row.year])} on:click={() => (expandedYears = { ...expandedYears, [row.year]: !expandedYears[row.year] })}>{expandedYears[row.year] ? '▾' : '▸'}</button>
+              <button class:is-active={filterYear === row.year} on:click={() => jumpYear(row.year)}>{row.year}<span class="dw-chip-count">{row.count}</span></button>
+            </div>
+            {#if expandedYears[row.year] || filterYear === row.year}
+              <div class="year-months">
+                {#each MONTHS as month, index}
+                  <button class:is-active={filterYear === row.year && filterMonth === String(index + 1).padStart(2, '0')} on:click={() => jumpYear(row.year, String(index + 1).padStart(2, '0'))}>{month}</button>
+                {/each}
+              </div>
+            {/if}
+          </div>
         {/each}
       </nav>
 
 
 
     </div>
-  </aside>
-  <div class="results-column">
-    <div class="dw-card search-card">
+  </LibraryRail>
+  <div class="entry-workspace" class:with-detail={selectedFile}>
+    <EntryListPane loading={requestBusy || moreBusy} hiddenOnMobile={Boolean(selectedFile)} bind:scrollElement={entryScroll} on:scroll={() => saveListAnchor()}>
+    <div slot="search" class="dw-card search-card">
       <div class="search">
-        <input class="dw-input" type="search" bind:value={searchQuery} placeholder="Search notes, tags, filenames…" aria-label="Search notes" />
+        <input class="dw-input" type="search" bind:this={searchInput} bind:value={searchQuery} on:keydown={event => { if (event.key === 'Enter') submitSearch(); }} placeholder="Search entries" aria-label="Search entries" />
         {#if searchQuery}<button class="dw-text-btn" on:click={clearSearch}>Clear search</button>{/if}
       </div>
       <div class="results-toolbar">
         <p class="dw-muted status-line" role="status">{statusLine}</p>
-        <button class="dw-chip" class:is-active={starredOnly} aria-pressed={starredOnly} on:click={() => (starredOnly = !starredOnly)}>★ Starred</button>
-        <button class="dw-btn-secondary dw-btn-compact" aria-expanded={filtersOpen} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}>Filters</button>
+        <button class="dw-chip" class:is-active={scope.mayDos === 'any' || activeStatuses.length > 0} aria-pressed={scope.mayDos === 'any' || activeStatuses.length > 0} disabled={libraryView === 'maydos'} title={libraryView === 'maydos' ? 'MayDos view includes entries with actions' : 'Filter entries with any saved MayDos'} on:click={() => { mayDoFilter = mayDoFilter ? '' : 'any'; mayDoStatuses = []; }}>MayDos</button>
+        <button class="dw-chip" class:is-active={scope.starred} aria-pressed={scope.starred} disabled={libraryView === 'starred'} title={libraryView === 'starred' ? 'Starred view includes starred entries' : 'Filter starred entries'} on:click={() => (starredOnly = !starredOnly)}>★ Starred</button>
+        <button class="dw-btn-secondary dw-btn-compact" aria-expanded={filtersOpen} bind:this={filterButton} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}>Filters</button>
         <label class="sort-label">Sort
-          <select class="dw-input dw-select" value={effectiveSort(searchKey)} on:change={event => (sortChoice = event.target.value)}>
+          <select class="dw-input dw-select" value={effectiveSort(searchKey)} on:change={event => setSort(event.target.value)}>
             <option value="recent">Newest first</option><option value="oldest">Oldest first</option>
             {#if searchQuery.trim()}<option value="relevance">Best match</option>{/if}
           </select>
         </label>
       </div>
-      {#if filterYear || selectedTags.length || since || until || starredOnly || noteFilter === 'unreadable' || libraryView === 'unfiled' || libraryView === 'holding'}
+      {#if libraryView === 'maydos'}
+        <div class="maydo-view-status"><details><summary>More</summary><button class="dw-text-btn" on:click={() => dispatch('backfill')}>Extract from older entries</button></details>{#if mayDoJob?.id && (mayDoJob.running || mayDoJob.remaining || mayDoJob.failed)}<button class="dw-text-btn" on:click={() => dispatch('backfill')}>Backfill · {mayDoJob.state} · {mayDoJob.processed}/{mayDoJob.total}</button>{/if}</div>
+      {/if}
+      {#if optionalFilters}
         <div class="active-filters" aria-label="Active filters">
-          {#if filterYear}<button class="dw-chip is-active" aria-label="Remove date filter" on:click={() => { filterYear = ''; filterMonth = ''; }}>{filterYear}{filterMonth ? ' · ' + MONTHS[Number(filterMonth) - 1] : ''} ×</button>{/if}
+          {#if mayDoFilter}<button class="dw-chip is-active" on:click={() => (mayDoFilter = '')}>MayDos · {mayDoFilter === 'any' ? 'Any status' : mayDoFilter} ×</button>{/if}
+          {#each mayDoStatuses as status}<button class="dw-chip is-active" aria-label={`Remove ${status} status filter`} on:click={() => { mayDoStatuses = mayDoStatuses.filter(value => value !== status); }}>{status} ×</button>{/each}
+          {#if filterYear}<button class="dw-chip is-active" aria-label="Remove date filter" on:click={() => setDates(chooseCalendarDate(''))}>{filterYear}{filterMonth ? ' · ' + MONTHS[Number(filterMonth) - 1] : ''} ×</button>{/if}
           {#each selectedTags as tag}<button class="dw-chip is-active" aria-label={'Remove tag ' + tag} on:click={() => toggleTag(tag)}>{tag} ×</button>{/each}
           {#if since}<button class="dw-chip is-active" on:click={() => (since = '')}>From {since} ×</button>{/if}
           {#if until}<button class="dw-chip is-active" on:click={() => (until = '')}>To {until} ×</button>{/if}
           {#if starredOnly}<button class="dw-chip is-active" on:click={() => (starredOnly = false)}>Starred ×</button>{/if}
-          {#if noteFilter === 'unreadable'}<button class="dw-chip is-active" on:click={() => (noteFilter = 'all')}>Unreadable ×</button>{/if}
-          {#if libraryView === 'unfiled' || libraryView === 'holding'}<button class="dw-chip is-active" on:click={() => (libraryView = 'all')}>{libraryView} ×</button>{/if}
+          {#if noteFilter === 'unreadable'}<button class="dw-chip is-active" on:click={() => (noteFilter = 'all')}>Unreadable audio ×</button>{/if}
+          {#if folderFilter}<button class="dw-chip is-active" on:click={() => (folderFilter = '')}>{folderFilter} ×</button>{/if}
           <button class="dw-text-btn" on:click={clearFilters}>Clear filters</button>
         </div>
       {/if}
       {#if filtersOpen}
-        <div class="filter-row" id="note-filters">
-          <label class="filter-field">Year<select class="dw-input dw-select" bind:value={filterYear} on:change={() => { filterMonth = ''; libraryView = 'all'; }}><option value="">All years</option>{#each yearCounts as row}<option value={row.year}>{row.year}</option>{/each}</select></label>
-          <label class="filter-field">Month<select class="dw-input dw-select" bind:value={filterMonth} disabled={!filterYear}><option value="">All months</option>{#each MONTHS as month, index}<option value={String(index + 1).padStart(2, '0')}>{month}</option>{/each}</select></label>
-          <label class="filter-field">From<input class="dw-input dw-select" type="date" bind:value={since} /></label>
-          <label class="filter-field">To<input class="dw-input dw-select" type="date" bind:value={until} /></label>
-          {#if hasEmbeddings()}<label class="filter-field">Search mode<select class="dw-input dw-select" value={effectiveMode()} on:change={event => (modeChoice = event.target.value)}><option value="lex">Words</option><option value="hybrid">Hybrid</option></select></label>{/if}
+        <div class="filter-row" id="note-filters" role="group" aria-label="Entry filters">
+          <fieldset class="maydo-filters"><legend>MayDo statuses (any selected)</legend>
+            <label><input type="checkbox" checked={mayDoFilter === 'any'} on:change={event => { mayDoFilter = event.target.checked ? 'any' : ''; mayDoStatuses = []; }} />Any saved MayDos</label>
+            {#each MAY_DO_STATUSES as status}<label><input type="checkbox" checked={activeStatuses.includes(status)} on:change={() => toggleMayDoStatus(status)} />{status[0].toUpperCase() + status.slice(1)}</label>{/each}
+          </fieldset>
+          <label class="filter-field">Year<select class="dw-input dw-select" value={filterYear} on:change={event => setDates(chooseCalendarDate(event.target.value))}><option value="">All years</option>{#each yearCounts as row}<option value={row.year}>{row.year}</option>{/each}</select></label>
+          <label class="filter-field">Month<select class="dw-input dw-select" value={filterMonth} on:change={event => setDates(chooseCalendarDate(filterYear, event.target.value))} disabled={!filterYear}><option value="">All months</option>{#each MONTHS as month, index}<option value={String(index + 1).padStart(2, '0')}>{month}</option>{/each}</select></label>
+          <label class="filter-field">From<input class="dw-input dw-select" type="date" value={since} on:change={event => setDates(chooseCustomDate(event.target.value, until))} /></label>
+          <label class="filter-field">To<input class="dw-input dw-select" type="date" value={until} on:change={event => setDates(chooseCustomDate(since, event.target.value))} /></label>
+          <label class="filter-field">Folder<select class="dw-input dw-select" bind:value={folderFilter}><option value="">View default</option><option value="unfiled">Unfiled</option><option value="holding">Holding</option></select></label>
+          <label class="filter-field"><input type="checkbox" checked={noteFilter === 'unreadable'} on:change={event => (noteFilter = event.target.checked ? 'unreadable' : 'all')} />Unreadable audio</label>
+          {#if hasEmbeddings()}<label class="filter-field">Search mode<select class="dw-input dw-select" value={effectiveMode()} on:change={event => (modeChoice = event.target.value)}><option value="lex">Search words only</option><option value="hybrid">Words and meaning</option></select></label>{/if}
+          <button class="dw-text-btn" on:click={clearFilters}>Clear filters</button>
+          <button class="dw-text-btn" on:click={resetView}>Reset view</button>
+          <button class="dw-btn-secondary dw-btn-compact" on:click={() => { filtersOpen = false; filterButton.focus(); }}>Close filters</button>
         </div>
       {/if}
     </div>
-    {#if inboxError}<p class="dw-error" role="alert">{inboxError}</p>{/if}
-    {#if (showHits && remoteHits == null) || (!showHits && (browseBusy || !indexReady))}
+            {#if inboxError}<p class="dw-error" role="alert">{inboxError} <button class="dw-text-btn" on:click={refreshResults}>Retry updating entries</button></p>{/if}
+    {#if !visibleItems.length && (requestBusy || browseBusy || !indexReady)}
       <p class="dw-empty">{showHits ? 'Searching…' : 'Loading notes…'}</p>
     {:else if !visibleItems.length}
-      <p class="dw-empty">{indexing ? 'Indexing notes…' : 'No notes match this view.'} {#if searchQuery || filterYear || selectedTags.length || starredOnly}<button class="dw-text-btn" on:click={() => { clearSearch(); clearFilters(); }}>Reset search and filters</button>{/if}</p>
+      <p class="dw-empty">{indexing ? 'Indexing notes…' : 'No notes match this view.'} {#if searchQuery || filterYear || selectedTags.length || starredOnly || mayDoFilter || mayDoStatuses.length}<button class="dw-text-btn" on:click={() => { resetView(); }}>Reset search and filters</button>{/if}</p>
     {:else}
       <section class="notes" aria-label={showHits ? 'Matching notes' : 'Journal entries'}>
                   <NoteList
-            items={visibleItems}
+            items={visibleItems} {activityItems}
             variant={showHits ? 'hit' : 'note'}
             query={searchQuery}
             {selectedTags}
-            {expanded}
+            {selectedFile}
+            compact={Boolean(selectedFile)}
+            bind:this={noteList}
             {showRaw}
-            {noteBusy}
-            landFile={Object.keys(expanded).find((key) => expanded[key]) || ''}
+            noteBusy={connected ? noteBusy : Object.fromEntries(visibleItems.map(item=>[item.jsonFile,true]))}
+            landFile={selectedFile}
             {landCue}
-            on:toggle={(event) => toggleExpanded(event.detail)}
+            on:toggle={(event) => openEntry(event.detail)}
             on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
             on:tag={(event) => toggleTag(event.detail)}
             on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
@@ -955,12 +1057,61 @@
           />
       </section>
     {/if}
+    <div slot="paging" class="paging-controls" aria-live="polite">
+      {#if moreError}<p class="dw-error" role="alert">{moreError}</p>{/if}
+      {#if cursorExpired}<button class="dw-btn-secondary" disabled={requestBusy} on:click={refreshResults}>Refresh results</button>
+      {:else if entryPage?.hasMore}<button class="dw-btn-secondary" disabled={requestBusy || moreBusy || committedKey !== searchKey} on:click={loadMore}>{moreBusy ? 'Loading more…' : moreError ? 'Retry loading more' : 'Load more'}</button>{/if}
+      {#if entryPage && !entryPage.hasMore && entryPage.total > 50}<p bind:this={pagingComplete} tabindex="-1">All {entryPage.total} {entryPage.countKind === 'ranked' ? 'ranked results' : 'entries'} loaded.</p>{/if}
+      {#if entryPage?.countKind === 'ranked' && searching}<button class="dw-text-btn" on:click={() => { modeChoice = 'lex'; }}>Search words only</button>{/if}
+    </div>
+    </EntryListPane>
+      {#if selectedFile}
+        <EntryReader title={entryPresentation(selectedNote || { jsonFile: selectedFile }).title} dateLabel={entryPresentation(selectedNote || { jsonFile: selectedFile }).dateLabel} starred={Boolean(selectedNote?.transcriptionJson?.starred)} busy={!connected || Boolean(noteBusy[selectedFile]) || Boolean(selectedNote?.transcriptionJson?._pending)} previousDisabled={requestBusy || committedKey !== searchKey || !adjacentEntry(visibleItems, selectedFile, -1)} nextDisabled={requestBusy || committedKey !== searchKey || (!adjacentEntry(visibleItems, selectedFile, 1) && (!entryPage?.hasMore || cursorExpired || !visibleItems.some(note => note.jsonFile === selectedFile)))} bind:heading={detailHeading} bind:scrollElement={detailScroll} on:scroll={() => saveReader()} on:previous={() => stepEntry(-1)} on:next={() => stepEntry(1)} on:close={closeDetail} on:star={() => starNote(selectedFile, !selectedNote?.transcriptionJson?.starred)}>
+            {#if cursorExpired}<p class="outside-results" role="status">Results changed or expired. <button class="dw-text-btn" disabled={requestBusy} on:click={refreshResults}>Refresh results</button></p>
+            {:else if moreError}<p class="dw-error" role="alert">{moreError} <button class="dw-text-btn" on:click={loadMore}>Retry loading more</button></p>{/if}
+            {#if outsideResults}<p class="outside-results" role="status">This entry is outside the current results. <button class="dw-text-btn" on:click={closeDetail}>Close entry</button></p>{/if}
+            {#if detailError}<p class="dw-error" role="alert">{detailError}</p><button class="dw-btn-secondary" on:click={() => { void openEntry(selectedFile, { kind: 'none', keepFocus: true }); }}>Retry opening entry</button>
+            {:else if detailLoading}<p class="dw-empty">Loading entry…</p>
+            {:else if selectedNote}
+              {#if selectedNote.transcriptionJson?._pending && selectedActivity}<PendingEntry item={selectedActivity} savedTime={readerState.time} on:time={event=>onAudioTime(selectedNote,event.detail)} />
+              {:else}{#key selectedFile}
+                <NoteCard transcription={selectedNote} variant="detail" activityItem={selectedActivity} expanded={true} selected={true} query={searchQuery} {selectedTags} showRaw={Boolean(showRaw[selectedFile])} busy={!connected || Boolean(noteBusy[selectedFile]) || Boolean(selectedNote?.transcriptionJson?._pending)} detailTab={readerState.tab} savedTime={readerState.time} on:tab={onReaderTab} saveDisplayTitle={saveTitle} {landCue} {connected} saveMayDoStatus={setMayDoStatus} extractMayDos={extractNoteMayDos} on:configurecleanup={() => dispatch('configurecleanup')}
+                              on:toggle={(event) => openEntry(event.detail)}
+            on:star={(event) => starNote(event.detail.jsonFile, event.detail.starred)}
+            on:tag={(event) => toggleTag(event.detail)}
+            on:savetags={(event) => saveTags(event.detail.jsonFile, event.detail.tags)}
+            on:raw={(event) => {
+              showRaw[event.detail.jsonFile] = event.detail.show;
+              showRaw = showRaw;
+            }}
+            on:time={(event) => onAudioTime(event.detail.item, event.detail.event)}
+            on:copy={(event) => copyTranscription(event.detail)}
+            on:retry={(event) => retryCleanup(event.detail)}
+            on:skip={(event) => skipNoteCleanup(event.detail)}
+            on:resolve={(event) => resolveHolding(event.detail.jsonFile, event.detail.action)}
+            on:delete={(event) => deleteTranscription(event.detail)}
+
+                  on:extractmaydos={event => extractNoteMayDos(event.detail)}
+                  on:maydostatus={event => setMayDoStatus(event.detail.jsonFile, event.detail.id, event.detail.status)}
+                />
+              {/key}{/if}
+            {:else}<p class="dw-empty">This entry is unavailable.</p>{/if}
+        </EntryReader>
+      {/if}
   </div>
 </section>
 
 <style lang="scss">
-  .transcriptions { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 1.25rem; align-items: start; }
-  .library { position: sticky; top: 0; padding: 1rem; max-height: calc(100dvh - 6rem); overflow-y: auto; box-shadow: none; }
+  .trash-undo { position: fixed; z-index: 90; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 24px); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; color: var(--dw-text); background: #18181b; border: 1px solid var(--dw-border); border-radius: 12px; box-shadow: 0 6px 24px #0008; }
+  .tag-undo { bottom: 100px; }
+  .trash-undo button { min-height: 44px; }
+
+  .paging-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; }
+  .paging-controls:empty { display: none; }
+  .paging-controls p { flex-basis: 100%; }
+  .paging-controls p:focus { outline: 1px solid var(--dw-accent); outline-offset: 3px; }
+  .paging-controls button { min-height: 44px; }
+  .transcriptions { height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch; }
   .library-body { display: flex; flex-direction: column; gap: 0.65rem; }
   .library-links { display: flex; flex-direction: column; gap: 0.2rem; }
   .library-links button, .date-nav button { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; border-radius: 0.5rem; padding: 0.5rem 0.65rem; background: transparent; color: var(--dw-text-muted); font: inherit; font-size: 0.875rem; cursor: pointer; text-align: left; }
@@ -969,8 +1120,12 @@
   .library-links button span { font-size: 0.75rem; }
   .date-heading { margin-top: 0.6rem; }
   summary { cursor: pointer; padding: 0.5rem 0; color: var(--dw-text); font-size: 0.875rem; }
-  .date-nav summary span:last-child { float: right; }
-  .date-nav .year-select { display: inline-flex; width: auto; padding: 0.1rem 0.35rem; font-weight: 600; }
+  .year-row { display: flex; align-items: center; }
+  .date-nav .year-chevron { width: 2rem; flex-shrink: 0; padding: 0.5rem; }
+  .year-months { padding-left: 1rem; }
+  .outside-results { font-size: 0.8125rem; padding: 0.5rem; border-bottom: 1px solid var(--dw-border); }
+  .maydo-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; border: 1px solid var(--dw-border); border-radius: 0.5rem; padding: 0.5rem; max-width: 100%; }
+  .maydo-filters legend, .maydo-filters label { font-size: 0.8125rem; }
   .date-nav button { padding-left: 1.1rem; font-size: 0.8125rem; }
   .tags-card { border-top: 1px solid var(--dw-border); padding-top: 0.35rem; }
   .tag-search { margin: 0.25rem 0 0.65rem; padding: 0.45rem 0.6rem; font-size: 0.8125rem; }
@@ -980,9 +1135,7 @@
   .tag-cloud-body { max-height: 20rem; overflow-y: auto; }
   .tag-cloud-body .dw-chip { max-width: 100%; overflow-wrap: anywhere; text-align: left; white-space: normal; }
   .tag-cloud-more { margin-top: 0.65rem; }
-  .tag-management { margin-top: 0.65rem; border-top: 1px solid var(--dw-border); }
-  .results-column { min-width: 0; }
-  .search-card { padding: 0.85rem 1rem; margin-bottom: 0.85rem; box-shadow: none; }
+  .search-card { padding: 8px; margin-bottom: 8px; box-shadow: none; }
   .search { display: flex; align-items: center; gap: 0.5rem; }
   .search .dw-input { min-width: 0; }
   .search .dw-text-btn { flex-shrink: 0; }
@@ -993,77 +1146,17 @@
   .active-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.65rem; }
   .filter-row { display: flex; flex-wrap: wrap; align-items: end; gap: 0.65rem; padding-top: 0.85rem; margin-top: 0.75rem; border-top: 1px solid var(--dw-border); }
   .filter-field { display: flex; flex-direction: column; gap: 0.25rem; color: var(--dw-text-muted); font-size: 0.75rem; }
-  .navigation-toggle { display: none; }
   .notes { display: flex; flex-direction: column; gap: 0.5rem; }
   .dw-error { margin-bottom: 0.75rem; }
-    .model-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-    color: rgb(161 161 170);
-  }
-
-  .model-toggle input {
-    accent-color: var(--dw-accent);
-  }
-
-  .consolidate {
-    margin-top: 0.7rem;
-    padding: 0.7rem 0.8rem;
-  }
-
-  .consolidate-head {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.75rem;
-    align-items: baseline;
-    margin-bottom: 0.45rem;
-  }
-
-  .consolidate-list {
-    margin: 0 0 0.55rem;
-    padding: 0;
-    list-style: none;
-    max-height: 16rem;
-    overflow: auto;
-  }
-
-  .consolidate-list li {
-    margin: 0.25rem 0;
-  }
-
-  .consolidate-list label {
-    display: flex;
-    gap: 0.45rem;
-    align-items: flex-start;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-  }
-
-  .consolidate-list input {
-    accent-color: var(--dw-accent);
-    margin-top: 0.15rem;
-  }
-
-  .consolidate-list em {
-    color: rgb(161 161 170);
-    font-style: normal;
-    margin-left: 0.35rem;
-  }
-
-
-  @media (max-width: 800px) {
-    .transcriptions { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
-    .library { position: static; padding: 0.65rem; max-height: none; }
-    .navigation-toggle { display: inline-flex; }
-    .library:not(.is-open) .library-body { display: none; }
-    .library-body { margin-top: 0.75rem; max-height: 45dvh; overflow-y: auto; }
-    .status-line { flex-basis: 100%; }
-    .search-card { padding: 0.75rem; }
+  .entry-workspace { min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .entry-workspace.with-detail { grid-template-columns: 360px minmax(440px, 1fr); }
+  .status-line { flex-basis: 100%; }
+  .sort-label { margin-left: auto; }
+  @media (min-width: 1200px) { .transcriptions.rail-open { grid-template-columns: 200px minmax(0, 1fr); } }
+  @media (min-width: 960px) and (max-width: 1199px) { .entry-workspace.with-detail { grid-template-columns: 320px minmax(0, 1fr); } }
+  @media (max-width: 959px), (pointer: coarse) { .outside-results button, .dw-error button { min-height: 44px; } }
+  @media (max-width: 959px) {
+    .entry-workspace, .entry-workspace.with-detail { grid-template-columns: minmax(0, 1fr); gap: 8px; }
     .search { flex-wrap: wrap; }
-  }
-  @media (min-width: 801px) {
-    .search-card { position: sticky; top: 0; z-index: 5; background: rgb(24 24 27 / 0.96); }
   }
 </style>

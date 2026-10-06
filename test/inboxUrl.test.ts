@@ -5,10 +5,11 @@ import { buildInboxSearch, emptyInboxUrl, inboxPath, parseCueHash, parseInboxUrl
 test('library views round-trip with search and starred filters', () => {
   const state = { ...emptyInboxUrl(), view: 'unfiled' as const, q: 'journal', starred: true };
   const parsed = parseInboxUrl(buildInboxSearch(state));
-  assert.equal(parsed.view, 'unfiled');
+  assert.equal(parsed.view, 'library');
+  assert.equal(parsed.folder, 'unfiled');
   assert.equal(parsed.q, 'journal');
   assert.equal(parsed.starred, true);
-  assert.equal(parseInboxUrl('view=unexpected').view, 'recent');
+  assert.equal(parseInboxUrl('view=unexpected').view, 'library');
   assert.equal(buildInboxSearch(emptyInboxUrl()), '');
 });
 
@@ -65,4 +66,39 @@ test('clear-search shape keeps year and tags', () => {
   assert.equal(kept.q, '');
   assert.equal(kept.year, '2011');
   assert.deepEqual(kept.tags, ['kristen']);
+});
+
+
+test('MayDo status filters round-trip and reject unknown statuses', () => {
+  for (const status of ['any', 'suggested', 'selected', 'done', 'dismissed'] as const) {
+    assert.equal(parseInboxUrl(buildInboxSearch({ ...emptyInboxUrl(), mayDos: status })).mayDos, status);
+  }
+  assert.equal(parseInboxUrl('mayDos=unexpected').mayDos, '');
+});
+
+
+test('canonical named views and old links resolve equivalent explicit scope', () => {
+  for (const view of ['library', 'starred', 'maydos', 'attention'] as const) {
+    assert.equal(parseInboxUrl(buildInboxSearch({ ...emptyInboxUrl(), view })).view, view);
+  }
+  assert.equal(parseInboxUrl('view=recent').view, 'library');
+  assert.equal(parseInboxUrl('view=all').view, 'library');
+  assert.equal(parseInboxUrl('view=holding').view, 'attention');
+  assert.equal(parseInboxUrl('view=holding').folder, 'holding');
+});
+
+test('status sets and custom date precedence round-trip consistently in both clients', async () => {
+  const client = await import('../client/src/lib/inboxUrl.js');
+  const links = ['', 'view=recent&year=2010&file=C%3A%2Fnotes%2Fold.json',
+    'view=holding&starred=1', 'view=maydos&mayDoStatus=selected&mayDoStatus=done&mayDoStatus=selected',
+    'year=2010&month=7&since=2025-01-01', 'year=nope&month=7&mayDoStatus=unknown'];
+  for (const link of links) {
+    const state = parseInboxUrl(link);
+    assert.deepEqual(client.parseInboxUrl(link), state);
+    assert.equal(client.buildInboxSearch(state), buildInboxSearch(state));
+    assert.deepEqual(parseInboxUrl(buildInboxSearch(state)), state);
+  }
+  const range = parseInboxUrl('year=2010&month=7&until=2025-01-01');
+  assert.equal(range.year, '');
+  assert.equal(range.month, '');
 });

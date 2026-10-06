@@ -1,73 +1,19 @@
 <script>
   import AudioRecorder from './AudioRecorder.svelte';
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
 
   const dispatch = createEventDispatcher();
+  export let navigationOpen = false;
 
-  let whisper = { label: 'Whisper', state: 'unknown', title: '' };
-  let ollanet = { label: 'ollanet', state: 'unknown', title: '' };
-  let device = { label: '…', state: 'unknown', title: '' };
-  let timer;
-
-  function pillClass(state) {
-    if (state === 'fail') return 'dw-pill is-fail';
-    if (state === 'warn') return 'dw-pill is-warn';
-    return 'dw-pill';
-  }
-
-  async function loadHealth() {
-    try {
-      const response = await fetch('/health');
-      const data = await response.json().catch(() => null);
-      if (!data) return;
-
-      const worker = data.whisperWorker || 'off';
-      if (worker === 'ready') {
-        whisper = { label: 'Whisper', state: 'ok', title: `ready · ${data.whisper || ''}` };
-      } else if (worker === 'starting') {
-        whisper = { label: 'Starting', state: 'warn', title: 'Whisper worker is starting' };
-      } else {
-        whisper = { label: 'Whisper', state: 'fail', title: `worker ${worker}` };
-      }
-
-      if (data.ollanet?.reachable) {
-        ollanet = {
-          label: 'ollanet',
-          state: 'ok',
-          title: data.ollanet.cleanModel || data.ollanet.machine || 'reachable',
-        };
-      } else if (data.ollanet?.machine || data.ollanet?.cleanModel) {
-        ollanet = { label: 'ollanet', state: 'fail', title: 'unreachable' };
-      } else {
-        ollanet = { label: 'ollanet', state: 'warn', title: 'not configured' };
-      }
-
-      const kind = String(data.device || '').toLowerCase();
-      device = {
-        label: kind === 'cpu' ? 'CPU' : 'GPU',
-        state: kind === 'cpu' ? 'warn' : 'ok',
-        title: data.device || '',
-      };
-    } catch {
-      whisper = { label: 'Whisper', state: 'fail', title: 'health unreachable' };
-      ollanet = { label: 'ollanet', state: 'fail', title: 'health unreachable' };
-      device = { label: '…', state: 'unknown', title: '' };
-    }
-  }
-
-  onMount(() => {
-    void loadHealth();
-    timer = setInterval(() => void loadHealth(), 15_000);
-  });
-
-  onDestroy(() => {
-    if (timer) clearInterval(timer);
-  });
+  export let connected = false;
+  export let workingCount = 0;
+  export let failureCount = 0;
 </script>
 
 <header class="dw-header">
   <div class="dw-header-inner">
     <div class="brand">
+      <button class="dw-btn-secondary dw-btn-compact" aria-expanded={navigationOpen} aria-controls="library-navigation" on:click={() => dispatch("navigation")}>Library</button>
       <span class="logo-wrap">
         <span class="logo-glow" aria-hidden="true"></span>
         <img src="/logo.png" alt="" width="36" height="36" />
@@ -78,16 +24,12 @@
       </span>
     </div>
     <div class="tools">
-      <AudioRecorder />
-      <div class="pills" aria-label="Health">
-        <span class={pillClass(whisper.state)} title={whisper.title}>{whisper.label}</span>
-        <span class={pillClass(ollanet.state)} title={ollanet.title}>{ollanet.label}</span>
-        <span class={pillClass(device.state)} title={device.title}>{device.label}</span>
-      </div>
-      <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('tools')}>
-        Tools
+      <AudioRecorder {connected} on:accepted on:openentry on:activity />
+      <button class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('activity')} aria-label={`Activity${workingCount ? ', work in progress' : ''}${failureCount ? ', ' + failureCount + ' need attention' : ''}`}>Activity{#if workingCount} <span aria-hidden="true">●</span>{/if}{#if failureCount} <span>{failureCount}</span>{/if}</button>
+      <button type="button" class="dw-btn-secondary dw-btn-compact" data-settings-trigger on:click={() => dispatch('tools')}>
+        Settings
       </button>
-      <button type="button" class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('help')}>
+      <button type="button" class="dw-btn-secondary dw-btn-compact header-help" data-help-trigger on:click={() => dispatch('help')}>
         Help
       </button>
     </div>
@@ -110,13 +52,13 @@
     gap: 0.75rem;
     max-width: var(--dw-max);
     margin: 0 auto;
-    padding: 0.5rem 0.85rem;
+    padding: 6px 12px;
     flex-wrap: wrap;
   }
 
   @media (min-width: 800px) {
     .dw-header-inner {
-      padding: 0.6rem 1rem;
+      padding: 6px 12px;
     }
   }
 
@@ -204,15 +146,12 @@
     gap: 0.5rem;
   }
 
-  .pills {
-    display: none;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  @media (min-width: 1100px) {
-    .pills {
-      display: flex;
-    }
+  @media (max-width: 459px) { .logo-wrap { display:none; } }
+  @media (max-width: 599px) {
+    .header-help { display:none; }
+    .wordmark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .dw-header-inner { gap: 4px; padding: 5px 8px; flex-wrap: nowrap; }
+    .tools { gap: 4px; }
+    .brand button, .tools :global(button) { min-height: 44px; }
   }
 </style>

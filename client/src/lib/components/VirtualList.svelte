@@ -1,9 +1,11 @@
 <script>
-  import { afterUpdate, onMount } from 'svelte';
+  import { afterUpdate, onMount, tick } from 'svelte';
   import { heightAt, virtualSlice } from '../virtualWindow.js';
 
   export let items = [];
   export let estimate = 108;
+  export let layoutKey = '';
+  const measurementKey = (key, context) => JSON.stringify([context, key]);
   export let overscan = 8;
   export let getKey = (item) => item.jsonFile;
 
@@ -11,20 +13,25 @@
   let scrollRoot;
   let scrollTop = 0;
   let viewport = 640;
-  let sizes = {};
-  let measuredItems;
-
-  $: if (items !== measuredItems) {
-    measuredItems = items;
-    sizes = {};
+  let heights = {};
+  export async function scrollToIndex(index, offset = 0) {
+    if (!scrollRoot || index < 0) return;
+    const base = root.getBoundingClientRect().top - scrollRoot.getBoundingClientRect().top + scrollRoot.scrollTop;
+    let top = 0;
+    for (let row = 0; row < index; row += 1) top += heightAt(sizes, row, estimate);
+    scrollRoot.scrollTop = base + top + offset;
+    onScroll();
+    await tick();
   }
+  // Preserve measurements when hydration or filtering replaces the item array.
+  $: sizes = Object.fromEntries(items.map((item, index) => [index, heights[measurementKey(getKey(item, index), layoutKey)]]));
 
-  function measure(node, index) {
+  function measure(node, key) {
     const write = () => {
       const height = node.getBoundingClientRect().height;
-      if (height > 0 && sizes[index] !== height) {
-        sizes[index] = height;
-        sizes = sizes;
+      if (height > 0 && heights[key] !== height) {
+        heights[key] = height;
+        heights = heights;
       }
     };
     write();
@@ -32,7 +39,7 @@
     observer.observe(node);
     return {
       update(next) {
-        index = next;
+        key = next;
         write();
       },
       destroy() {
@@ -75,7 +82,7 @@
   $: tall = items.length > 16;
 
   onMount(() => {
-    scrollRoot = root?.closest('.dw-main') || null;
+    scrollRoot = root?.closest('.entry-scroll') || root?.closest('.dw-main') || null;
     const target = scrollRoot || window;
     onScroll();
     target.addEventListener('scroll', onScroll, { passive: true });
@@ -95,7 +102,7 @@
   {:else}
     <div class="virt" style="height: {slice.total}px">
       {#each windowed as row (row.key)}
-        <div class="virt-row" style="transform: translateY({row.top}px)" use:measure={row.index}>
+        <div class="virt-row" style="transform: translateY({row.top}px)" use:measure={measurementKey(row.key, layoutKey)}>
           <slot item={row.item} index={row.index} />
         </div>
       {/each}
