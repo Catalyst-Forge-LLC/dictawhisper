@@ -62,3 +62,10 @@ Screenshot: `Z:/workspace/__tmp/dictawhisper-ux03.jpg` (sample data).
 ## Reproduction
 
 Build the client; run `node --experimental-strip-types scripts/ux01-fixture.mjs`; open `http://127.0.0.1:17778/`. Search Fixture 199 for a long title/22 tags, Fixture 198 for Original-only, or Fixture 197 for missing audio. For denied clipboard, launch a fresh document at `http://127.0.0.1:17778/?q=Fixture%20198&clipboardDenied=1`, open the entry, and Copy transcript. Wait for the visible copy result; clipboard denial does not hide or erase the text. Stop the fixture afterward.
+
+
+## 2026-10-06 follow-up — multi-passage copy
+
+User-requested reader addition: passage checkboxes appear on hover/focus, remain visible once selection starts, and are always visible on touch/narrow screens. More → Select passages offers a labeled starting point. A sticky toolbar provides count, Copy selected, Select all, and Clear selection. Copy joins the selected passage text in document order with blank lines, without timestamps or highlighted HTML. Clipboard failure exposes a read-only combined-text field for manual copying. Selections clear when switching entries, Original/Readable, or source passage content; switching tabs preserves them. Clear returns focus to reader More without changing scroll.
+
+Focused presentation tests: **7 passed**, including nonadjacent order, duplicate/out-of-range indices, plain literal text, multiline passages, and existing denied-clipboard behavior. Client production build passed. Isolated 204-entry browser fixture: selected passage 3 then 1; clipboard contained passage 1, blank line, passage 3, with “2 passages copied” acknowledgment. All checkboxes stayed visible and audio stayed paused. Select all selected 100 passages; Clear removed checks. Space toggled a focused checkbox; Original reset selection; Next opened a different entry with no checks. At 390px, document width was 390, targets measured 44×44px, and the selection toolbar fit the reader. No browser runtime errors were observed. Proof: `Z:/workspace/__tmp/dictawhisper-passage-selection.png`.

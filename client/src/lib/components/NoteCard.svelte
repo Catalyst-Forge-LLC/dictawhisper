@@ -5,7 +5,7 @@
   export let connected = false, saveMayDoStatus, extractMayDos;
   import { stageCopy } from '../activityState.js';
 
-  import { entryPresentation, transcriptPassages, activeMayDoCount, mayDoCounts, markEntryMatch, copyTranscriptText } from '../entryPresentation.js';
+  import { entryPresentation, transcriptPassages, activeMayDoCount, mayDoCounts, markEntryMatch, copyTranscriptText, selectedPassageText } from '../entryPresentation.js';
   export let saveDisplayTitle;
   export let transcription;
   export let variant = 'note';
@@ -53,6 +53,45 @@
   let moreButton;
   let morePanel;
   let findButton;
+  let selectedPassages = [];
+  let selectingPassages = false;
+  let selectionSource = '';
+  let selectionFallback = '';
+  let copyingSelection = false;
+  let copiedSelectionCount = 0;
+  $: passageSource = JSON.stringify([transcription.jsonFile, original, passages.map(row => [row.text, row.start, row.end])]);
+  $: if (selectionSource !== passageSource) {
+    if (selectionFallback) copyError = '';
+    selectionSource = passageSource; selectedPassages = []; selectingPassages = false; selectionFallback = '';
+    if (copiedSegment === 'selected') copiedSegment = '';
+  }
+  $: selectedText = selectedPassageText(passages, selectedPassages);
+  function selectPassage(index, checked) {
+    selectingPassages = true;
+    selectedPassages = checked ? [...new Set([...selectedPassages, index])] : selectedPassages.filter(value => value !== index);
+    selectionFallback = ''; copyError = ''; copiedSegment = '';
+  }
+  async function beginPassageSelection() {
+    selectingPassages = true; moreOpen = false; await tick();
+    card?.querySelector('.passage-select input')?.focus({preventScroll:true});
+  }
+  async function clearPassageSelection() {
+    selectedPassages = []; selectingPassages = false; selectionFallback = ''; copyError = ''; copiedSegment = '';
+    await tick(); moreButton?.focus({preventScroll:true});
+  }
+  async function copySelectedPassages() {
+    if (!selectedText || copyingSelection) return;
+    const text = selectedText, count = selectedPassages.length, source = selectionSource;
+    copyingSelection = true;
+    try {
+      const result = await copyTranscriptText(text, navigator.clipboard);
+      if (selectionSource !== source) return;
+      selectionFallback = result.error ? text : '';
+      copyError = result.error ? 'Could not copy. Select the combined text below and copy it manually.' : '';
+      copiedSelectionCount = count; copiedSegment = result.error ? '' : 'selected';
+      clearTimeout(copyTimer); if (!result.error) copyTimer = setTimeout(() => copiedSegment = '', 1500);
+    } finally { copyingSelection = false; }
+  }
   $: presentation = entryPresentation(transcription);
   $: original = !cleaned || showRaw;
   $: passages = transcriptPassages(transcription.transcriptionJson, original);
@@ -73,6 +112,7 @@
     finally { titleSaving = false; }
   }
   async function copyFull() {
+    selectionFallback = "";
     const result = await copyTranscriptText(fullText, navigator.clipboard); copyError = result.error;
     if (!copyError) { copiedSegment = 'full'; clearTimeout(copyTimer); copyTimer = setTimeout(() => copiedSegment = '', 1500); }
   }
@@ -145,6 +185,7 @@
   }
 
   async function copySegment(text, key) {
+    selectionFallback = "";
     const result = await copyTranscriptText(text, navigator.clipboard);
     copyError = result.error; copiedSegment = copyError ? '' : key;
     clearTimeout(copyTimer);
@@ -378,6 +419,7 @@
         <button class="dw-text-btn" aria-label="Copy full transcript" disabled={!fullText} on:click={copyFull}>Copy transcript</button>
         <button bind:this={findButton} class="dw-text-btn" on:click={openFind}>Find in entry</button>
         <details bind:open={moreOpen} class="more"><summary bind:this={moreButton}>More</summary><div class="more-menu" bind:this={morePanel}>
+          {#if detailTab === 'transcript'}<button class="dw-text-btn" disabled={!passages.length} on:click={beginPassageSelection}>Select passages</button>{/if}
           <button class="dw-text-btn" on:click={beginTitleEdit}>Rename display title</button>
           <div class="mobile-playback"><label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
           <a href={audioDownloadUrl(transcription.jsonFile)}>Download audio</a><a href={sidecarDownloadUrl(transcription.jsonFile)}>Export entry JSON</a>
@@ -394,7 +436,14 @@
       <div class="player-row"><audio bind:this={audioElement} data-position-restored={audioRestored} controls preload="metadata" on:loadedmetadata={restoreAudio} on:error={playbackFailed} src={audioUrl(transcription.jsonFile)} on:timeupdate={updateAudio} on:play={() => { for (const audio of document.querySelectorAll('audio')) if (audio !== audioElement) audio.pause(); }}></audio>
       <label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
       {#if playError}<p class="dw-error" role="alert">{playError} <button class="dw-text-btn" on:click={playAudio}>Play audio</button></p>{/if}
-      {#if copiedSegment || copyError}<p role={copyError ? 'alert' : 'status'} class:dw-error={copyError} class:copy-success={!copyError}>{copyError || (copiedSegment === 'full' ? 'Transcript copied' : 'Passage copied')}</p>{/if}
+      {#if copiedSegment || copyError}<p role={copyError ? 'alert' : 'status'} class:dw-error={copyError} class:copy-success={!copyError}>{copyError || (copiedSegment === 'full' ? 'Transcript copied' : copiedSegment === 'selected' ? `${copiedSelectionCount} ${copiedSelectionCount === 1 ? 'passage' : 'passages'} copied` : 'Passage copied')}</p>{/if}
+      {#if detailTab === 'transcript' && selectingPassages}<div class="passage-selection-bar" role="group" aria-label="Selected passages">
+        <span role="status">{selectedPassages.length} selected</span>
+        <button class="dw-btn-secondary dw-btn-compact" disabled={!selectedText || copyingSelection} on:click={copySelectedPassages}>{copyingSelection ? 'Copying…' : 'Copy selected'}</button>
+        <button class="dw-text-btn" disabled={selectedPassages.length === passages.length} on:click={() => { selectedPassages = passages.map((_, index) => index); selectionFallback = ''; copyError = ''; }}>Select all</button>
+        <button class="dw-text-btn" on:click={clearPassageSelection}>Clear selection</button>
+      </div>{/if}
+      {#if selectionFallback && detailTab === 'transcript'}<label class="selection-fallback">Selected passage text<textarea readonly rows="4" value={selectionFallback} on:focus={event => event.currentTarget.select()}></textarea></label>{/if}
       {#if titleEditing}<form class="title-editor" on:submit|preventDefault={renameTitle}><label>Display title<input class="dw-input" maxlength="160" bind:this={titleInput} bind:value={titleDraft} placeholder={presentation.title} /></label><button class="dw-btn-secondary dw-btn-compact" disabled={titleSaving}>Save title</button><button type="button" class="dw-text-btn" on:click={() => titleEditing = false}>Cancel</button><p class="dw-muted">Leave blank to use the filename title. Files keep their names.</p>{#if titleError}<p class="dw-error" role="alert">{titleError}</p>{/if}</form>{/if}
       {#if findOpen}<div class="find-bar"><label>Find in entry<input class="dw-input" bind:this={findInput} bind:value={findQuery} on:input={() => matchCursor = -1} on:keydown={event => { if (event.key === 'Enter') stepMatch(event.shiftKey ? -1 : 1); if (event.key === 'Escape') { findOpen = false; findButton?.focus(); } }} /></label><span role="status">{findMatches.length ? (matchCursor < 0 ? `${findMatches.length} matches` : `${matchCursor + 1} of ${findMatches.length} matches`) : '0 matches'}</span><button disabled={!findMatches.length} on:click={() => stepMatch(-1)}>Previous match</button><button disabled={!findMatches.length} on:click={() => stepMatch(1)}>Next match</button><button on:click={() => { findOpen = false; findButton?.focus(); }}>Close find</button></div>{/if}
       </div>
@@ -446,7 +495,8 @@
       {:else}
       {#if original}<p class="original-status dw-muted">Original transcript{#if !cleaned} · {transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'readable version unavailable'} <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('retry', transcription.jsonFile)}>Retry cleanup</button>{/if}</p>{/if}
       {#each passages as cue, index}
-        <div class="cue-row" class:find-match={findMatches[matchCursor]?.index === index}>
+        <div class="cue-row" class:find-match={findMatches[matchCursor]?.index === index} class:passage-selected={selectedPassages.includes(index)} class:selection-mode={selectingPassages}>
+          <label class="passage-select" title={`Select passage ${index + 1}`}><input type="checkbox" aria-label={`Select passage ${index + 1}`} checked={selectedPassages.includes(index)} on:change={event => selectPassage(index, event.currentTarget.checked)} /></label>
           <div id={`cue-${index}`} class="cue" class:is-active={cueActive(transcription, cue, index, playTime)}>
             {#if cueHasTime(cue)}<button class="cue-time" aria-label={`Play passage at ${formatTime(cue.start)}`} on:click={event => playCue(event, cue)}>{formatTime(cue.start)}</button>{:else}<span class="cue-time" aria-label="No timing available">—</span>{/if}
             <div class="cue-text">{@html markEntryMatch(cue.text, findOpen ? findQuery : '')}</div>
@@ -468,7 +518,17 @@
   .detail-tabs span { margin-left: 0.25rem; font-size: 0.7rem; }
   .note.is-selected { border-color: var(--dw-accent); background: rgb(245 158 11 / 0.08); }
   .maydo-badge { margin-top: 0.45rem; color: var(--dw-accent-bright); }
-  .cue-row { position: relative; padding-right: 2.1rem; }
+  .cue-row { position: relative; padding-right: 76px; min-height: 44px; }
+  .passage-select { position: absolute; right: 36px; top: 0.35rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; border-radius: 6px; }
+  .passage-select input { width: 18px; height: 18px; margin: 0; accent-color: var(--dw-accent); cursor: pointer; }
+  .cue-row:hover .passage-select, .cue-row:focus-within .passage-select, .selection-mode .passage-select { opacity: 1; }
+  .passage-select:focus-within { outline: 2px solid var(--dw-accent-bright); outline-offset: 1px; }
+  .passage-selected { background: rgb(245 158 11 / 0.08); border-radius: 6px; }
+  .passage-selection-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; }
+  .passage-selection-bar button { min-height: 36px; }
+  .selection-fallback { display: block; font-size: 12px; }
+  .selection-fallback textarea { display: block; width: 100%; color: var(--dw-text); background: #27272a; border: 1px solid var(--dw-border); padding: 8px; }
+  @media (hover: none), (pointer: coarse), (max-width: 959px) { .cue-row { padding-right: 96px; } .passage-select { opacity: 1; right: 46px; width: 44px; height: 44px; } .passage-selection-bar button { min-height: 44px; } }
   .segment-copy { position: absolute; top: 0.45rem; right: 0; opacity: 0; background: rgb(39 39 42); color: var(--dw-text); border: 1px solid var(--dw-border); border-radius: 0.35rem; padding: 0.2rem 0.45rem; cursor: pointer; font-size: 1rem; }
   .cue-row:hover .segment-copy, .cue-row:focus-within .segment-copy { opacity: 1; }
   @media (hover: none) { .segment-copy { opacity: 1; } }

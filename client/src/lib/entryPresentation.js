@@ -68,3 +68,9 @@ export function fileSizeLabel(bytes) {
   if(size<1024*1024)return `${(size/1024).toFixed(1)} KB`;
   return `${(size/(1024*1024)).toFixed(1)} MB`;
 }
+
+/** Join checked passages in document order, without timestamps or UI highlighting. */
+export function selectedPassageText(passages, selectedIndices) {
+  const selected = new Set(selectedIndices);
+  return passages.filter((_, index) => selected.has(index)).map(row => String(row.text || '').trim()).filter(Boolean).join('\n\n');
+}

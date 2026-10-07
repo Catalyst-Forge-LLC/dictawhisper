@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { entryPresentation, transcriptPassages, activeMayDoCount, markEntryMatch, copyTranscriptText } from '../client/src/lib/entryPresentation.js';
+import { entryPresentation, transcriptPassages, activeMayDoCount, markEntryMatch, copyTranscriptText, selectedPassageText } from '../client/src/lib/entryPresentation.js';
 import { preserveHumanEdits } from '../src/lib/humanEditsLib.ts';
 
 const entry = (name: string, json = {}) => ({ jsonFile: `C:/journal/${name}.json`, transcriptionJson: json });
@@ -41,4 +41,12 @@ test('cleanup restores current human title, star and edited tags without replaci
   const plain = { tags: ['generated'] };
   preserveHumanEdits(plain, { tags: ['old'] }, { tags: ['old'] }); assert.deepEqual(plain.tags, ['old', 'generated']);
   preserveHumanEdits(plain, { tags: ['old'] }, { tags: ['old'], tagsEditedAt: 'now' }); assert.deepEqual(plain.tags, ['old']);
+});
+
+test('multi-passage copy preserves transcript order, paragraph breaks, and plain text without timestamps', () => {
+  const passages = [{text:'  First <literal>.  ',start:0},{text:'Not selected.',start:5},{text:'Third.\nSecond line.',start:10}];
+  assert.equal(selectedPassageText(passages,[2,0,2]),'First <literal>.\n\nThird.\nSecond line.');
+  assert.equal(selectedPassageText(passages,[]),'');
+  assert.equal(selectedPassageText(passages,[99,-1]),'');
+  assert.equal(selectedPassageText([{text:'  '},{text:'Last.'}],[0,1]),'Last.');
 });
