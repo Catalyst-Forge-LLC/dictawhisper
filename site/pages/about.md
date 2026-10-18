@@ -1,21 +1,12 @@
 ---
-title: A local voice journal. Audio stays on your computer.
-description: Record or drop a file, get a readable note. Nothing is uploaded to a cloud account.
+title: "Turn a recording into a note you can reread."
+description: "Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes."
 order: 1
 ---
 
-Voice notes pile up. **DictaWhisper** turns a recording into a note you can reread, on your own computer, sitting next to the audio.
+<section class="value-hero" aria-label="DictaWhisper overview"><div class="value-intro"><p class="value-kind">Voice journal running on your computer</p><h1>Turn a recording into a note you can reread.</h1><p class="value-lede">Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes.</p><div class="cta-row"><a class="cta cta-primary" href="/install">Set up DictaWhisper</a><a class="cta cta-secondary" href="#where-the-files-live">See how a note is kept</a></div><p class="value-limit">Setup needs Node, Python, and faster-whisper. The exercised path uses an NVIDIA GPU. Optional cleanup sends text only to the machine you configure.</p></div><figure class="value-proof"><figcaption>Illustrative example</figcaption><p><strong>Starting point</strong><br>A recording from a walk, saved as <code>walk-note.webm</code>.</p><div class="value-result"><p><strong>What you get</strong><br>A neighboring notes file with raw words and a readable version in the inbox.</p></div><p>Revisit the note, search it, and play the audio without exporting a journal from an account.</p><p class="value-note">Illustrative note pair. Transcription quality depends on the recording and model.</p></figure></section>
 
-The name is **dicta** (dictation, a dictaphone) plus **Whisper**. There is no account. Each recording keeps a small notes file beside it. That file is the journal.
-
-Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites. You need Node 22.13+, pnpm, Python with faster-whisper, and (for the exercised path) an NVIDIA GPU. [Install](/install) lists that before the clone.
-
-<div class="cta-row">
-  <a class="cta cta-primary" href="/install">Get started →</a>
-  <a class="cta cta-secondary" href="https://github.com/Catalyst-Forge-LLC/dictawhisper">View on GitHub</a>
-</div>
-
-<p class="kicker">Runs on your desktop. MIT.</p>
+Package releases from 0.1.11 include compiled JavaScript and the inbox UI. Earlier npm releases do not start from an npm installation. Full prerequisites and setup are on [Install](/install).
 
 ## What you get
 

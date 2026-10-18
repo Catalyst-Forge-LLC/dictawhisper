@@ -4,10 +4,9 @@ const github = 'https://github.com/Catalyst-Forge-LLC/dictawhisper';
 
 export default defineFilepressConfig({
 	title: 'DictaWhisper',
-	description:
-		'A local voice journal. Speak, transcribe on your GPU, keep notes as files next to the audio.',
+	description: "Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes.",
 	tagline: 'Dictation, meet Whisper.',
-	lede: 'Speak · keep the note · your machine',
+	lede: "Voice journal running on your computer",
 	url: 'https://dictawhisper.com',
 	author: 'Catalyst Forge LLC',
 	logo: '/logo.png',
