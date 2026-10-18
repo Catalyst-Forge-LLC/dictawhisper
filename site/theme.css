@@ -577,3 +577,39 @@ main.wrap > .home-with-rail:has(.value-hero) { display: block !important; }
 
 /* Keep small action text and opening captions readable on light surfaces. */
 .home-page .value-hero { --accent-strong: #9b431a; }
+
+/* A single worked example connects the input, actual output, and next action. */
+.home-page .value-hero { grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+.home-page .value-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
+.home-page .value-intro > * { min-width: 0; }
+.home-page .value-hero h1 { margin-bottom: 0; }
+.home-page .worked-example { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 1.25rem; scroll-margin-top: 1.5rem; }
+.home-page .worked-example.example-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-page .worked-example > figcaption { grid-column: 1 / -1; font-size: 1.2rem; line-height: 1.4; margin-bottom: .75rem; }
+.home-page .worked-example .example-context { grid-column: 1 / -1; font-size: .875rem; margin: 0 0 1.25rem; max-width: 80ch; color: var(--ink-soft, #46515a); }
+.home-page .worked-example .example-step { min-width: 0; padding: 1rem; border-top: 2px solid var(--rule, #ccd3d7); }
+.home-page .worked-example .example-step h2 { margin: 0 0 .8rem; font: 700 1.05rem/1.4 var(--font-sans, system-ui); letter-spacing: -.015em; text-transform: none; color: var(--ink, #202933); }
+.home-page .worked-example .example-step h2 span { display: block; margin-bottom: .4rem; font-size: .8rem; font-weight: 600; letter-spacing: .01em; color: var(--accent-strong, var(--ink, #202933)); }
+.home-page .worked-example .example-step p { margin: .55rem 0; font-size: .925rem; line-height: 1.55; }
+.home-page .worked-example blockquote { margin: 0; border-left: 3px solid var(--rule, #ccd3d7); padding: .2rem 0 .2rem .9rem; font-style: normal; color: var(--ink, #202933); }
+.home-page .worked-example .example-report { background: color-mix(in srgb, var(--accent, #376f76) 7%, var(--surface, #fff)); border-top-color: var(--accent, #376f76); }
+.home-page .worked-example pre { margin: .75rem 0; padding: .8rem; background: var(--surface, #fff); color: var(--ink, #202933); border: 1px solid var(--rule, #ccd3d7); border-radius: 4px; box-shadow: none; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .78rem; line-height: 1.6; }
+.home-page .worked-example pre code { padding: 0; background: transparent; color: inherit; font-size: inherit; }
+.home-page .worked-example code { overflow-wrap: anywhere; }
+.home-page .worked-example .example-payoff { font-weight: 600; }
+.home-page .worked-example .value-note { grid-column: 1 / -1; font-size: .8rem; line-height: 1.5; margin-top: 1rem; }
+.home-page .worked-example .example-links { grid-column: 1 / -1; font-size: .875rem; margin: .75rem 0 0; }
+.home-page .example-fields { margin: 0; }
+.home-page .example-fields > div { margin: .65rem 0; }
+.home-page .example-fields dt { font-size: .8rem; font-weight: 600; }
+.home-page .example-fields dd { margin: .25rem 0; padding: .35rem .6rem; border: 1px solid var(--rule, #ccd3d7); border-radius: 4px; background: var(--surface, #fff); }
+.home-page .example-page { padding: 1rem; background: var(--surface, #fff); border: 1px solid var(--rule, #ccd3d7); }
+.home-page .example-page h3 { margin: .5rem 0 1rem; font: 700 1.6rem/1.2 var(--font-serif, Georgia); }
+.home-page .example-page .example-meta { font-size: .75rem; color: var(--ink-soft, #46515a); }
+@media (max-width: 900px) {
+  .home-page .value-intro { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  .home-page .value-hero h1 { max-width: 24ch; }
+  .home-page .value-hero .value-lede { max-width: 62ch; }
+  .home-page .worked-example, .home-page .worked-example.example-pair { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .home-page .worked-example .example-step { padding: 1rem .75rem; }
+}

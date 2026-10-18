@@ -4,7 +4,28 @@ description: "Record a thought or drop an audio file into DictaWhisper. It trans
 order: 1
 ---
 
-<section class="value-hero" aria-label="DictaWhisper overview"><div class="value-intro"><p class="value-kind">Voice journal running on your computer</p><h1>Turn a recording into a note you can reread.</h1><p class="value-lede">Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes.</p><div class="cta-row"><a class="cta cta-primary" href="/install">Set up DictaWhisper</a><a class="cta cta-secondary" href="#where-the-files-live">See how a note is kept</a></div><p class="value-limit">Setup needs Node, Python, and faster-whisper. The exercised path uses an NVIDIA GPU. Optional cleanup sends text only to the machine you configure.</p></div><figure class="value-proof"><figcaption>Illustrative example</figcaption><p><strong>Starting point</strong><br>A recording from a walk, saved as <code>walk-note.webm</code>.</p><div class="value-result"><p><strong>What you get</strong><br>A neighboring notes file with raw words and a readable version in the inbox.</p></div><p>Revisit the note, search it, and play the audio without exporting a journal from an account.</p><p class="value-note">Illustrative note pair. Transcription quality depends on the recording and model.</p></figure></section>
+<section class="value-hero" aria-label="DictaWhisper overview"><div class="value-intro"><div class="value-headline"><p class="value-kind">Voice journal running on your computer</p><h1>Turn a recording into a note you can reread.</h1></div><div class="value-pitch"><p class="value-lede">Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes.</p><div class="cta-row"><a class="cta cta-primary" href="/install">Set up DictaWhisper</a><a class="cta cta-secondary" href="#note-example">See raw speech become a note</a></div><p class="value-limit">Setup needs Node, Python, and faster-whisper. The exercised path uses an NVIDIA GPU. Optional cleanup sends text only to the machine you configure.</p></div></div>
+<figure class="value-proof worked-example" id="note-example" tabindex="-1">
+<figcaption>Keep the thought without replaying the whole walk</figcaption>
+<p class="example-context">Fictional recording and cleanup. Both versions belong to the same note; the audio remains available when you need to check what was said.</p>
+<section class="example-step" aria-labelledby="example-step-1">
+<h2 id="example-step-1"><span>1 · Raw words</span> The useful thought is inside the ramble</h2>
+<p><code>walk-note.webm</code> → transcription</p><blockquote><p>Um, for the garden, I think we should move the tomatoes to the south bed. Yeah, that’s the bit that gets sun in the afternoon.</p></blockquote>
+</section>
+<section class="example-step example-report" aria-labelledby="example-step-2">
+<h2 id="example-step-2"><span>2 · Saved note excerpt</span> A readable version beside the recording</h2>
+<p><code>walk-note.json</code> · selected fields</p><pre><code>{
+  "cleanedTranscription": "For the garden, I think we should move the tomatoes to the south bed. It gets sun in the afternoon.",
+  "tags": ["garden", "tomatoes"]
+}</code></pre><p>The sidecar also keeps the raw transcript. Cleanup is optional.</p>
+</section>
+<section class="example-step" aria-labelledby="example-step-3">
+<h2 id="example-step-3"><span>3 · Revisit in the inbox</span> Find the reason when you need it</h2>
+<p>Search for <strong>tomatoes</strong>, open the note, and read the thought: move them to the south bed for afternoon sun.</p><p>Play <code>walk-note.webm</code> to check the wording. Copy the audio and JSON together to keep the note with its source.</p><p class="example-payoff">The recording becomes something you can find and reread.</p>
+</section>
+<p class="value-note">Illustrative text, not a transcription-quality benchmark. If cleanup is unavailable, the raw transcript remains useful; check important details against the recording.</p>
+<p class="example-links"><a href="#where-the-files-live">See where the audio and notes live</a></p>
+</figure></section>
 
 Package releases from 0.1.11 include compiled JavaScript and the inbox UI. Earlier npm releases do not start from an npm installation. Full prerequisites and setup are on [Install](/install).
 
