@@ -1,9 +1,8 @@
 # Feature register: DictaWhisper
 
-Scan `scan-init`. Candidates are not confirmed capabilities.
+Scan `scan-add`. Candidates are not confirmed capabilities.
 
 | ID | Name | Recognition | Lifecycle | Availability | Docs | Tests | Observation |
 |---|---|---|---|---|---|---|---|
-
-No feature records yet. Run a scan, then review candidates before confirming anything.
+| `dictawhisper` | dictawhisper | candidate | unknown | unknown | unknown | unknown | current |
 

@@ -1,6 +1,17 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-init",
+  "scan_id": "scan-add",
   "kind": "tests",
-  "assessments": []
+  "assessments": [
+    {
+      "feature_id": "dictawhisper",
+      "assessment": {
+        "state": "unassessed",
+        "result": "unknown",
+        "adapter_ids": [],
+        "links": [],
+        "reason": "Tests were not assessed."
+      }
+    }
+  ]
 }

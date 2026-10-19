@@ -27,6 +27,12 @@ order: 1
 <p class="example-links"><a href="#where-the-files-live">See where the audio and notes live</a></p>
 </figure></section>
 
+## Read the note beside your library
+
+![Actual DictaWhisper Inbox: searchable library, selected transcript with timestamps, audio controls, and MayDos tab.](/screenshots/dictawhisper-inbox.jpg)
+
+The actual Inbox with fictional entries and synthetic transcript, timing, and action data. Select an entry to read it without leaving the library. The MayDos tab keeps possible actions alongside their source note. This capture shows the interface, not transcription or cleanup quality.
+
 Package releases from 0.1.11 include compiled JavaScript and the inbox UI. Earlier npm releases do not start from an npm installation. Full prerequisites and setup are on [Install](/install).
 
 ## What you get

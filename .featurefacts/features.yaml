@@ -8,8 +8,7 @@ product:
 features:
   - id: dictawhisper
     name: dictawhisper
-    description: Local voice journal. Record or drop audio, transcribe with
-      faster-whisper, keep the .json next to the file.
+    description: Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.
     type: feature
     recognition: candidate
     lifecycle: unknown
@@ -56,8 +55,7 @@ features:
         state: current
         assertion:
           field: capability
-          value: Local voice journal. Record or drop audio, transcribe with
-            faster-whisper, keep the .json next to the file.
+          value: Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.
           claim: package.json names this package. This is not a confirmed capability list.
         declaration:
           actor: xfacts-add-labels

@@ -39,3 +39,13 @@ File paths are resolved against configured roots, including existing parent real
 | POST | `/tags/consolidate/preview`, `/tags/consolidate/apply` | Proposed groups (including affected entry counts), then explicit reviewed groups. Model synonyms start unselected in Settings. Batch merge has no Undo. |
 
 The irreversible `delete-transcription` socket event is deprecated and removes nothing. Use acknowledged Trash. Validation/conflict/file-operation failures report an error; retained-path details are included when reconciliation needs review.
+
+## Search pagination and MayDo records
+
+HTTP callers can opt into the page contract with `GET /notes/search?page=1`: `items`, `total`, `countKind` (`exact` or `ranked`), `hasMore`, `nextCursor`, and actual `mode`. Ranked responses also include `candidateLimit` (500) and `expiresAt` (60 seconds). Pass `cursor` with the same query/filter/sort parameters to continue. Cursor errors return `invalid_cursor` (400) or `cursor_expired` (409); refresh by omitting the cursor. Without `page=1`, the legacy `{ hits, count }` response remains available; its `count` is the returned array length, not a corpus total. Existing MCP search keeps its array response.
+
+Sidecars store a `mayDos` array (ID, title, verb, source quote, audio start/end, status, and timestamps), plus `mayDoExtraction` version, source hash, model, host, and timestamp. Failures set `mayDoError` without replacing existing actions. ExoMetaCortex synchronization is a future step.
+
+API clients retain `mayDoCount` and numeric `skipped` compatibility. Summaries also expose `mayDoTotalCount`, `mayDoStatusCounts`, and `skipReasons`. `POST /tools/may-dos/backfill` accepts `action: start | stop | resume | retry_failed`, plus `id` for stale-job protection; Start accepts `year` and `refresh`. `GET /notes/may-dos/capabilities` reports configuration availability without calling the model.
+
+Activity history is stored in `.dictawhisper/activity.json` beneath the configured index directory. Backfill scope and acknowledged outcomes persist separately in `.dictawhisper/maydo-job.json`. Results remain in entry sidecars. After a restart, unfinished jobs are interrupted and require explicit Resume.
