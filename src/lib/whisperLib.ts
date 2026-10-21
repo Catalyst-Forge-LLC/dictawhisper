@@ -49,6 +49,7 @@ function pythonEnv(): NodeJS.ProcessEnv {
 }
 
 export type WhisperModelAlias = 'large-v3' | 'large' | 'turbo' | 'large-v3-turbo';
+export type WhisperOptions = { vadFilter?: boolean };
 
 const MODEL_ALIASES: Record<string, WhisperModelAlias> = {
   large: 'large-v3',
@@ -81,7 +82,8 @@ function spawnOneShot(
   audioFile: string,
   transcriptionFile: string,
   model: WhisperModelAlias,
-  callback: WhisperCallback
+  callback: WhisperCallback,
+  options: WhisperOptions = {}
 ): void {
   const python = config.whisper.python;
   const computeType = config.whisper.computeType;
@@ -95,6 +97,7 @@ function spawnOneShot(
     '--device', device,
     '--compute-type', computeType,
     '--initial-prompt', buildWhisperInitialPrompt(config.whisper.promptTerms),
+    ...(options.vadFilter === false ? ['--no-vad-filter'] : []),
   ];
 
   console.log(`[whisper] one-shot ${python} ${whisperArgs.map((arg) => JSON.stringify(arg)).join(' ')}`);
@@ -338,7 +341,8 @@ export async function stopWhisperWorker(): Promise<void> {
 async function transcribeViaWorker(
   audioFile: string,
   transcriptionFile: string,
-  model: WhisperModelAlias
+  model: WhisperModelAlias,
+  options: WhisperOptions = {}
 ): Promise<string> {
   await startWhisperWorker(model);
   const id = String(++jobSeq);
@@ -370,6 +374,7 @@ async function transcribeViaWorker(
         device: config.whisper.device,
         compute_type: config.whisper.computeType,
         initial_prompt: buildWhisperInitialPrompt(config.whisper.promptTerms),
+        vad_filter: options.vadFilter !== false,
       });
     } catch (error) {
       pending.delete(id);
@@ -393,17 +398,27 @@ export async function whisperTranscribe(
   audioFile: string,
   transcriptionFile: string,
   callback: WhisperCallback,
-  modelSize: WhisperModelAlias = resolveWhisperModel()
+  modelSize: WhisperModelAlias = resolveWhisperModel(),
+  options: WhisperOptions = {}
 ): Promise<void> {
   const model = resolveWhisperModel(modelSize);
   console.log(`[whisper] TRANSCRIBING FILE (${model})`, audioFile);
 
   try {
-    const elapsed = await enqueueJob(() => transcribeViaWorker(audioFile, transcriptionFile, model));
+    // Keep fallback inside the same queue: switching models must never stop an
+    // in-flight job or load two GPU models concurrently.
+    const elapsed = await enqueueJob(async () => {
+      try { return await transcribeViaWorker(audioFile, transcriptionFile, model, options); }
+      catch (error) {
+        console.warn(`[whisper] worker failed (${String(error)}); falling back to one-shot`);
+        await stopWhisperWorker();
+        return new Promise<string>((resolve, reject) => spawnOneShot(audioFile, transcriptionFile, model, payload => {
+          if (payload.err) reject(payload.err); else resolve(payload.result!.elapsed);
+        }, options));
+      }
+    });
     callback({ err: null, result: { transcriptionFile, elapsed } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[whisper] worker failed (${message}); falling back to one-shot`);
-    spawnOneShot(audioFile, transcriptionFile, model, callback);
+    callback({ err: error instanceof Error ? error : new Error(String(error)) });
   }
 }
