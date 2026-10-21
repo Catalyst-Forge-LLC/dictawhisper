@@ -1,5 +1,6 @@
 import { ollanetIsConfigured } from './lib/ollanetReadyLib.ts';
 import express from 'express';
+import { audioRescueRoutes } from './audioRescueRoutes.ts';
 import multer from 'multer';
 import { process, cleanTranscription, countStatus, getTranscriptionFilename, listNoteSummaries, patchTranscription, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
 import {
@@ -65,6 +66,7 @@ function requireAllowedFile(req: express.Request, res: express.Response): string
 }
 
 export const apiRoutes = [
+  ...audioRescueRoutes,
   {path:'/tools/probe/mark',method:'POST',handler:async(req:express.Request,res:express.Response)=>{try{res.json(await markReviewedAudio(req.body?.files));}catch(error){res.status(409).json({error:String(error)});}}},
   {path:'/settings',method:'GET',handler:(_req:express.Request,res:express.Response)=>res.json(effectiveSettings())},
   {path:'/tools/index/rebuild',method:'POST',handler:async(_req:express.Request,res:express.Response)=>{try{const result=await rebuildJournalIndex([...new Set([...config.watch.roots,config.watch.browserDropFolder])],{embed:false});emitNotesIndex();res.json({ok:true,...result});}catch(error){res.status(409).json({error:String(error)});}}},

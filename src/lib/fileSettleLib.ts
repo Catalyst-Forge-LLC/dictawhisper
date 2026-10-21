@@ -39,6 +39,7 @@ export function isTransientSyncFile(filePath: string): boolean {
     name.startsWith('.syncthing.') ||
     name.endsWith('.tmp') ||
     name.endsWith('.replacement.json') ||
+    /_enhanced-[a-f0-9-]{36}\.wav$/i.test(name) ||
     lower.includes('/.stfolder') ||
     lower.includes('/.stversions/')
   );

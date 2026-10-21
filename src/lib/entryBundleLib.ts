@@ -11,6 +11,7 @@ import { ensureEntryId } from './entryIdentityLib.ts';
 import { forgetTranscription, relocateTranscription, emitNotesIndex, readTranscription } from './transcriptionLib.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
 import {getJournalIndex} from './journalIndexLib.ts';
+import { purgeAudioImprovementHistory } from './audioImprovementStorageLib.ts';
 
 type BundleFile = { original: string; stored: string; size: number; hash?: string };
 type Manifest = { version: 1; id: string; entryId: string; jsonFile: string; title: string; deletedAt: string; state: 'preparing' | 'trashed' | 'restoring' | 'restored' | 'rolled_back' | 'recovery_needed'; files: BundleFile[]; restoredJsonFile?: string; error?: string };
@@ -47,6 +48,11 @@ export function entryBundleFiles(jsonFile: string, allowWaiting = false): string
     const candidate = `${base}${suffix}.${ext}`;
     if (fs.existsSync(candidate)) { checked(candidate); files.push(candidate); }
   }
+  for (const name of fs.readdirSync(path.dirname(file))) {
+    if (!name.startsWith(path.basename(base))) continue;
+    if (!/^_enhanced-[a-f0-9-]{36}\.wav$/i.test(name.slice(path.basename(base).length))) continue;
+    const enhanced = path.join(path.dirname(file), name); checked(enhanced); files.push(enhanced);
+  }
   return [...new Set(files)];
 }
 async function hash(file: string) {
@@ -76,7 +82,7 @@ function locate(id: string): { directory: string; manifest: Manifest } | null {
     for (const row of manifest.files) {
       const base = manifest.jsonFile.slice(0, -5);
       const suffix = typeof row.original === 'string' ? row.original.slice(base.length) : '';
-      const validAudio = ['', '_original', '_clean'].some(part => audioExtensions.some(ext => suffix.toLowerCase() === `${part}.${ext}`));
+      const validAudio = ['', '_original', '_clean'].some(part => audioExtensions.some(ext => suffix.toLowerCase() === `${part}.${ext}`)) || /^_enhanced-[a-f0-9-]{36}\.wav$/i.test(suffix);
       if (typeof row.original !== 'string' || !(same(row.original, manifest.jsonFile) || (row.original.startsWith(base) && validAudio)) || typeof row.stored !== 'string' || !same(path.dirname(row.stored), directory) || !/^file-\d+\.[a-z0-9]+$/i.test(path.basename(row.stored)) || !Number.isFinite(row.size)) throw new BundleError('Invalid bundle paths. All files were kept.');
       if (!containedRelative(row.stored, directory) || !containedRelative(row.original, checked(manifest.jsonFile).root)) throw new BundleError('Trash manifest escapes its original root.');
       checked(row.stored); checked(row.original);
@@ -192,6 +198,7 @@ export function purgeTrash(id: string, confirmation: unknown) {
   const saved = locate(id); if (!saved) throw new BundleError('Trash bundle not found.');
   if (saved.manifest.state !== 'trashed') throw new BundleError('Only a fully acknowledged Trash bundle can be permanently deleted. Recovery bundles are kept.');
   saved.manifest.files.forEach(row => { assertEntryWritable(row.original); assertEntryWritable(row.stored); });
+  purgeAudioImprovementHistory(saved.manifest.entryId);
   checked(saved.directory); fs.rmSync(saved.directory, { recursive: true }); return { ok: true, id };
 }
 /** Reconcile interrupted receipts only when every retained byte is accounted for. */

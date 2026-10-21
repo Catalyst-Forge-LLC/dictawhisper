@@ -54,6 +54,14 @@ export function audioContentType(filePath: string): string {
 export function findAudioForSidecar(jsonFile: string): string | null {
   const parsed = path.parse(jsonFile);
   const base = path.join(parsed.dir, parsed.name);
+  try {
+    const id = JSON.parse(fs.readFileSync(jsonFile, 'utf8'))?.audioEnhancement?.versionId;
+    if (typeof id === 'string' && /^[a-f0-9-]{36}$/.test(id)) {
+      const enhanced = `${base}_enhanced-${id}.wav`;
+      // Missing enhanced audio must not silently play an older, differently timed file.
+      return fs.existsSync(enhanced) ? enhanced : null;
+    }
+  } catch { /* Legacy sidecars have no enhanced version. */ }
   for (const ext of audioExtensions) {
     const candidate = `${base}.${ext}`;
     if (fs.existsSync(candidate)) return candidate;

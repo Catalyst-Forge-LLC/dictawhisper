@@ -75,6 +75,8 @@ export type TranscriptionDocument = {
   cleanupSkipped?: boolean;
   /** ffmpeg/preprocess could not read the audio. Do not retry until force. */
   audioError?: string;
+  /** Immutable enhanced sibling; the UUID travels with the entry bundle. */
+  audioEnhancement?: { versionId: string; preset: string; model: string; appliedAt: string };
   starred?: boolean;
   promptVersion?: number;
 };
