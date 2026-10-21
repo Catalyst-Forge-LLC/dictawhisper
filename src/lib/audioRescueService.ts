@@ -156,6 +156,12 @@ export class AudioRescueService {
     void promise.catch(error => console.error('[audio-improvement] Could not persist failure:', error));
   }
   async wait(id: string) { await this.running.get(id); }
+  markBatch(file: string, id: string, batchId: string) {
+    const { root, job } = this.locate(file, id);
+    if (job.phase !== 'ready' || !ID.test(batchId)) throw new Error('A ready candidate and valid batch ID are required.');
+    const output = owned(root, id, 'candidate.json'), candidate = jsonRead(output) as TranscriptionDocument;
+    if (candidate.transcriptionQuality) { candidate.transcriptionQuality.batchId = batchId; writeEntryJson(output, JSON.stringify(candidate, null, 2)); }
+  }
   prepare(file: string, options: { preset?: unknown; model?: unknown; vadFilter?: unknown }) {
     const current = entry(file);
     const existing = this.jobs(current.json).find(row => ['preparing', 'transcribing'].includes(row.job.phase));

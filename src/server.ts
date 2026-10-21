@@ -1,4 +1,5 @@
 import { audioRescue } from './lib/audioRescueService.ts';
+import { initTranscriptionBatch } from './lib/transcriptionBatchLib.ts';
 import { ActivityStore, activity, setActivityStore } from './lib/activityLib.ts';
 import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
@@ -63,6 +64,7 @@ setTranscriptionIo(io);
 setActivityStore(new ActivityStore(path.join(path.dirname(config.journal.index), '.dictawhisper', 'activity.json')));
 activity.setEmitter(event => io.emit('activity-change', event));
 initMayDoBackfill(path.join(path.dirname(config.journal.index), '.dictawhisper', 'maydo-job.json'), () => io.emit('maydo-job-change', getMayDoBackfill()));
+initTranscriptionBatch(path.join(path.dirname(config.journal.index), '.dictawhisper', 'transcription-batch.json'), { emit: () => io.emit('transcription-batch-change') });
 
 function startQueues(): void {
   initQueues({
