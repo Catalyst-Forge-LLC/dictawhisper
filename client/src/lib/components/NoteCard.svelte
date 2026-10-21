@@ -2,6 +2,7 @@
   import { afterUpdate, createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
   import { displayName, markPreview } from '../markPreview.js';
   import MayDoReview from './MayDoReview.svelte';
+  import AudioImprovementDialog from './AudioImprovementDialog.svelte';
   export let connected = false, saveMayDoStatus, extractMayDos;
   import { stageCopy } from '../activityState.js';
 
@@ -50,6 +51,13 @@
   let titleError = '';
   let titleSaving = false;
   let moreOpen = false;
+  let improveAudioOpen = false;
+  let lastAudioVersion = null;
+  $: audioVersion = transcription.transcriptionJson?.audioEnhancement?.versionId || 'source';
+  $: if (lastAudioVersion !== audioVersion) {
+    if (lastAudioVersion !== null) { audioElement?.pause(); audioRestored = false; savedTime = 0; playTime = 0; }
+    lastAudioVersion = audioVersion;
+  }
   let moreButton;
   let morePanel;
   let findButton;
@@ -209,8 +217,8 @@
     return `${oneLine.slice(0, limit)}…`;
   }
 
-  function audioUrl(jsonFile) {
-    return `/audio?file=${encodeURIComponent(jsonFile)}`;
+  function audioUrl(jsonFile, version = 'source') {
+    return `/audio?file=${encodeURIComponent(jsonFile)}&version=${version}`;
   }
 
   function audioDownloadUrl(jsonFile) {
@@ -426,6 +434,7 @@
           <details><summary>Processing details</summary><p>{presentation.path}</p><p>{presentation.dateLabel}{presentation.precision === 'month' ? ' · Month precision; no recording day is known.' : ''}</p>{#if presentation.sequence}<p>Recording {presentation.sequence}</p>{/if}{#if audioDuration != null}<p>Audio duration {formatTime(audioDuration)}</p>{/if}{#if transcription.transcriptionJson?.elapsed}<p>Processing time {transcription.transcriptionJson.elapsed}</p>{/if}{#if cleanedBy}<p>Cleaned {cleanedBy}</p>{/if}</details>
           {#if searchMatches.length}<p>{searchMatches.length} matching passages</p><button class="dw-text-btn" on:click={() => { stepSearch(-1); moreOpen = false; }}>Previous search match</button><button class="dw-text-btn" on:click={() => { stepSearch(1); moreOpen = false; }}>Next search match</button>{/if}
           <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('retry', transcription.jsonFile)}>Reprocess readable transcript</button>
+          <button class="dw-text-btn" disabled={busy} on:click={() => { moreOpen = false; audioElement?.pause(); improveAudioOpen = true; }}>Improve audio & retranscribe…</button>
           <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('skip', transcription.jsonFile)}>Skip cleanup</button>
           {#if holding || (unfiled && hasDateName(transcription.jsonFile))}<button class="dw-text-btn" disabled={busy} on:click={() => dispatch('resolve', { jsonFile: transcription.jsonFile, action: 'rename' })}>Organize / resolve conflict…</button>{/if}
           {#if holding}<button class="dw-text-btn" disabled={busy} on:click={() => dispatch('resolve', { jsonFile: transcription.jsonFile, action: 'unfile' })}>Move to Unfiled</button>{/if}
@@ -433,7 +442,7 @@
           <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('delete', transcription.jsonFile)}>Move to Trash</button>
         </div></details>
       </div></div>
-      <div class="player-row"><audio bind:this={audioElement} data-position-restored={audioRestored} controls preload="metadata" on:loadedmetadata={restoreAudio} on:error={playbackFailed} src={audioUrl(transcription.jsonFile)} on:timeupdate={updateAudio} on:play={() => { for (const audio of document.querySelectorAll('audio')) if (audio !== audioElement) audio.pause(); }}></audio>
+      <div class="player-row"><audio bind:this={audioElement} data-position-restored={audioRestored} controls preload="metadata" on:loadedmetadata={restoreAudio} on:error={playbackFailed} src={audioUrl(transcription.jsonFile, audioVersion)} on:timeupdate={updateAudio} on:play={() => { for (const audio of document.querySelectorAll('audio')) if (audio !== audioElement) audio.pause(); }}></audio>
       <label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
       {#if playError}<p class="dw-error" role="alert">{playError} <button class="dw-text-btn" on:click={playAudio}>Play audio</button></p>{/if}
       {#if copiedSegment || copyError}<p role={copyError ? 'alert' : 'status'} class:dw-error={copyError} class:copy-success={!copyError}>{copyError || (copiedSegment === 'full' ? 'Transcript copied' : copiedSegment === 'selected' ? `${copiedSelectionCount} ${copiedSelectionCount === 1 ? 'passage' : 'passages'} copied` : 'Passage copied')}</p>{/if}
@@ -510,6 +519,7 @@
     </div>
   {/if}
 </article>
+{#if expanded && improveAudioOpen}<AudioImprovementDialog file={transcription.jsonFile} on:close={() => { improveAudioOpen = false; tick().then(() => moreButton?.focus({ preventScroll: true })); }} />{/if}
 
 <style lang="scss">
   .detail-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.45rem; }

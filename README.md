@@ -62,6 +62,10 @@ Select a card to read its full entry in the right pane. The entry list and detai
 
 Library and search results load in pages of 50. **Load more** keeps the current reading position, and reader **Next** continues onto the next page. Word searches show an exact matching count and sort the full matching set before paging. Meaning searches label their bounded ranked results; **Search words only** switches to exhaustive word matching. If results change or a ranked snapshot expires, **Refresh results** keeps the selected entry open.
 
+## Improve difficult recordings
+
+For quiet, uneven, or noisy recordings, use the reader's **More → Improve audio & retranscribe…** action. Prepare an audio preview from the original when available, switch between original and enhanced at the same position, then create a candidate with **Whisper large-v3** (default for this action) or **turbo**. Review and accept the candidate or keep your current version. Preparation uses FFmpeg and a lossless working copy without trimming silence. Your title, stars, tags, MayDo decisions, and original recordings remain saved. Existing MayDo timings are cleared until refreshed against the new transcript. Reopen the action to check progress or undo acceptance before further transcript changes. Readable cleanup is a separate action after acceptance. See [audio improvement behavior and verification](docs/AUDIO_IMPROVEMENT.md).
+
 ## Review MayDos and extract older entries
 
 Cleanup also extracts **MayDos**: possible actions stated in the transcript, including tentative intentions. Each starts as **Suggested** and can become **Selected**, **Done**, or **Dismissed**. Its source quote and available audio timing stay with it. Re-extraction preserves IDs and your status choices, keeping decided items even when the model omits them. Filter entries by any MayDos or a particular status.

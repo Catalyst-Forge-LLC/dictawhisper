@@ -4,6 +4,8 @@ Status: Core implementation delivered; manual accessibility review remains
 
 Date: 2026-10-06
 
+2026-10-21 extension: [Audio improvement and retranscription](AUDIO_IMPROVEMENT.md) defines the new per-entry recovery flow, preservation contracts, AR01–AR04 packet status, verification evidence, and deferred work.
+
 Scope: The complete DictaWhisper product, including the browser workspace, capture, processing, organization, maintenance, setup, CLI, HTTP, and MCP.
 
 Implementation status: 7 of 8 core packets Verified. UX02 is Needs review for physical touch and actual 200% browser zoom (UX02-V01). UX08b editable settings and UX09 enhancements remain Deferred. Packet and phase evidence is recorded in the delivery tracker.

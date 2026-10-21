@@ -10,6 +10,9 @@ import { Server } from 'socket.io';
 import { ActivityStore, setActivityStore } from '../src/lib/activityLib.ts';
 import { config } from '../src/config.ts';
 import { apiRoutes } from '../src/apiRoutes.ts';
+import { createAudioRescueRoutes } from '../src/audioRescueRoutes.ts';
+import { AudioRescueService } from '../src/lib/audioRescueService.ts';
+import { findAudioForSidecar } from '../src/lib/audioLib.ts';
 import { setTranscriptionIo, transcriptions, readTranscription } from '../src/lib/transcriptionLib.ts';
 import { JournalIndex, EntryCursorError, setJournalIndex } from '../src/lib/journalIndexLib.ts';
 import { MayDoJobStore } from '../src/lib/mayDoJobLib.ts';
@@ -149,6 +152,21 @@ wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
 wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
 wav.write('data', 36); wav.writeUInt32LE(wav.length - 44, 40);
 const fixtureAudio=path.join(root,'fixture-audio.wav');fs.writeFileSync(fixtureAudio,wav);
+// Opt-in real FFmpeg preparation with deterministic ASR output; no GPU/model calls.
+// DICTA_FIXTURE_AUDIO_RESCUE=1 node --experimental-strip-types scripts/ux01-fixture.mjs
+if (process.env.DICTA_FIXTURE_AUDIO_RESCUE === '1') {
+  config.queues.transcription.active = true;
+  const quiet = Buffer.from(wav.subarray(0, 44 + 16000 * 4));
+  quiet.writeUInt32LE(quiet.length - 8, 4); quiet.writeUInt32LE(quiet.length - 44, 40);
+  for (let i = 0; i < (quiet.length - 44) / 2; i++) quiet.writeInt16LE(Math.round(100 * Math.sin(i * 2 * Math.PI * 440 / 8000)), 44 + i * 2);
+  for (const file of [...notes.keys()].filter(file => /Fixture (19[89]|20[01])/.test(file))) fs.writeFileSync(file.slice(0, -5) + '_original.wav', quiet);
+  const rescue = new AudioRescueService({ transcribe: async (_audio, output, model, vad) => {
+    await new Promise(resolve => setTimeout(resolve, 2200));
+    fs.writeFileSync(output, JSON.stringify({ text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair. This is deterministic test text, not speech recognition output.', segments: [{ start: 0, end: 4, text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair.' }], whisper: { model, vad_filter: vad } }));
+  } });
+  for (const route of createAudioRescueRoutes(rescue)) app[route.method.toLowerCase()](route.path, route.handler);
+  app.get('/audio', (req, res, next) => { const file = findAudioForSidecar(String(req.query.file || '')); if (file) res.sendFile(file); else next(); });
+}
 app.get('/audio', (req, res) => { if (String(req.query.file).includes('Fixture 197')) { res.status(404).json({ error: 'Missing fixture audio' }); return; } res.sendFile(fixtureAudio); });
 app.post('/__fixture/expire', (_req, res) => { fixtureTime += 60_001; res.json({ ok: true }); });
 app.get('/__fixture/events', (_req, res) => res.json({ root, requests }));
