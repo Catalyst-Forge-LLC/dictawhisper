@@ -47,6 +47,12 @@ for (let i = 0; i < 200; i++) {
     json.mayDoExtraction={version:1,sourceHash:mayDoSourceHash(text),createdAt:'2020-01-01T00:00:00.000Z'};
   }
   if (i === 195) json.mayDoExtraction={version:0,sourceHash:'stale',createdAt:'2020-01-01T00:00:00.000Z'};
+  if (i === 197) {
+    json.segments = ['First original passage.', 'Second original passage, with <literal> text.\nA line within the passage.', 'Final original passage.'].map((text, n) => ({text,start:n*5,end:n*5+5}));
+    json.text = json.segments.map(segment => segment.text.replace(/\s+/g, ' ')).join(' ');
+    json.cleanedTranscription = 'First readable paragraph.\n\nSecond readable paragraph.\nA line within the paragraph.';
+    json.playbackCues = json.cleanedTranscription.split('\n\n').map((text,n) => ({text,start:n*5,end:n*5+5}));
+  }
   if (i === 198) { delete json.cleanedTranscription; delete json.playbackCues; json.text = 'Original-only fixture text. Copying and reading work without cleanup.'; }
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(json));
   notes.set(file, { jsonFile: file, day, transcriptionJson: json });

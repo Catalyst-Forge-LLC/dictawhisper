@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { entryPresentation, transcriptPassages, activeMayDoCount, markEntryMatch, copyTranscriptText, selectedPassageText } from '../client/src/lib/entryPresentation.js';
+import { entryPresentation, transcriptPassages, transcriptCopyText, activeMayDoCount, markEntryMatch, copyTranscriptText, selectedPassageText } from '../client/src/lib/entryPresentation.js';
 import { preserveHumanEdits } from '../src/lib/humanEditsLib.ts';
 
 const entry = (name: string, json = {}) => ({ jsonFile: `C:/journal/${name}.json`, transcriptionJson: json });
@@ -49,4 +49,27 @@ test('multi-passage copy preserves transcript order, paragraph breaks, and plain
   assert.equal(selectedPassageText(passages,[]),'');
   assert.equal(selectedPassageText(passages,[99,-1]),'');
   assert.equal(selectedPassageText([{text:'  '},{text:'Last.'}],[0,1]),'Last.');
+});
+
+test('full original copy preserves displayed segments even when Whisper text is flattened', async () => {
+  const json = {text:'First original passage. Second <literal> passage. Last line.', cleanedTranscription:'Different readable text.',
+    segments:[{text:' First original passage. ',start:0,end:5},{text:'  ',start:5,end:6},{text:'Second <literal> passage.\nLast line.',start:6,end:12}]};
+  let clipboard = '';
+  await copyTranscriptText(transcriptCopyText(json, true), {writeText:async (text: string) => {clipboard = text;}});
+  assert.equal(clipboard, 'First original passage.\n\nSecond <literal> passage.\nLast line.');
+});
+
+test('full readable copy follows displayed cues and preserves internal line breaks', () => {
+  const json = {text:'Original text.', cleanedTranscription:'Flattened readable text.', segments:[{text:'Original segment.'}],
+    playbackCues:[{text:'First readable paragraph.',start:0},{text:'Second paragraph.\nAnother line.',start:10}]};
+  assert.equal(transcriptCopyText(json), 'First readable paragraph.\n\nSecond paragraph.\nAnother line.');
+  assert.equal(transcriptCopyText(json, true), 'Original segment.');
+});
+
+test('full copy keeps legacy text when passages are missing or empty', () => {
+  assert.equal(transcriptCopyText({text:'First.\r\n\r\nSecond.'},true),'First.\r\n\r\nSecond.');
+  assert.equal(transcriptCopyText({cleanedTranscription:'First.\n\nSecond.'}),'First.\n\nSecond.');
+  assert.equal(transcriptCopyText({text:'Unsegmented original.'}),'Unsegmented original.');
+  assert.equal(transcriptCopyText({text:'Legacy fallback.',segments:[{text:' '}]},true),'Legacy fallback.');
+  assert.equal(transcriptCopyText(undefined),'');
 });

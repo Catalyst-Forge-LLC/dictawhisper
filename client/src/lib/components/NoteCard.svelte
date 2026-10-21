@@ -8,7 +8,7 @@
   export let connected = false, saveMayDoStatus, extractMayDos;
   import { stageCopy } from '../activityState.js';
 
-  import { entryPresentation, transcriptPassages, activeMayDoCount, mayDoCounts, markEntryMatch, copyTranscriptText, selectedPassageText } from '../entryPresentation.js';
+  import { entryPresentation, transcriptPassages, transcriptCopyText, activeMayDoCount, mayDoCounts, markEntryMatch, copyTranscriptText, selectedPassageText } from '../entryPresentation.js';
   export let saveDisplayTitle;
   export let transcription;
   export let variant = 'note';
@@ -116,7 +116,7 @@
   $: original = !cleaned || showRaw;
   $: passages = transcriptPassages(transcription.transcriptionJson, original);
   $: if (matchCursor >= findMatches.length) matchCursor = -1;
-  $: fullText = original ? String(transcription.transcriptionJson?.text || passages.map(row => row.text).join('\n\n')) : cleaned;
+  $: fullText = transcriptCopyText(transcription.transcriptionJson, original);
   $: findMatches = findQuery.trim() ? passages.flatMap((row, index) => {
     const text = String(row.text).toLowerCase(), term = findQuery.trim().toLowerCase();
     const matches = []; let at = text.indexOf(term);

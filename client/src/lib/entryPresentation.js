@@ -38,6 +38,13 @@ export function transcriptPassages(json, original = false) {
   return String(json.cleanedTranscription).split(/\n{2,}/).filter(text => text.trim()).map(text => ({ text, start: null, end: null }));
 }
 
+/** Copy the displayed version's passages, not Whisper's flattened text field. */
+export function transcriptCopyText(json, original = false) {
+  const paragraphs = transcriptPassages(json, original)
+    .map(row => String(row.text || '').trim()).filter(Boolean);
+  return paragraphs.join('\n\n') || String((!original && json?.cleanedTranscription) || json?.text || '').trim();
+}
+
 export function activeMayDoCount(json) { return mayDoCounts(json).mayDoActiveCount; }
 
 /** Literal in-entry highlighting; escape each piece before emitting markup. */
