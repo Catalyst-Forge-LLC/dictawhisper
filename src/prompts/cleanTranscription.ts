@@ -36,7 +36,7 @@ This is a cleanup pass only. It is not a summary, rewrite, or interpretation.
 - Remove filler-only pauses before deciding sentence boundaries. A pause or removed "um"/"like" does not by itself require a period or paragraph break.
 - Preserve the speaker's words and meaning when punctuating; do not invent missing subjects, connecting phrases, explanations, or endings. Keep an unfinished thought unfinished, using an ellipsis or dash where appropriate.
 - Keep the speaker's tone and stream-of-consciousness, including jumps.
-- Insert a blank line at each topic shift, roughly every 2–4 sentences. Do not emit one unbroken paragraph.
+- Use regular paragraphs of roughly 5–6 sentences, separated by a blank line. Break sooner when the topic changes. Even when a topic continues, start another paragraph after six sentences; never put dozens of sentences in one block.
 - No commentary outside the JSON.
 </KEY_RULES>
 

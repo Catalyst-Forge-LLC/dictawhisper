@@ -1,3 +1,6 @@
+import { readableParagraphs as splitCleanedSections } from '../shared/readableParagraphs.ts';
+export { readableParagraphs as splitCleanedSections } from '../shared/readableParagraphs.ts';
+
 export type WhisperWord = {
   word: string;
   start: number;
@@ -18,16 +21,6 @@ export type PlaybackCue = {
 };
 
 const FILLERS = new Set(['uh', 'um', 'umm', 'hmm', 'yeah', 'like']);
-
-export function splitCleanedSections(cleaned: string): string[] {
-  const trimmed = String(cleaned || '').trim();
-  if (!trimmed) return [];
-  const paras = trimmed.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-  if (paras.length >= 2) return paras;
-  const sentences = trimmed.split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter(Boolean);
-  if (sentences.length >= 2) return sentences;
-  return [trimmed];
-}
 
 function normWord(text: string): string {
   return String(text || '')

@@ -6,6 +6,7 @@ import { getLoadablePath } from 'sqlite-vec';
 import { isSkippedWatchPath } from './fileSettleLib.ts';
 import { mayDoSummary, validMayDos, type MayDoFilter } from './mayDoLib.ts';
 import { dayOf } from './journalQueryLib.ts';
+import { readableParagraphs } from '../shared/readableParagraphs.ts';
 
 const SCHEMA_VERSION = '5';
 const PREVIEW_LIMIT = 200;
@@ -1015,12 +1016,7 @@ export function queryTokens(query: string): string[] {
 }
 
 export function noteSections(text: string): string[] {
-  const trimmed = String(text || '').trim();
-  if (!trimmed) return [];
-  const paras = trimmed.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-  if (paras.length >= 2) return paras;
-  const sentences = trimmed.split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter(Boolean);
-  return sentences.length >= 2 ? sentences : [trimmed];
+  return readableParagraphs(text);
 }
 
 export function cueIndexForQuery(body: string, query: string): number | null {

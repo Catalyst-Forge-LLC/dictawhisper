@@ -1,4 +1,5 @@
 import { displayName } from './markPreview.js';
+import { readableParagraphs } from '../../../src/shared/readableParagraphs.ts';
 
 export function entryPresentation(entry, locale = 'en-US') {
   const json = entry?.transcriptionJson || {};
@@ -34,8 +35,13 @@ export function transcriptPassages(json, original = false) {
     if (json?.segments?.length) return json.segments;
     return String(json?.text || '').split(/\n{2,}/).filter(text => text.trim()).map(text => ({ text, start: null, end: null }));
   }
-  if (json.playbackCues?.length) return json.playbackCues;
-  return String(json.cleanedTranscription).split(/\n{2,}/).filter(text => text.trim()).map(text => ({ text, start: null, end: null }));
+  if (json.playbackCues?.length) return json.playbackCues.flatMap(cue => {
+    const paragraphs = readableParagraphs(cue.text);
+    // The server regenerates word-aligned cues on entry load. For a legacy cue
+    // without fresh timing, keep only its known start; never interpolate times.
+    return paragraphs.map((text, index) => ({ ...cue, text, start: index === 0 ? cue.start : null, end: paragraphs.length === 1 ? cue.end : null }));
+  });
+  return readableParagraphs(json.cleanedTranscription).map(text => ({ text, start: null, end: null }));
 }
 
 /** Copy the displayed version's passages, not Whisper's flattened text field. */

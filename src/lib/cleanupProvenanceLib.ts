@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type { CleanupRecord, TranscriptionDocument } from '../types/transcription.ts';
+import { readableParagraphs } from '../shared/readableParagraphs.ts';
 
 export const CLEANUP_HISTORY_CAP = 20;
 
@@ -66,7 +67,7 @@ export function applyCleanupProvenance(
     json.cleanupHistory = history;
   }
   const cleanup: CleanupRecord = {
-    text: next.text,
+    text: readableParagraphs(next.text).join('\n\n'),
     createdAt: next.createdAt || new Date().toISOString(),
     promptVersion: next.promptVersion,
     dictawhisperVersion: next.dictawhisperVersion || dictawhisperVersion(),
@@ -74,7 +75,7 @@ export function applyCleanupProvenance(
   if (next.model) cleanup.model = next.model;
   if (next.host) cleanup.host = next.host;
   json.cleanup = cleanup;
-  json.cleanedTranscription = next.text;
+  json.cleanedTranscription = cleanup.text;
   if (typeof next.promptVersion === 'number') json.promptVersion = next.promptVersion;
   return cleanup;
 }

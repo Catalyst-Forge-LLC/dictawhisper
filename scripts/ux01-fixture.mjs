@@ -54,6 +54,13 @@ for (let i = 0; i < 200; i++) {
     json.playbackCues = json.cleanedTranscription.split('\n\n').map((text,n) => ({text,start:n*5,end:n*5+5}));
   }
   if (i === 198) { delete json.cleanedTranscription; delete json.playbackCues; json.text = 'Original-only fixture text. Copying and reading work without cleanup.'; }
+  if (i === 193 && process.env.DICTA_FIXTURE_PARAGRAPHS === '1') {
+    const sentences = Array.from({length:26}, (_,n) => `Planning step ${n+1} is to review the kitchen measurements before ordering materials.`);
+    json.text = json.cleanedTranscription = sentences.join(' ');
+    const words = json.text.split(' ').map((word,n) => ({word,start:n*.2,end:(n+1)*.2}));
+    json.segments = [{text:json.text,start:0,end:words.at(-1).end,words}];
+    json.playbackCues = [{text:json.text,start:0,end:words.at(-1).end}]; json.playbackCuesSource = 'words';
+  }
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(json));
   notes.set(file, { jsonFile: file, day, transcriptionJson: json });
 }
@@ -157,7 +164,10 @@ app.get('/notes/search', (req, res) => {
 });
 app.get('/note', (req, res) => {
   const note = fs.existsSync(String(req.query.file)) ? (notes.get(req.query.file)||readTranscription(String(req.query.file))) : null;
-  if(note) { note.transcriptionJson=JSON.parse(fs.readFileSync(note.jsonFile,'utf8')); note.transcriptionJson.mayDoState=mayDoExtractionState(note.transcriptionJson); }
+  if(note) {
+    note.transcriptionJson=process.env.DICTA_FIXTURE_PARAGRAPHS === '1' ? readTranscription(note.jsonFile).transcriptionJson : JSON.parse(fs.readFileSync(note.jsonFile,'utf8'));
+    note.transcriptionJson.mayDoState=mayDoExtractionState(note.transcriptionJson);
+  }
   setTimeout(() => note ? res.json(note) : res.status(404).json({ error: 'Fixture entry unavailable' }), String(req.query.file).includes('Fixture 003') ? 1600 : 50);
 });
 app.post('/note', (req, res) => {
