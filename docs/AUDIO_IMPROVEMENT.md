@@ -31,6 +31,12 @@ All presets read a private snapshot of the source and write PCM WAV. They never 
 
 The existing import preprocessing remains unchanged. The new action bypasses it and always starts from the best available original rather than repeatedly processing an enhanced version. FFmpeg and faster-whisper are existing dependencies; no new model family/runtime is installed.
 
+### Transcription context and prompt leakage
+
+Whisper's `initial_prompt` supplies preceding transcript context, not chat-style instructions. The former default included instructions such as “Transcribe the speech accurately…”; the operator reported that prose appearing in a transcript. All app transcription paths now default to an empty prompt, including the persistent worker, one-shot fallback, and direct Python CLI. Configured `whisper.promptTerms` remain supported as a plain comma-separated vocabulary list, with no surrounding instructions. This follows Whisper's [vocabulary/context contract](https://github.com/openai/whisper/blob/main/whisper/transcribe.py).
+
+Restart the app to load the fix and create a new transcription attempt for an affected entry. Previously generated candidates and saved transcripts are not silently rewritten; review and accept a fresh candidate through the existing recovery flow. Removing our instruction prose eliminates that injected source but does not guarantee hallucination-free recognition on weak audio. Readable-text cleanup alone cannot recover the speech missed by ASR.
+
 ## State, storage, and preservation
 
 - Job phases: preparing → preview → transcribing → ready → applied. Discarded, failed, and reverted are explicit outcomes. On restart, unfinished jobs become retryable failures; no model runs automatically on restoration.
@@ -71,6 +77,7 @@ Every operation resolves the configured watch-root allowlist and binds attempts 
 - 2026-10-21: Complete test suite passed: 175 tests, no failures or skips. Real FFmpeg fixtures verify signal processing behavior. ASR is controlled in service/browser tests; these do not establish recognition quality or GPU performance.
 - 2026-10-21: Browser inspection at 1280×720 caught hidden review actions; shortened comparison panels and made the action row sticky. At 390×844 the candidate appears before the current transcript.
 - 2026-10-21: Two additional Python bridge tests passed, covering large-v3/turbo and VAD options through both worker and forced fallback. The installed tarball smoke test passed (help/init/refusal/doctor) using a temporary npm cache after the default cache rejected writes. No publication was attempted.
+- 2026-10-21 follow-up: Removed instruction prose after a report of prompt leakage. Three focused tests passed: default/whitespace/vocabulary handling, actual worker transport, and forced fallback transport. Both transport tests also exercise the direct Python CLI default, without GPU/model execution. Runtime/client builds and typecheck passed; recognition quality on operator recordings remains unmeasured.
 - A system TTS smoke sample could not be generated because the executor had no usable installed voice. No operator recording was substituted. Actual model recognition quality remains unmeasured.
 
 ## Package/release record
@@ -78,6 +85,8 @@ Every operation resolves the configured watch-root allowlist and binds attempts 
 The enrolled npm package is `dictawhisper` at `Z:/workspace/dictawhisper`, not the private `client` harness. Version authority: root `package.json` (0.1.15). README source: root `README.md`. Build: `pnpm build` (runtime TypeScript plus client). Pack: `npm pack` invokes `prepack`; isolated validation uses `node scripts/pack-smoke.mjs` after building and packs with `--ignore-scripts` to avoid repeating the build. Release is a separate operator-authorized action through LocalHelm Publish or `npm publish` after checks/versioning.
 
 LocalHelm read-only status resolved the correct root package, manifest, README and CLI executable. Its initial Git inspection hit sandbox ownership; a process-scoped `safe.directory` setting corrected that without changing global Git configuration. During implementation, the Publish plan skipped the dirty checkout. After the implementation commits, both the default plan and `localhelm publish dictawhisper --kind patch` reported `skip / 0.1.15 / nothing to publish` and unavailable npm authentication, with nothing written. Registry and local version both read 0.1.15; these new source changes are nevertheless unreleased. A future release must explicitly verify version advancement and the tarball contents rather than treating that quiet plan as proof npm is current. No push, version bump, or publication is performed in this batch.
+
+The 2026-10-21 prompt/contrast follow-up rechecked LocalHelm status and the read-only Publish plan: the release target remained the root `dictawhisper` package with the root manifest/README and CLI executable; the plan skipped the in-progress dirty tree and reported unavailable npm authentication. Runtime/client builds passed. These follow-up changes also remain unreleased at 0.1.15.
 
 ## Reproduce browser verification
 

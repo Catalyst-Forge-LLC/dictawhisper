@@ -1,11 +1,7 @@
-const BASE_INITIAL_PROMPT =
-  'This is a personal audio journal spoken in English. ' +
-  'Transcribe the speech accurately with natural punctuation and capitalization. ' +
-  'Keep filler words, false starts, and repetitions as spoken. ' +
-  'Do not paraphrase. Prefer unusual names and terms over common words that sound similar.';
-
+// Whisper treats this as preceding transcript context, not chat instructions.
+// Instruction prose can be echoed as speech, especially with weak/noisy audio.
+// Leave it empty unless the operator has supplied vocabulary hints.
 export function buildWhisperInitialPrompt(promptTerms: string[] = []): string {
-  const terms = promptTerms.map((term) => String(term || '').trim()).filter(Boolean);
-  if (!terms.length) return BASE_INITIAL_PROMPT;
-  return `${BASE_INITIAL_PROMPT} Names and terms that may appear: ${terms.join(', ')}.`;
+  const terms = promptTerms.map((term) => String(term || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return [...new Set(terms)].join(', ');
 }

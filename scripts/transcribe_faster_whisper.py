@@ -32,14 +32,9 @@ MODEL_ALIASES = {
     "large-v3-turbo": "large-v3-turbo",
 }
 
-# Light journal context only — do not ask the model to rewrite/polish speech.
-# Downstream LLM cleanup already removes fillers while preserving content.
-DEFAULT_INITIAL_PROMPT = (
-    "This is a personal audio journal spoken in English. "
-    "Transcribe the speech accurately with natural punctuation and capitalization. "
-    "Keep filler words, false starts, and repetitions as spoken. "
-    "Do not paraphrase. Prefer unusual names and terms over common words that sound similar."
-)
+# Whisper's prompt is transcript context, not an instruction channel. Default to
+# no prompt so quiet/noisy audio cannot echo our own transcription instructions.
+DEFAULT_INITIAL_PROMPT = ""
 
 KEEP_KEYS = (
     "cleanedTranscription",
@@ -285,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--initial-prompt",
         default=DEFAULT_INITIAL_PROMPT,
-        help="Optional first-window prompt. Pass empty string to disable.",
+        help="Optional vocabulary/transcript context for the first window, not instructions (default: none).",
     )
     parser.add_argument(
         "--vad-filter",
