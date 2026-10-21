@@ -49,6 +49,7 @@ KEEP_KEYS = (
     "elapsed",
     "cleanupError",
     "cleanupAttempts",
+    "audioEnhancement",  # CLI retranscription reads the currently selected audio variant.
 )
 
 

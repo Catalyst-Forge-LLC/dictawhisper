@@ -106,30 +106,40 @@ function spawnOneShot(
     windowsHide: true,
     env: pythonEnv(),
   });
+  let finished = false, timedOut = false;
+  const finish: WhisperCallback = payload => {
+    if (finished) return;
+    finished = true; clearTimeout(timer); callback(payload);
+  };
+  const timer = setTimeout(() => {
+    timedOut = true;
+    child.kill();
+  }, JOB_TIMEOUT_MS);
 
   child.stdout.on('data', (data: Buffer) => forwardLines('stdout', data));
   child.stderr.on('data', (data: Buffer) => forwardLines('stderr', data));
 
   child.on('error', (error: Error) => {
     console.log(`[whisper] error: ${error.message}`);
-    callback({ err: error });
+    finish({ err: error });
   });
 
   child.on('close', (code: number) => {
+    if (timedOut) { finish({ err: new Error(`faster-whisper timed out after ${JOB_TIMEOUT_MS / 1000}s`) }); return; }
     const elapsed = `${(Date.now() - startTime.getTime()) / 1000}s`;
     console.log(`[whisper] child process exited with code ${code}`);
     console.log(`[whisper] Total Elapsed: ${elapsed}`);
     if (code === 0) {
-      callback({ err: null, result: { transcriptionFile, elapsed } });
+      finish({ err: null, result: { transcriptionFile, elapsed } });
       return;
     }
     if (transcriptionLooksComplete(transcriptionFile)) {
       const hint = code === WINDOWS_CUDA_TEARDOWN ? ' (CUDA teardown crash; transcript is complete)' : '';
       console.log(`[whisper] process crashed with ${code}${hint}; keeping existing JSON`);
-      callback({ err: null, result: { transcriptionFile, elapsed } });
+      finish({ err: null, result: { transcriptionFile, elapsed } });
       return;
     }
-    callback({
+    finish({
       err: new Error(`faster-whisper exited with code ${code}`),
       result: { transcriptionFile, elapsed },
     });
@@ -199,11 +209,13 @@ function attachWorker(child: ChildProcess): void {
   workerRl.on('line', handleWorkerMessage);
   child.stderr?.on('data', (data: Buffer) => forwardLines('stderr', data));
   child.on('error', (error: Error) => {
+    if (worker !== child) return;
     console.warn(`[whisper] worker error: ${error.message}`);
     status = 'down';
     failPending(error);
   });
   child.on('close', (code: number) => {
+    if (worker !== child) return;
     console.log(`[whisper] worker exited with code ${code}`);
     workerRl?.close();
     workerRl = null;
