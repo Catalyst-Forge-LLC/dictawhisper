@@ -13,7 +13,7 @@ export const isWorkingStage = (stage: ActivityStage) => unfinished.has(stage);
 export const isFailureStage = (stage: ActivityStage) => stage.startsWith('failed_') || stage === 'interrupted';
 const fileKey = (file: string) => process.platform === 'win32' ? path.resolve(file).toLowerCase() : path.resolve(file);
 
-/** Durable summaries, never a queue replay. Restarted work requires explicit recovery. */
+/** Durable summaries, never a queue replay. Watchers recheck waiting files; interrupted processing requires explicit recovery. */
 export class ActivityStore {
   private items = new Map<string, ActivityItem>();
   private emit: (event: unknown) => void = () => {};
@@ -29,7 +29,14 @@ export class ActivityStore {
         if (saved.version !== 1 || !Array.isArray(saved.items)) throw new Error('Invalid Activity history');
         for (const item of saved.items) {
           if (!item.id || !item.jsonFile || !item.audioFile) continue;
-          if (unfinished.has(item.stage)) { item.resumeStage = item.stage; item.stage = 'interrupted'; item.error = 'Server stopped before processing finished. Resume explicitly.'; item.updatedAt = Date.now(); }
+          if (item.stage === 'waiting_for_file' || item.stage === 'interrupted' && item.resumeStage === 'waiting_for_file') {
+            // No model work started. Let the watcher reconstruct the timer from
+            // the current mtime, including waits stranded by older versions.
+            item.stage = 'waiting_for_file';
+            delete item.resumeStage; delete item.error; delete item.eligibleAt;
+            item.reason = 'Checking file stability after restart.';
+            item.updatedAt = Date.now();
+          } else if (unfinished.has(item.stage)) { item.resumeStage = item.stage; item.stage = 'interrupted'; item.error = 'Server stopped before processing finished. Resume explicitly.'; item.updatedAt = Date.now(); }
           this.items.set(item.id, item);
         }
         this.persist();
@@ -44,7 +51,7 @@ export class ActivityStore {
     const old = this.find(file); const jsonFile = file.replace(/\.[^.\\/]+$/, '.json');
     const item: ActivityItem = { id: old?.id || randomUUID(), audioFile: old?.audioFile || file,
       jsonFile: old?.jsonFile || jsonFile, createdAt: old?.createdAt || Date.now(), hasTranscript: old?.hasTranscript || false,
-      ...old, eligibleAt: undefined, error: undefined, reason: undefined, ...patch, stage, updatedAt: Date.now() };
+      ...old, eligibleAt: undefined, error: undefined, reason: undefined, resumeStage: undefined, ...patch, stage, updatedAt: Date.now() };
     this.items.set(item.id, item);
     const completed = [...this.items.values()].filter(row => !unfinished.has(row.stage) && !isFailureStage(row.stage)).sort((a,b) => b.updatedAt - a.updatedAt);
     for (const row of completed.slice(200)) if (!row.uploadId) this.items.delete(row.id);

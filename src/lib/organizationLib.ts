@@ -2,7 +2,7 @@ import { organizationPreview, organizeEntry } from './entryOrganizationLib.ts';
 import { entryOperationPending } from './entryOperationLib.ts';
 import {moveEntryBundle,keepBothDestination} from './entryBundleLib.ts';
 import path from 'path';
-import { activity } from './activityLib.ts';
+import { activity, isWorkingStage } from './activityLib.ts';
 import fs from 'fs';
 import { audioFileRegex, findAudioForSidecar } from './audioLib.ts';
 import { getSettleMs, inspectFileReadiness, isSkippedWatchPath, requestWhenSettled } from './fileSettleLib.ts';
@@ -88,8 +88,16 @@ export async function organizeAudioFile(filePath: string, sourceRoot: string): P
   return destPath;
 }
 
+function skipPipeline(filePath: string, root: string): boolean {
+  const stage = activity.find(filePath)?.stage;
+  // Preprocessing writes the working audio. Its watcher event must not replace
+  // the running job's status with a fresh sync wait or enqueue duplicate work.
+  return pipelineIdle(filePath, root) || stage === 'interrupted' ||
+    Boolean(stage && stage !== 'waiting_for_file' && isWorkingStage(stage));
+}
+
 async function runPipeline(filePath: string, root: string, options: { front?: boolean } = {}) {
-  if (pipelineIdle(filePath, root) || activity.find(filePath)?.stage === 'interrupted') return;
+  if (skipPipeline(filePath, root)) return;
   const dest = await organizeAudioFile(filePath, root);
   if (!dest) return;
   if (dest !== filePath) activity.relocate(filePath, dest);
@@ -133,7 +141,7 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
         filePath.includes('_clean'),
       fileMatchRegex: audioFileRegex,
       addHandler: async (filePath) => {
-        if (pipelineIdle(filePath, folder) || activity.find(filePath)?.stage === 'interrupted') return;
+        if (skipPipeline(filePath, folder)) return;
         if (inspectFileReadiness(filePath, getSettleMs()).ready) {
           await runPipeline(filePath, folder, { front: liveAdds });
           return;
@@ -144,7 +152,7 @@ export function initVoiceRootPipeline(sourceFolders: string[] = []) {
         });
       },
       changeHandler: (filePath) => {
-        if (pipelineIdle(filePath, folder) || activity.find(filePath)?.stage === 'interrupted') return;
+        if (skipPipeline(filePath, folder)) return;
         requestWhenSettled(filePath, () => runPipeline(filePath, folder, { front: true }), {
           label: 'voice-pipeline',
           onWaiting: (status, eligibleAt) => activity.update(filePath, 'waiting_for_file', { eligibleAt, reason: status.reason }),

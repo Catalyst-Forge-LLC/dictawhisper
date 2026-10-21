@@ -54,7 +54,7 @@ Record opens the compact capture panel and requests the microphone. Stop keeps a
 
 Import accepts multiple WebM, MP3, M4A, WAV, or OGG files up to 80 MiB each, with two simultaneous uploads and per-file outcomes. Saved means the server acknowledged the audio bytes; transcription and cleanup continue separately. Imports never overwrite an existing audio file or sidecar. Stable upload identities let retries reconcile an unknown previous outcome.
 
-Activity shows actual processing stages, sync eligibility deadlines, failures with specific recovery actions, recent completions, and bulk-job progress. Open a newly saved entry there to play it before its transcript is ready. System diagnostics run when expanded or explicitly refreshed. After a server restart, unfinished work appears as Interrupted and requires explicit resume; existing transcripts remain readable.
+Activity shows actual processing stages, sync eligibility deadlines, failures with specific recovery actions, recent completions, and bulk-job progress. Open a newly saved entry there to play it before its transcript is ready. System diagnostics run when expanded or explicitly refreshed. After a server restart, files still waiting to finish syncing are rechecked automatically against their latest write time. Queued or running processing appears as Interrupted and requires explicit resume; existing transcripts remain readable.
 
 ## Read, search, and listen
 
