@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { assessAudio, assessWindows } from '../src/lib/audioAssessmentLib.ts';
-import { enhanceAudio } from '../src/lib/audioEnhancementLib.ts';
+import { enhanceAudio, measureAudio } from '../src/lib/audioEnhancementLib.ts';
 import { inspectTranscript, transcribeWithQuality } from '../src/lib/transcriptionQualityLib.ts';
 
 test('assessment selects quiet, varying, adequate and near-silent signals conservatively', () => {
@@ -32,6 +32,8 @@ test('real PCM assessment and bounded alternate passes retain the primary text a
     const made = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=4:sample_rate=16000', '-af', 'volume=0.03', source], { windowsHide: true });
     assert.equal(made.status, 0, String(made.stderr));
     const before = fs.readFileSync(source), assessment = await assessAudio(source);
+    const measured = await measureAudio(source);
+    assert.ok(Math.abs(assessment.peakDb - measured.peakDb) < .15, 'mono channel conversion must not understate peak headroom');
     assert.equal(assessment.suggestedPreset, 'quiet'); assert.equal(assessment.durationSec, 4);
     const report = await enhanceAudio(source, prepared, 'auto'); assert.equal(report.selectedPreset, 'quiet');
     let calls = 0;

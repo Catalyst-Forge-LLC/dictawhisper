@@ -51,6 +51,15 @@ test('normal imports share preparation and preserve originals, sidecar metadata 
   await svc.restore(file, json.audioEnhancement.versionId); assert.equal(read(file).text, 'Old words');
 });
 
+test('first import cannot Undo into an empty, invalid sidecar', async () => {
+  const svc = service(), file = makeEntry(); fs.unlinkSync(file);
+  await svc.importAudio(file.slice(0, -5) + '.mp3', file, 'large-v3');
+  const status = svc.status(file);
+  assert.equal(status.canUndo, false);
+  await assert.rejects(svc.restore(file, status.job!.id), /first transcript/);
+  assert.equal(read(file).text, 'Recovered words');
+});
+
 test('preview/candidate isolation, current human decisions, timed audio swap, idempotence and Undo', async () => {
   const svc = service(), file = makeEntry(), id = await ready(svc, file);
   assert.equal(read(file).text, 'Old words'); assert.equal(read(file).cleanedTranscription, 'Old readable words');

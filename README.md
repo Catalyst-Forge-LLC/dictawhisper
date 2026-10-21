@@ -18,7 +18,7 @@ Actual Inbox showing three fictional entries. The transcript, timestamps, and ac
 
 ## Before you clone
 
-Exercised path: Windows, Node 22.13+ (checkout scripts use `--experimental-strip-types`), pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` is required when denoise is on. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
+Exercised path: Windows, Node 22.13+ (checkout scripts use `--experimental-strip-types`), pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` and `ffprobe` are required for audio assessment and preparation, including unfiltered mode. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
 
 ## From a checkout
 
@@ -64,7 +64,15 @@ Library and search results load in pages of 50. **Load more** keeps the current 
 
 ## Improve difficult recordings
 
+New imports automatically measure audio levels over time, then keep adequate audio unfiltered, boost quiet speech, or level uneven volume. Preparation preserves pauses and timestamps in a PCM WAV working copy. The configured model is used (default **large-v3**) with speech gating off to include faint speech. Sidecars record preparation, source identity, model and pipeline version. Suspect passages have listening signals and up to three short alternate passes; the reader's **Transcription details** disclosure exposes the evidence. These signals are not an accuracy score. Automatic noise reduction remains off; the manual preset is available below. Set `audio.preprocess` to false for unfiltered preparation.
+
 For quiet, uneven, or noisy recordings, use the reader's **More → Improve audio & retranscribe…** action. Prepare an audio preview from the original when available, switch between original and enhanced at the same position, then create a candidate with **Whisper large-v3** (default for this action) or **turbo**. Review and accept the candidate or keep your current version. Preparation uses FFmpeg and a lossless working copy without trimming silence. Your title, stars, tags, MayDo decisions, and original recordings remain saved. Existing MayDo timings are cleared until refreshed against the new transcript. Reopen the action to check progress or undo acceptance before further transcript changes. Readable cleanup is a separate action after acceptance. See [audio improvement behavior and verification](docs/AUDIO_IMPROVEMENT.md).
+
+## Retranscribe an existing library
+
+Open **Settings → Transcription → Retranscribe library** (also in Data and maintenance). Select a year or all years, large-v3 or turbo, and older-pipeline entries, flagged entries, or all entries. **Preview eligible entries** reads sidecars and source metadata without running models. Already-current entries and missing sources are accounted for. Prepared audio and saved versions require extra disk space.
+
+Choose **Review before replacing**, or explicitly choose **Replace entries without review signals** to update unflagged entries with saved previous versions while holding flagged candidates for review. Optionally queue readable text, tags and MayDos for replacements. Then Start the previewed batch. Progress and candidate review are available in **Activity**; only 50 result summaries load at a time. Stop finishes the current entry. Restart never automatically starts a saved batch: Resume continues its checkpoints and Retry failed only targets failures. Current titles, stars, tags and MayDo decisions are retained. Undo is conditional on no later transcript/cleanup changes; earlier sidecars remain saved even when automatic Undo is blocked. A first import has no earlier transcript to undo.
 
 ## Review MayDos and extract older entries
 

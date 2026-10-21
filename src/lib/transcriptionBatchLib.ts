@@ -75,8 +75,8 @@ export class TranscriptionBatchService {
   }
   snapshot(offset = 0, filter = 'all') {
     const count = (outcome: Outcome) => this.job.rows.filter(row => row.outcome === outcome).length;
-    const rows = this.job.rows.filter(row => filter === 'all' || row.outcome === filter);
-    const safeOffset = Math.max(0, Number.isFinite(offset) ? Math.floor(offset) : 0);
+    const rows = this.job.rows.filter(row => filter === 'all' || (filter === 'work' ? !row.outcome || ['review','applied','failed'].includes(row.outcome) : row.outcome === filter));
+    const safeOffset = Math.max(0, Math.min(Number.isFinite(offset) ? Math.floor(offset) : 0, Math.floor(Math.max(0, rows.length - 1) / 50) * 50));
     return { id: this.job.id, state: this.job.state, scope: this.job.scope, policy: this.job.policy, planning: this.planning,
       running: ['running', 'stopping'].includes(this.job.state), enabled: this.deps.enabled(), cleanupEnabled: this.deps.cleanupEnabled(), cleanup: this.job.cleanup, current: this.job.current,
       total: this.job.rows.length, remaining: this.job.rows.filter(row => !row.outcome).length, applied: count('applied'), review: count('review'), failed: count('failed'), skipped: count('current') + count('unavailable'),

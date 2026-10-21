@@ -2,13 +2,13 @@
 
 Date: 2026-10-21
 
-Scope: A per-entry recovery flow for difficult audio using FFmpeg and the existing faster-whisper runtime. Parakeet, Qwen, neural denoiser installation, bulk reprocessing, and changes to routine import preprocessing are outside this batch. No operator recordings are automatically retranscribed.
+Scope: Shared automatic preparation for new imports, a per-entry recovery flow, and resumable library retranscription using FFmpeg and the existing faster-whisper runtime. Parakeet, Qwen and neural denoiser installation remain deferred. Existing recordings are only retranscribed after an explicit batch Start or per-entry action.
 
 ## Experience
 
 Open **Reader → More → Improve audio & retranscribe…**. This is separate from **Reprocess readable transcript**, which only reruns text cleanup.
 
-1. Select Quiet speech (default), Uneven volume, Background noise, or Unfiltered original.
+1. Select Automatic (default), Quiet speech, Uneven volume, Background noise, or Unfiltered original.
 2. Choose large-v3 (default for this action) or turbo. This is a per-attempt setting; it does not change the global model preference. Speech detection is an optional disclosure, off by default to include faint speech; the copy explains possible false words during silence.
 3. Prepare the audio preview. Original lookup checks every supported `_original` container before using the ordinary working file. If no separate original exists, the UI identifies the available source instead of claiming it is untouched.
 4. Switch original/enhanced at the same playhead. Only one player plays at a time. Recording pauses the preview.
@@ -24,12 +24,13 @@ All presets read a private snapshot of the source and write PCM WAV. They never 
 
 | Preset | Processing | Limits |
 | --- | --- | --- |
-| Quiet speech | Measure average and peak; gain toward -22 dB average, limited by -1 dB peak headroom and a 30 dB boost cap | Loud peaks can limit useful gain; the preview recommends Uneven volume in that case. Near-silence gets a warning. |
+| Automatic | Measure one-second energy, active-level variation and decoded-channel peaks; choose unfiltered, quiet or uneven | Never automatically selects noise removal. |
+| Quiet speech | Gain toward -22 dB median active level, limited by -1 dB peak headroom and a 30 dB boost cap | Loud peaks can limit useful gain; the preview recommends Uneven volume in that case. Near-silence gets a warning. |
 | Uneven volume | `dynaudnorm=f=250:g=15:p=0.89:m=10` | Conservative peak target and maximum gain. No claim of improved recognition on every recording. |
 | Background noise | 80 Hz high-pass, `afftdn=nr=8:nf=-50:tn=1`, then the same leveling | Mild steady-noise/rumble treatment; not source separation, dereverberation, or reconstruction. |
 | Unfiltered original | PCM conversion only | A baseline transcription from the source without enhancement. |
 
-The existing import preprocessing remains unchanged. The new action bypasses it and always starts from the best available original rather than repeatedly processing an enhanced version. FFmpeg and faster-whisper are existing dependencies; no new model family/runtime is installed.
+Routine imports and this action share preparation and diagnostics, starting from the best available original rather than repeatedly processing an enhanced version. FFmpeg/ffprobe are required even in unfiltered mode; doctor reports both. No new model family/runtime is installed. Older standalone scripts using the legacy `cleanAudioFile` helper are not the app's normal import path.
 
 ### Transcription context and prompt leakage
 

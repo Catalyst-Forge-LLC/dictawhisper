@@ -21,6 +21,7 @@ export type RescueJob = {
   sourceExt: string; sourceOriginal: boolean; baseline: string;
   report?: EnhancementReport; error?: string; failedStage?: 'preparing' | 'transcribing';
   acceptedFingerprint?: string;
+  firstImport?: boolean;
   sourceSize?: number; sourceMtimeMs?: number; sourceHash?: string;
 };
 type Dependencies = {
@@ -144,6 +145,7 @@ export class AudioRescueService {
       currentText: current.json.text || '', activeVersionId: current.json.audioEnhancement?.versionId || null,
       history: rows.filter(row => ['applied', 'reverted'].includes(row.job.phase)).map(({ job }) => ({ id: job.id, preset: job.preset, model: job.model, createdAt: job.createdAt, phase: job.phase })),
       transcriptionEnabled: config.queues.transcription.active,
+      canUndo: Boolean(job && !job.firstImport && current.json.audioEnhancement?.versionId === job.id),
     };
   }
   private launch(root: string, job: RescueJob, file: string, operation: () => Promise<void>) {
@@ -255,7 +257,7 @@ export class AudioRescueService {
     return withEntryOperation([current.path, source.file], async () => {
       const initial = fs.existsSync(file) ? jsonRead(file) as TranscriptionDocument : {};
       const baseline = fingerprint(initial), identity = { ...initial };
-      const job: RescueJob = { version: 1, id: randomUUID(), entryId: ensureEntryId(identity), file: current.path, phase: 'preparing', preset: preprocess ? 'auto' : 'original', model, vadFilter: false, createdAt: new Date().toISOString(), sourceExt: path.extname(source.file).toLowerCase(), sourceOriginal: source.original, baseline };
+      const job: RescueJob = { version: 1, id: randomUUID(), entryId: ensureEntryId(identity), file: current.path, phase: 'preparing', preset: preprocess ? 'auto' : 'original', model, vadFilter: false, createdAt: new Date().toISOString(), sourceExt: path.extname(source.file).toLowerCase(), sourceOriginal: source.original, baseline, firstImport: !fs.existsSync(file) };
       this.register(current.root, job);
       this.importing.add(job.id);
       const snapshot = owned(current.root, job.id, 'source' + job.sourceExt), prepared = owned(current.root, job.id, 'enhanced.wav'), output = owned(current.root, job.id, 'candidate.json');
@@ -296,6 +298,7 @@ export class AudioRescueService {
   async restore(file: string, id: string) {
     const { root, job, current } = this.locate(file, id);
     if (job.phase === 'reverted') return this.status(file, id);
+    if (job.firstImport) throw new Error('This is the first transcript for this recording. There is no previous transcript to restore.');
     entry(file, true);
     if (current.json.audioEnhancement?.versionId !== id) throw new Error('Only the current improved version can be undone.');
     return withEntryOperation([current.path], async () => {

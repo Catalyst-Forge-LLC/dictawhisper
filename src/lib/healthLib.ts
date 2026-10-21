@@ -275,11 +275,11 @@ export async function collectHealth(
   if (ffmpeg.status === 0) {
     const version = (ffmpeg.stdout || '').match(/ffmpeg version (\S+)/i)?.[1];
     add(checks, 'ffmpeg', 'ok', version ? `ffmpeg ${version}` : 'ffmpeg on PATH');
-  } else if (config.audio.preprocess) {
-    add(checks, 'ffmpeg', 'fail', 'ffmpeg not on PATH (denoise will fail)');
   } else {
-    add(checks, 'ffmpeg', 'warn', 'ffmpeg not on PATH (preprocess is off)');
+    add(checks, 'ffmpeg', 'fail', 'ffmpeg not on PATH (audio assessment and preparation require it, including unfiltered mode)');
   }
+  const ffprobe = spawnSync('ffprobe', ['-version'], { encoding: 'utf8', timeout: 15_000, windowsHide: true });
+  add(checks, 'ffprobe', ffprobe.status === 0 ? 'ok' : 'fail', ffprobe.status === 0 ? 'ffprobe on PATH' : 'ffprobe not on PATH (recording duration/channel checks require it)');
 
   const machine = config.ollanet.machine.trim();
   const model = config.ollanet.cleanModel.trim();
@@ -358,7 +358,7 @@ export async function collectHealth(
     );
   }
 
-  for(const check of checks) check.group = ['python','faster-whisper','device','ffmpeg','whisper-worker'].includes(check.id) ? 'transcription' : check.id==='ollanet' ? 'cleanup' : check.id.startsWith('journal-') ? 'search' : 'runtime';
+  for(const check of checks) check.group = ['python','faster-whisper','device','ffmpeg','ffprobe','whisper-worker'].includes(check.id) ? 'transcription' : check.id==='ollanet' ? 'cleanup' : check.id.startsWith('journal-') ? 'search' : 'runtime';
   const failed = checks.some((check) => check.level === 'fail');
   const degraded = checks.some((check) => check.level === 'warn');
 

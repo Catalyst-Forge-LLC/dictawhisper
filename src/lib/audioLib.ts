@@ -110,6 +110,7 @@ export type AudioProbe = {
   ok: boolean;
   reason: string;
   durationSec?: number;
+  channels?: number;
   size: number;
 };
 
@@ -125,7 +126,7 @@ export function probeAudioFile(filePath: string): Promise<AudioProbe> {
   return new Promise((resolve) => {
     const child = spawn(
       'ffprobe',
-      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'json', filePath],
+      ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'format=duration:stream=channels', '-of', 'json', filePath],
       { windowsHide: true },
     );
     let stdout = '';
@@ -156,12 +157,13 @@ export function probeAudioFile(filePath: string): Promise<AudioProbe> {
         return;
       }
       try {
-        const duration = Number(JSON.parse(stdout || '{}')?.format?.duration);
+        const parsed = JSON.parse(stdout || '{}');
+        const duration = Number(parsed?.format?.duration);
         if (!Number.isFinite(duration) || duration <= 0) {
           resolve({ ok: false, reason: 'no duration', size });
           return;
         }
-        resolve({ ok: true, reason: `${duration.toFixed(1)}s`, durationSec: duration, size });
+        resolve({ ok: true, reason: `${duration.toFixed(1)}s`, durationSec: duration, channels: Number(parsed.streams?.[0]?.channels) || 1, size });
       } catch {
         resolve({ ok: false, reason: 'ffprobe json', size });
       }
