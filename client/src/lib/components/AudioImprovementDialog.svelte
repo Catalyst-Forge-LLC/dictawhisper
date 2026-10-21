@@ -11,7 +11,7 @@
     { id: 'noise', name: 'Background noise', description: 'Reduce steady noise and low rumble, then level speech.' },
     { id: 'original', name: 'Unfiltered original', description: 'Transcribe the source again without enhancement.' },
   ];
-  const phases = { preparing: 'Preparing audio preview…', preview: 'Audio preview ready', transcribing: 'Waiting for Whisper or transcribing…', ready: 'New transcript ready to review', applied: 'Improved version saved', reverted: 'Previous version restored', discarded: 'Attempt discarded', failed: 'This attempt needs attention' };
+  const phases = { preparing: 'Preparing audio preview…', preview: 'Audio preview ready', transcribing: 'Waiting for Whisper or transcribing…', ready: 'New transcript ready to review', applied: 'Improved version saved', reverted: 'Previous version restored', discarded: 'Current version kept', failed: 'This attempt needs attention' };
   let dialog, audio, heading, priorFocus, timer, alive = true, request = 0;
   let loading = true, busy = false, error = '', result = null, attemptId = initialAttemptId, showSetup = false;
   let preset = 'auto', model = 'large-v3', vadFilter = false, variant = 'enhanced', position = 0, resume = false;
@@ -39,6 +39,7 @@
   }
   async function refresh() {
     const sequence = ++request;
+    loading = true;
     try {
       const data = await decode(await fetch(`/notes/audio-improvement?file=${encodeURIComponent(file)}${attemptId ? '&id=' + attemptId : ''}`, { cache: 'no-store' }));
       if (!alive || sequence !== request) return;
@@ -50,16 +51,22 @@
     finally { if (alive && sequence === request) loading = false; }
   }
   async function act(action, extra = {}) {
-    if (busy) return;
+    if (busy || loading || attemptId && job?.id !== attemptId) return;
     busy = true; error = ''; clearTimeout(timer); const sequence = ++request;
     try {
       const data = await decode(await fetch('/notes/audio-improvement/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file, id: attemptId, ...extra }) }));
       if (!alive || sequence !== request) return;
-      result = data; attemptId = data.job?.id || ''; showSetup = action === 'discard';
+      result = data; attemptId = data.job?.id || ''; showSetup = false;
       if (action === 'prepare') { variant = 'enhanced'; position = 0; resume = false; }
-      if (['apply', 'restore'].includes(action)) dispatch('changed');
+      if (['apply', 'restore', 'discard'].includes(action)) dispatch('changed');
       schedule(); await tick(); heading?.focus({ preventScroll: true });
-    } catch (e) { if (alive) error = `${e.message || 'The request could not be confirmed.'} Refresh status before retrying if the connection was interrupted.`; }
+    } catch (e) {
+      if (alive) {
+        // Refresh the actual comparison after a race, not just its status label.
+        if (action === 'apply') await refresh();
+        error = e.message || 'The request could not be confirmed. Refresh status to check the saved result.';
+      }
+    }
     finally { if (alive) busy = false; }
   }
   function close() { if (!busy) dispatch('close'); }
@@ -76,11 +83,11 @@
 
 <dialog bind:this={dialog} aria-labelledby="audio-improvement-heading" on:cancel|preventDefault={close}>
   <header>
-    <div><p class="eyebrow">AUDIO & TRANSCRIPTION</p><h2 id="audio-improvement-heading" bind:this={heading} tabindex="-1">Improve audio & retranscribe</h2></div>
+    <div><p class="eyebrow">AUDIO & TRANSCRIPTION</p><h2 id="audio-improvement-heading" bind:this={heading} tabindex="-1">{job?.phase === 'ready' && !showSetup ? 'Review new transcript' : 'Improve audio & retranscribe'}</h2></div>
     <button class="dw-btn-secondary" disabled={busy} on:click={close}>Close</button>
   </header>
   <div class="content">
-    <p class="intro">Prepare a listening preview, then create a new transcript. Your current version stays in place until you choose the new one.</p>
+    <p class="intro">{job?.phase === 'ready' && !showSetup ? 'The entry still uses your saved version. Compare it with the new transcript, then choose which to keep.' : 'Prepare a listening preview, then create a new transcript. Your current version stays in place until you choose the new one.'}</p>
     {#if loading}<p role="status">Checking saved attempts…</p>{/if}
     {#if error}<div class="error" role="alert"><p>{error}</p><button class="dw-btn-secondary" disabled={busy} on:click={refresh}>Refresh status</button></div>{/if}
     {#if !loading && (showSetup || !job)}
@@ -93,6 +100,7 @@
       <div class="actions"><button class="dw-btn-primary" disabled={busy || running} on:click={() => act('prepare', { preset, model, vadFilter })}>Prepare audio preview</button>{#if job && !['discarded', 'reverted'].includes(job.phase)}<button class="dw-text-btn" disabled={busy} on:click={() => showSetup = false}>Back to saved attempt</button>{/if}</div>
     {/if}
     {#if job && !showSetup}
+      {#if result.pending?.length > 1 && result.pending.some(candidate => candidate.id === job.id)}<label class="model">Saved candidates<select class="dw-input" disabled={busy || running} value={attemptId} on:change={event => { attemptId = event.target.value; void refresh(); }}>{#each result.pending as candidate}<option value={candidate.id}>Whisper {candidate.model} · started {new Date(candidate.createdAt).toLocaleString()}</option>{/each}</select></label>{/if}
       <div class="status"><h3 role="status">{phases[job.phase]}</h3><p class="muted">{presets.find(row => row.id === job.preset)?.name} · Whisper {job.model}</p></div>
       {#if running}<p>You can close this window and keep browsing. Reopen this action on the entry to check progress.</p>{/if}
       {#if job.error}<p class="error" role="alert">{job.error}</p>{/if}
@@ -109,15 +117,20 @@
         {#if !result.transcriptionEnabled}<p role="status">Transcription is disabled in Settings. Enable it to create a transcript.</p>{/if}
         <div class="actions"><button class="dw-btn-primary" disabled={busy || !result.transcriptionEnabled} on:click={() => act('transcribe')}>{job.phase === 'failed' ? 'Retry transcription' : 'Create new transcript'}</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button><button class="dw-text-btn" disabled={busy} on:click={() => act('discard')}>Discard attempt</button></div>
       {:else if job.phase === 'ready'}
+        {#if result.currentChanged}<div class="review-warning" role="status"><strong>Your saved version changed after this attempt began.</strong><p>Compare the latest saved text below with this candidate. Accepting replaces that saved transcript and its readable cleanup; a copy is kept for Undo. You do not need to transcribe again.</p></div>{/if}
         <TranscriptionQuality quality={job.quality} listen={(event,cue)=>{audio.currentTime=cue.start;void audio.play().catch(()=>error='Press Play to listen to this passage.');}}/>
         <p>Compare the original machine transcripts below. Readable cleanup can be generated after acceptance.</p>
         <div class="transcript-compare"><section aria-label="Current transcript"><h3>Current transcript</h3><textarea class="transcript" aria-label="Current transcript text" readonly rows="10" value={result.currentText || 'No current transcript.'}></textarea></section><section aria-label="New transcript"><h3>New transcript</h3><textarea class="transcript" aria-label="New transcript text" readonly rows="10" value={job.text}></textarea></section></div>
+        {#if result.currentChanged && result.currentReadableText}<details><summary>Current readable cleanup · replaced on acceptance</summary><textarea class="transcript" aria-label="Current readable cleanup text" readonly rows="6" value={result.currentReadableText}></textarea></details>{/if}
         <p class="muted">Your title, stars, tags and MayDo decisions stay saved. Existing MayDo audio links will need refreshing for the new transcript.</p>
-        <div class="actions"><button class="dw-btn-primary" disabled={busy} on:click={() => act('apply')}>Use new audio & transcript</button><button class="dw-btn-secondary" disabled={busy} on:click={() => act('discard')}>Keep current version</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button></div>
+        <div class="actions"><button class="dw-btn-primary" disabled={busy || loading || attemptId !== job.id} on:click={() => act('apply', result.reviewToken ? { reviewToken: result.reviewToken } : {})}>{result.currentChanged ? 'Replace reviewed version' : 'Use new audio & transcript'}</button><button class="dw-btn-secondary" disabled={busy || loading || attemptId !== job.id} on:click={() => act('discard')}>Keep current version</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button></div>
       {:else if job.phase === 'applied'}
         <p>The entry now uses the prepared audio and new transcript. Use <strong>More → Reprocess readable transcript</strong> to generate readable text and refresh suggested MayDos.</p>
         <div class="actions">{#if result.canUndo}<button class="dw-btn-secondary" disabled={busy} on:click={() => act('restore')}>Undo · restore previous version</button>{/if}<button class="dw-text-btn" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
         <p class="muted">{job.firstImport ? 'This is the first transcript for this recording; there is no previous transcript to restore.' : 'Undo keeps your latest tags and MayDo statuses. It is available until this transcript is changed again; the saved previous version remains on disk.'}</p>
+      {:else if job.phase === 'discarded'}
+        <p>Your saved audio and transcript are unchanged. This candidate has been removed.</p>
+        <div class="actions">{#if result.pending?.length}<button class="dw-btn-secondary" disabled={busy || loading} on:click={() => { attemptId = result.pending[0].id; void refresh(); }}>Review next candidate</button>{/if}<button class="dw-btn-secondary" on:click={close}>Done</button></div>
       {:else if job.phase === 'reverted'}
         <div class="actions"><button class="dw-btn-secondary" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
       {:else if job.phase === 'failed'}
@@ -153,6 +166,7 @@
   .transcript-compare section { min-width: 0; } .transcript-compare h3 { margin-bottom: 8px; }
   .transcript { box-sizing: border-box; width: 100%; resize: vertical; color: var(--dw-text); font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; font-size: 15px; background: #121214; padding: 14px; border: 1px solid var(--dw-border); border-radius: 8px; min-height: 140px; height: clamp(140px, calc(100dvh - 560px), 280px); overflow: auto; }
   .error { color: #fca5a5; } .saved-version { border-top: 1px solid var(--dw-border); padding-top: 12px; }
+  .review-warning { padding: 12px 16px; border-left: 3px solid var(--dw-accent); background: rgb(245 158 11 / .07); margin-top: 16px; } .review-warning p { margin: 6px 0 0; }
   :is(button, input, select, summary, .transcript):focus-visible { outline: 2px solid var(--dw-accent-bright); outline-offset: 3px; }
   @media (max-width: 600px) { dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } header { padding: 12px 16px; } h2 { font-size: 19px; } .content { padding: 0 16px 20px; } .preset-grid, .transcript-compare { grid-template-columns: 1fr; } .transcript-compare section:last-child { order: -1; } .model { align-items: stretch; flex-direction: column; gap: 6px; } .transcript { max-height: 220px; } .actions { bottom: 0; } }
 </style>

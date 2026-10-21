@@ -97,6 +97,64 @@ test('stale transcript acceptance and Undo after new cleanup preserve newer work
   await assert.rejects(svc.restore(file, next), /newer work/); assert.equal(read(file).cleanedTranscription, 'New cleanup');
 });
 
+test('reviewing changed current text permits explicit replacement and Undo preserves the reviewed version', async () => {
+  const svc = service(), file = makeEntry(), id = await ready(svc, file);
+  const initial = svc.status(file, id);
+  const latest = read(file); latest.cleanedTranscription = 'Cleanup completed after candidate preparation.';
+  fs.writeFileSync(file, JSON.stringify(latest));
+  await assert.rejects(svc.apply(file, id), /changed/);
+  await assert.rejects(svc.apply(file, id, initial.reviewToken), /changed/);
+  const reviewed = svc.status(file, id);
+  assert.equal(reviewed.currentChanged, true);
+  assert.equal(reviewed.currentReadableText, latest.cleanedTranscription);
+  assert.notEqual(reviewed.reviewToken, initial.reviewToken);
+  // Human organization changes still survive an already-open review.
+  patchTranscription(file, { tags: ['latest tag'] });
+  await svc.apply(file, id, reviewed.reviewToken);
+  assert.equal(read(file).text, 'Recovered words');
+  await svc.restore(file, id);
+  assert.equal(read(file).cleanedTranscription, latest.cleanedTranscription);
+  assert.deepEqual(read(file).tags, ['latest-tag']);
+  const manifest = path.join(root, '.dictawhisper', 'audio-improvements', id, 'job.json');
+  const receipt = read(manifest); receipt.phase = 'applied'; fs.writeFileSync(manifest, JSON.stringify(receipt));
+  assert.equal(service().status(file, id).job!.phase, 'reverted', 'reconcile an interrupted Undo to the reviewed baseline');
+});
+
+test('review tokens reject further transcript changes, invalid tokens and changes while audio is copied', async () => {
+  const svc = service(), file = makeEntry(), id = await ready(svc, file);
+  const reviewed = svc.status(file, id);
+  await assert.rejects(svc.apply(file, id, 'bad token'), /Refresh/);
+  const copy = fs.promises.copyFile;
+  fs.promises.copyFile = async (...args) => {
+    await copy(...args);
+    const latest = read(file); latest.text = 'Changed during audio copy'; fs.writeFileSync(file, JSON.stringify(latest));
+  };
+  try { await assert.rejects(svc.apply(file, id, reviewed.reviewToken), /changed while audio/); }
+  finally { fs.promises.copyFile = copy; }
+  assert.equal(read(file).text, 'Changed during audio copy');
+  assert.equal(svc.status(file, id).job!.phase, 'ready');
+  await assert.rejects(svc.apply(file, id, reviewed.reviewToken), /changed/);
+});
+
+test('lightweight candidate discovery survives restart and moves, omits transcript text, and clears resolved versions', async () => {
+  const svc = service(), file = makeEntry(), id = await ready(svc, file);
+  const manifest = path.join(root, '.dictawhisper', 'audio-improvements', id, 'job.json');
+  const job = read(manifest); job.createdAt = '2020-01-01T00:00:00.000Z'; fs.writeFileSync(manifest, JSON.stringify(job));
+  const next = await ready(svc, file);
+  const restarted = service();
+  assert.deepEqual(restarted.summary(file).pending.map(row => row.id), [next, id]);
+  assert.equal(JSON.stringify(restarted.summary(file)).includes('Recovered words'), false);
+  const candidatePath = path.join(root, '.dictawhisper', 'audio-improvements', next, 'candidate.json');
+  const candidate = fs.readFileSync(candidatePath); fs.writeFileSync(candidatePath, 'not JSON');
+  assert.equal(restarted.summary(file).pending.length, 2, 'discovery does not load candidate text');
+  fs.writeFileSync(candidatePath, candidate);
+  const moved = path.join(root, 'moved', path.basename(file)); await moveEntryBundle(file, moved);
+  assert.equal(restarted.summary(moved).pending.length, 2);
+  await restarted.apply(moved, next); assert.equal(restarted.summary(moved).pending.length, 0);
+  await restarted.restore(moved, next); assert.equal(restarted.summary(moved).pending.length, 1);
+  restarted.discard(moved, id); assert.equal(restarted.summary(moved).pending.length, 0);
+});
+
 test('confirmed permanent deletion also removes saved candidate audio and transcript history', async () => {
   const svc = service(), file = makeEntry(), id = await ready(svc, file); await svc.apply(file, id);
   const stored = path.join(root, '.dictawhisper', 'audio-improvements', id);
@@ -142,6 +200,12 @@ test('HTTP rejects out-of-root paths and invalid presets without starting a mode
     const blocked = await fetch(base + '?file=' + encodeURIComponent(path.join(root, '..', 'outside.json'))); assert.equal(blocked.status, 403);
     const invalid = await fetch(base + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: makeEntry(), ...options, preset: 'shell injection' }) });
     assert.equal(invalid.status, 409); assert.match((await invalid.json()).error, /supported audio preset/);
+    const file = makeEntry(), outside = path.join(root, '..', 'outside.json');
+    const summaries = await fetch(base + '/summaries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files: [file, outside, file] }) });
+    const rows = (await summaries.json()).items;
+    assert.equal(rows.length, 2); assert.deepEqual(rows[0].pending, []); assert.ok(rows[1].error);
+    const overflow = await fetch(base + '/summaries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files: Array(101).fill(file) }) });
+    assert.equal(overflow.status, 400);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
 test.after(() => { fs.rmSync(root, { recursive: true, force: true }); });

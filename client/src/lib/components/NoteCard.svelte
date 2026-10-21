@@ -5,6 +5,7 @@
   import { displayName, markPreview } from '../markPreview.js';
   import MayDoReview from './MayDoReview.svelte';
   import AudioImprovementDialog from './AudioImprovementDialog.svelte';
+  import { audioReviews } from '../audioReviewState.js';
   export let connected = false, saveMayDoStatus, extractMayDos;
   import { stageCopy } from '../activityState.js';
 
@@ -54,6 +55,14 @@
   let titleSaving = false;
   let moreOpen = false;
   let improveAudioOpen = false;
+  let reviewAttemptId = '', reviewTrigger;
+  $: review = $audioReviews[transcription.jsonFile];
+  $: pendingVersions = review?.pending || [];
+  onMount(() => audioReviews.watch(transcription.jsonFile));
+  function openAudioReview(event, id = '') {
+    reviewTrigger = event.currentTarget;
+    reviewAttemptId = id; audioElement?.pause(); improveAudioOpen = true;
+  }
   let lastAudioVersion = null;
   $: audioVersion = transcription.transcriptionJson?.audioEnhancement?.versionId || 'source';
   $: if (lastAudioVersion !== audioVersion) {
@@ -354,6 +363,7 @@
       <span class="note-title">
         <span class="name">{presentation.title}</span>
         {#if presentation.dateLabel}<span class="day">{presentation.dateLabel}{disambiguate && presentation.sequence ? ` · recording ${presentation.sequence}` : ''}</span>{/if}
+        {#if pendingVersions.length}<span class="review-badge"><AppIcon name="waveform" size={14}/>New transcript ready{pendingVersions.length > 1 ? ` · ${pendingVersions.length}` : ''}</span>{/if}
         {#if activityItem && !['ready','raw_only'].includes(activityItem.stage)}
           <span class="status">{activityItem.stage.replaceAll('_',' ')}</span>
         {:else if transcription.transcriptionJson?.cleanupSkipped}
@@ -427,6 +437,13 @@
 
   {#if expanded}
     {#if variant==='detail' && activityItem && !['ready','raw_only'].includes(activityItem.stage)}<p class="dw-muted" role="status">{stageCopy[activityItem.stage]}{#if activityItem.error} · {activityItem.error}{/if}</p>{/if}
+    {#if pendingVersions.length}
+      <div class="version-notice" role="status">
+        <div><strong>{pendingVersions.length === 1 ? 'New transcript ready' : `${pendingVersions.length} new transcripts ready`}</strong><p>You’re reading the saved version. Review before switching.</p></div>
+        <button class="dw-btn-secondary dw-with-icon" on:click={event => openAudioReview(event, pendingVersions[0].id)}><AppIcon name="waveform" size={16}/>Review new transcript</button>
+      </div>
+    {/if}
+    {#if variant === 'detail' && review?.error}<p class="version-error" role="status">Version status unavailable{pendingVersions.length ? ' · showing last known status' : ''}. <button class="dw-text-btn" on:click={() => audioReviews.refresh()}>Retry version check</button></p>{/if}
     <div class="note-body">
       <div class="reader-controls">
       <div class="reader-command-row">
@@ -450,7 +467,7 @@
           <div class="mobile-playback menu-group"><label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
           {#if searchMatches.length}<div class="menu-group"><p>{searchMatches.length} matching passages</p><button class="menu-action" on:click={() => { stepSearch(-1); moreOpen = false; }}><AppIcon name="left"/><span>Previous search match</span></button><button class="menu-action" on:click={() => { stepSearch(1); moreOpen = false; }}><AppIcon name="chevron"/><span>Next search match</span></button></div>{/if}
           <div class="menu-group">
-            <button class="menu-action" disabled={busy} on:click={() => { closeActions(); audioElement?.pause(); improveAudioOpen = true; }}><AppIcon name="waveform"/><span>Improve audio & retranscribe…</span></button>
+            <button class="menu-action" disabled={busy} on:click={event => { closeActions(); openAudioReview(event, pendingVersions[0]?.id || ''); reviewTrigger = moreButton; }}><AppIcon name="waveform"/><span>{pendingVersions.length ? 'Review new transcript…' : 'Improve audio & retranscribe…'}</span></button>
             <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('retry', transcription.jsonFile); }}><AppIcon name="refresh"/><span>Reprocess readable transcript</span></button>
             <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('skip', transcription.jsonFile); }}><AppIcon name="skip"/><span>Skip cleanup</span></button>
             <details class="processing-details"><summary class="menu-action"><AppIcon name="info"/><span>Processing details</span><span class="disclosure-chevron"><AppIcon name="chevron" size={14}/></span></summary><div class="processing-content"><p>{presentation.path}</p><p>{presentation.dateLabel}{presentation.precision === 'month' ? ' · Month precision; no recording day is known.' : ''}</p>{#if presentation.sequence}<p>Recording {presentation.sequence}</p>{/if}{#if audioDuration != null}<p>Audio duration {formatTime(audioDuration)}</p>{/if}{#if transcription.transcriptionJson?.elapsed}<p>Processing time {transcription.transcriptionJson.elapsed}</p>{/if}{#if cleanedBy}<p>Cleaned {cleanedBy}</p>{/if}</div></details>
@@ -541,9 +558,14 @@
     </div>
   {/if}
 </article>
-{#if expanded && improveAudioOpen}<AudioImprovementDialog file={transcription.jsonFile} on:close={() => { improveAudioOpen = false; tick().then(() => moreButton?.focus({ preventScroll: true })); }} />{/if}
+{#if expanded && improveAudioOpen}<AudioImprovementDialog file={transcription.jsonFile} initialAttemptId={reviewAttemptId} on:changed={() => { void audioReviews.refresh(); dispatch('versionchanged'); }} on:close={() => { improveAudioOpen = false; void audioReviews.refresh(); tick().then(() => (reviewTrigger?.isConnected ? reviewTrigger : moreButton)?.focus({ preventScroll: true })); }} />{/if}
 
 <style lang="scss">
+  .review-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--dw-accent-bright); font-size: 12px; }
+  .version-notice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--dw-border); border-left: 3px solid var(--dw-accent); border-radius: 6px; background: rgb(245 158 11 / .06); font-size: 13px; }
+  .version-notice p { color: var(--dw-text-muted); margin: 3px 0 0; }
+  .version-notice button, .version-error button { min-height: 44px; }
+  .version-error { color: var(--dw-text-muted); font-size: 13px; }
   .detail-tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.45rem; }
   .detail-tabs button { flex-shrink: 0; white-space: nowrap; border: 1px solid transparent; border-radius: 0.4rem; background: transparent; color: var(--dw-text-muted); font: inherit; font-size: 0.8125rem; padding: 0.3rem 0.55rem; cursor: pointer; }
   .detail-tabs button.is-on { border-color: var(--dw-border); background: rgb(245 158 11 / 0.08); color: var(--dw-accent-bright); }

@@ -1093,6 +1093,7 @@
             on:delete={(event) => deleteTranscription(event.detail)}
 
                   on:extractmaydos={event => extractNoteMayDos(event.detail)}
+                  on:versionchanged={() => hydrateNote(selectedFile).catch(error => detailError = error.message)}
                   on:maydostatus={event => setMayDoStatus(event.detail.jsonFile, event.detail.id, event.detail.status)}
                 />
               {/key}{/if}

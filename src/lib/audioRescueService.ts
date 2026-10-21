@@ -21,6 +21,7 @@ export type RescueJob = {
   sourceExt: string; sourceOriginal: boolean; baseline: string;
   report?: EnhancementReport; error?: string; failedStage?: 'preparing' | 'transcribing';
   acceptedFingerprint?: string;
+  acceptedBaseline?: string;
   firstImport?: boolean;
   sourceSize?: number; sourceMtimeMs?: number; sourceHash?: string;
 };
@@ -71,6 +72,11 @@ function assertCandidate(json: TranscriptionDocument) {
   if (!json || typeof json.text !== 'string' || !json.text.trim() || !Array.isArray(json.segments) || !json.segments.length || json.segments.some(row => !Number.isFinite(row.start) || !Number.isFinite(row.end) || row.start < 0 || row.end < row.start || typeof row.text !== 'string')) throw new Error('No usable timed transcript was produced. Your current transcript is unchanged.');
 }
 function changed(file: string) { emitTranscription(null, file); emitNotesIndex(); }
+function reviewCandidates(rows: { job: RescueJob }[], activeId?: string) {
+  const active = rows.find(row => row.job.id === activeId)?.job;
+  return rows.filter(({ job }) => job.phase === 'ready' && job.id !== activeId && (!active || job.createdAt >= active.createdAt))
+    .map(({ job }) => ({ id: job.id, model: job.model, createdAt: job.createdAt }));
+}
 
 /** Jobs persist under watch roots; only explicit acceptance changes transcript/audio. */
 export class AudioRescueService {
@@ -122,7 +128,7 @@ export class AudioRescueService {
         }
         // Reconcile a server stop between the atomic entry write and its receipt.
         if (json.audioEnhancement?.versionId === id && job.phase === 'ready') { job.phase = 'applied'; job.acceptedFingerprint = fingerprint(json); save(root, job); }
-        if (job.phase === 'applied' && json.audioEnhancement?.versionId !== id && fingerprint(json) === job.baseline) { job.phase = 'reverted'; save(root, job); }
+        if (job.phase === 'applied' && json.audioEnhancement?.versionId !== id && fingerprint(json) === (job.acceptedBaseline || job.baseline)) { job.phase = 'reverted'; save(root, job); }
         rows.push({ root, job });
       }
     }
@@ -135,14 +141,25 @@ export class AudioRescueService {
     if (!saved) throw new Error('This audio improvement does not belong to this entry.');
     return { ...saved, current };
   }
+  /** Lightweight discovery for mounted cards. Never read candidate transcripts. */
+  summary(file: string) {
+    const current = entry(file), rows = this.jobs(current.json);
+    const active = rows.find(row => row.job.id === current.json.audioEnhancement?.versionId)?.job;
+    const pending = reviewCandidates(rows, current.json.audioEnhancement?.versionId);
+    return { pending, active: active ? { id: active.id, model: active.model, createdAt: active.createdAt } : null };
+  }
   status(file: string, id?: string) {
     const current = entry(file), rows = this.jobs(current.json);
     const selected = id ? rows.find(row => row.job.id === id) : rows[0];
     if (id && !selected) throw new Error('Audio improvement not found for this entry.');
     const job = selected?.job;
     return {
+      pending: reviewCandidates(rows, current.json.audioEnhancement?.versionId),
       job: job ? { ...job, ...(['ready', 'applied'].includes(job.phase) ? { text: String(jsonRead(owned(selected!.root, job.id, 'candidate.json')).text || ''), quality: jsonRead(owned(selected!.root, job.id, 'candidate.json')).transcriptionQuality } : {}) } : null,
       currentText: current.json.text || '', activeVersionId: current.json.audioEnhancement?.versionId || null,
+      currentReadableText: current.json.cleanedTranscription || '',
+      reviewToken: job?.phase === 'ready' ? fingerprint(current.json) : null,
+      currentChanged: Boolean(job?.phase === 'ready' && fingerprint(current.json) !== job.baseline),
       history: rows.filter(row => ['applied', 'reverted'].includes(row.job.phase)).map(({ job }) => ({ id: job.id, preset: job.preset, model: job.model, createdAt: job.createdAt, phase: job.phase })),
       transcriptionEnabled: config.queues.transcription.active,
       canUndo: Boolean(job && !job.firstImport && current.json.audioEnhancement?.versionId === job.id),
@@ -219,14 +236,18 @@ export class AudioRescueService {
     if (!fs.existsSync(audio)) throw new Error('Audio preview is not ready.');
     return checked(audio);
   }
-  async apply(file: string, id: string) {
+  async apply(file: string, id: string, reviewToken?: unknown) {
     const { root, job, current } = this.locate(file, id);
     if (current.json.audioEnhancement?.versionId === id) return this.status(file, id);
     entry(file, true);
     if (job.phase !== 'ready') throw new Error('A completed candidate transcript is required.');
+    if (reviewToken !== undefined && (typeof reviewToken !== 'string' || !/^[a-f0-9]{64}$/.test(reviewToken))) throw new Error('Refresh the comparison before accepting this version.');
+    // A reviewed current version may supersede the original baseline. Bind the
+    // explicit choice to those exact bytes and still reject changes during review.
+    const expected = reviewToken ?? job.baseline;
     return withEntryOperation([current.path], async () => {
       let fresh = jsonRead(current.path) as TranscriptionDocument;
-      if (fingerprint(fresh) !== job.baseline) throw new Error('The transcript changed while this candidate was prepared. Start a new attempt; your current version was kept.');
+      if (fingerprint(fresh) !== expected) throw new Error('The current transcript changed. Review the updated comparison before accepting; your current version was kept.');
       const candidate = jsonRead(owned(root, id, 'candidate.json')) as TranscriptionDocument; assertCandidate(candidate);
       // The immutable sibling is installed first. One atomic JSON swap then selects
       // both its audio and transcript. A crash cannot pair new text with old audio.
@@ -235,8 +256,9 @@ export class AudioRescueService {
       if (!fs.existsSync(destination)) await fs.promises.copyFile(source, destination, fs.constants.COPYFILE_EXCL);
       if (await fileHash(destination) !== await fileHash(source)) throw new Error('Enhanced audio destination changed. Saved versions were kept.');
       fresh = jsonRead(current.path) as TranscriptionDocument;
-      if (fingerprint(fresh) !== job.baseline) throw new Error('The transcript changed while audio was being saved. Your current version was kept.');
+      if (fingerprint(fresh) !== expected) throw new Error('The current transcript changed while audio was being saved. Review the updated comparison before accepting; your current version was kept.');
       writeEntryJson(owned(root, id, 'previous.json'), JSON.stringify(fresh, null, 2));
+      job.acceptedBaseline = fingerprint(fresh); save(root, job);
       const next = { ...fresh };
       for (const key of transcriptKeys) delete next[key];
       for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
