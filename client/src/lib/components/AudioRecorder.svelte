@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from './AppIcon.svelte';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { createCaptureSession, createImportQueue } from '../captureSession.js';
   export let connected = false;
@@ -51,8 +52,8 @@
 </script>
 <svelte:window on:dragover={drag} on:dragleave={event => { if (!event.relatedTarget) dragOver = false; }} on:drop={event => { if (event.dataTransfer?.files.length) { event.preventDefault(); dragOver = false; files(event.dataTransfer.files); } }} on:keydown={event => { if (event.key === 'Escape' && open && !document.querySelector('dialog[open]')) { event.preventDefault(); close(); } }} />
 <section class="capture" aria-label="Record or import audio">
-  <button bind:this={recordButton} class="dw-btn-secondary dw-btn-compact record-button" class:recording={capture.phase === 'recording'} aria-label={capture.draft?'Record, draft retained':capture.phase==='recording'?'Record, recording in progress':'Record'} title={capture.draft?'Recording draft retained':capture.phase==='recording'?'Recording in progress':'Record audio'} aria-expanded={open} aria-controls="audio-capture" on:click={record}>Record{#if capture.phase === 'recording' || capture.draft}<span class="capture-indicator" aria-hidden="true">●</span>{/if}</button>
-  <button class="dw-btn-secondary dw-btn-compact" on:click={() => fileInput?.click()}>Import</button>
+  <button bind:this={recordButton} class="dw-btn-secondary dw-btn-compact record-button" class:recording={capture.phase === 'recording'} aria-label={capture.draft?'Record, draft retained':capture.phase==='recording'?'Record, recording in progress':'Record'} title={capture.draft?'Recording draft retained':capture.phase==='recording'?'Recording in progress':'Record audio'} aria-expanded={open} aria-controls="audio-capture" on:click={record}><AppIcon name="mic" size={16}/>Record{#if capture.phase === 'recording' || capture.draft}<span class="capture-indicator" aria-hidden="true">●</span>{/if}</button>
+  <button class="dw-btn-secondary dw-btn-compact" on:click={() => fileInput?.click()}><AppIcon name="upload" size={16}/>Import</button>
   <input class="file-input" type="file" multiple accept={capabilities?.formats.map(ext=>'.'+ext).join(',') || 'audio/*'} bind:this={fileInput} on:change={event => { files(event.target.files); event.target.value = ''; }} />
   {#if dragOver}<div class="drop-target">Drop audio to import</div>{/if}
   {#if open}<section id="audio-capture" class="capture-panel" aria-label="Audio capture">
@@ -83,5 +84,5 @@
   .import-row { padding:12px 0; border-top:1px solid var(--dw-border); display:flex; flex-direction:column; gap:6px; overflow-wrap:anywhere; }
   .drop-target { pointer-events:none; position:fixed; inset:64px 16px 16px; z-index:40; background:#191915e8; border:2px dashed var(--dw-accent); display:grid; place-items:center; font-size:24px; }
   .capture-panel button, .capture-panel a { min-height:44px; }
-  @media(max-width:599px) { .capture { gap:4px; } }
+  @media(max-width:599px) { .capture { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-column:span 2; gap:4px; } }
 </style>

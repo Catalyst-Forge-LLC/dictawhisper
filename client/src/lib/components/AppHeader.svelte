@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from './AppIcon.svelte';
   import AudioRecorder from './AudioRecorder.svelte';
   import { createEventDispatcher } from 'svelte';
 
@@ -13,7 +14,7 @@
 <header class="dw-header">
   <div class="dw-header-inner">
     <div class="brand">
-      <button class="dw-btn-secondary dw-btn-compact" aria-expanded={navigationOpen} aria-controls="library-navigation" on:click={() => dispatch("navigation")}>Library</button>
+      <button class="dw-btn-secondary dw-btn-compact" aria-expanded={navigationOpen} aria-controls="library-navigation" on:click={() => dispatch("navigation")}><AppIcon name="library" size={16}/>Library</button>
       <span class="logo-wrap">
         <span class="logo-glow" aria-hidden="true"></span>
         <img src="/logo.png" alt="" width="36" height="36" />
@@ -25,12 +26,12 @@
     </div>
     <div class="tools">
       <AudioRecorder {connected} on:accepted on:openentry on:activity />
-      <button class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('activity')} aria-label={`Activity${workingCount ? ', work in progress' : ''}${failureCount ? ', ' + failureCount + ' need attention' : ''}`}>Activity{#if workingCount} <span aria-hidden="true">●</span>{/if}{#if failureCount} <span>{failureCount}</span>{/if}</button>
+      <button class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('activity')} aria-label={`Activity${workingCount ? ', work in progress' : ''}${failureCount ? ', ' + failureCount + ' need attention' : ''}`}><AppIcon name="activity" size={16}/><span>Activity{#if workingCount} <span aria-hidden="true">●</span>{/if}{#if failureCount} <span>{failureCount}</span>{/if}</span></button>
       <button type="button" class="dw-btn-secondary dw-btn-compact" data-settings-trigger on:click={() => dispatch('tools')}>
-        Settings
+        <AppIcon name="settings" size={16}/>Settings
       </button>
       <button type="button" class="dw-btn-secondary dw-btn-compact header-help" data-help-trigger on:click={() => dispatch('help')}>
-        Help
+        <AppIcon name="help" size={16}/>Help
       </button>
     </div>
   </div>
@@ -146,12 +147,12 @@
     gap: 0.5rem;
   }
 
-  @media (max-width: 459px) { .logo-wrap { display:none; } }
   @media (max-width: 599px) {
-    .header-help { display:none; }
+    .header-help, .logo-wrap { display:none; }
     .wordmark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-    .dw-header-inner { gap: 4px; padding: 5px 8px; flex-wrap: nowrap; }
-    .tools { gap: 4px; }
-    .brand button, .tools :global(button) { min-height: 44px; }
+    .dw-header-inner { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 4px; padding: 5px 8px; }
+    .brand { display: block; }
+    .tools { display: contents; }
+    .brand button, .tools :global(.dw-btn-compact) { width: 100%; min-height: 48px; flex-direction: column; padding: 4px 2px; gap: 3px; font-size: 11px; }
   }
 </style>

@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from './AppIcon.svelte';
   import { createEventDispatcher } from 'svelte';
   export let title = '';
   export let dateLabel = '';
@@ -12,8 +13,8 @@
 </script>
 <section class="detail-pane" aria-label="Selected entry detail">
   <header class="detail-head">
-    <div class="title-row"><div class="identity"><h2 bind:this={heading} tabindex="-1" title={title} aria-live="polite" aria-atomic="true">{title}</h2>{#if dateLabel}<p class="recording-date">{dateLabel}</p>{/if}</div><button class="star dw-btn-secondary dw-btn-compact" aria-label={starred ? 'Unstar note' : 'Star note'} aria-pressed={starred} disabled={busy} on:click={() => dispatch('star')}>★</button></div>
-    <div class="reader-navigation"><button class="dw-btn-secondary dw-btn-compact" disabled={previousDisabled} title={previousDisabled ? 'No previous entry in the available results' : 'Previous entry'} on:click={() => dispatch('previous')}>Previous</button><button class="dw-btn-secondary dw-btn-compact" disabled={nextDisabled} title={nextDisabled ? 'No next entry in the current results' : 'Next entry'} on:click={() => dispatch('next')}>Next</button><button class="close dw-btn-secondary dw-btn-compact" on:click={() => dispatch('close')}>Back to entries</button></div>
+    <div class="title-row"><div class="identity"><h2 bind:this={heading} tabindex="-1" title={title} aria-live="polite" aria-atomic="true">{title}</h2>{#if dateLabel}<p class="recording-date">{dateLabel}</p>{/if}</div><button class="star dw-btn-secondary dw-btn-compact" aria-label={starred ? 'Unstar note' : 'Star note'} aria-pressed={starred} disabled={busy} on:click={() => dispatch('star')}><AppIcon name="star" filled={starred}/></button></div>
+    <div class="reader-navigation"><button class="dw-btn-secondary dw-btn-compact" disabled={previousDisabled} title={previousDisabled ? 'No previous entry in the available results' : 'Previous entry'} on:click={() => dispatch('previous')}><AppIcon name="left" size={16}/>Previous</button><button class="dw-btn-secondary dw-btn-compact" disabled={nextDisabled} title={nextDisabled ? 'No next entry in the current results' : 'Next entry'} on:click={() => dispatch('next')}>Next<AppIcon name="chevron" size={16}/></button><button class="close dw-btn-secondary dw-btn-compact" on:click={() => dispatch('close')}><AppIcon name="list" size={16}/>Back to entries</button></div>
   </header>
   <div class="detail-scroll" bind:this={scrollElement} on:scroll><slot /></div>
 </section>

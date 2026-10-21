@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from './AppIcon.svelte';
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte';
   import { inboxPath, isFilenameQuery, parseCueHash, parseInboxUrl, tightenFilenameHits } from '../inboxUrl.js';
   import { adjacentEntry, chooseCalendarDate, chooseCustomDate, clearOptionalFilters, createWorkspaceSession, MAY_DO_STATUSES, scopeOf, workspaceKey } from '../workspaceState.js';
@@ -889,14 +890,14 @@
     <div class="library-body">
       <p class="dw-eyebrow">Library</p>
       <nav class="library-links" aria-label="Library views">
-        <button class:is-active={libraryView === 'library'} aria-current={libraryView === 'library' ? 'page' : undefined} on:click={() => chooseLibrary('library')}>Library</button>
-        <button class:is-active={libraryView === 'starred'} aria-current={libraryView === 'starred' ? 'page' : undefined} on:click={() => chooseLibrary('starred')}>★ Starred <span>{journalMeta?.starred || 0}</span></button>
-        <button class:is-active={libraryView === 'maydos'} aria-current={libraryView === 'maydos' ? 'page' : undefined} on:click={() => chooseLibrary('maydos')}>MayDos</button>
-        <button class:is-active={libraryView === 'attention'} aria-current={libraryView === 'attention' ? 'page' : undefined} on:click={() => chooseLibrary('attention')}>Needs attention</button>
+        <button class:is-active={libraryView === 'library'} aria-current={libraryView === 'library' ? 'page' : undefined} on:click={() => chooseLibrary('library')}><AppIcon name="library"/><span class="nav-label">Library</span></button>
+        <button class:is-active={libraryView === 'starred'} aria-current={libraryView === 'starred' ? 'page' : undefined} on:click={() => chooseLibrary('starred')}><AppIcon name="star"/><span class="nav-label">Starred</span><span class="nav-count">{journalMeta?.starred || 0}</span></button>
+        <button class:is-active={libraryView === 'maydos'} aria-current={libraryView === 'maydos' ? 'page' : undefined} on:click={() => chooseLibrary('maydos')}><AppIcon name="maydos"/><span class="nav-label">MayDos</span></button>
+        <button class:is-active={libraryView === 'attention'} aria-current={libraryView === 'attention' ? 'page' : undefined} on:click={() => chooseLibrary('attention')}><AppIcon name="attention"/><span class="nav-label">Needs attention</span></button>
       </nav>
         {#if tagCloud.length}
     <details class="tags-card">
-      <summary>Tags</summary>
+      <summary><span class="dw-with-icon"><AppIcon name="tags" size={16}/>Tags</span></summary>
       <input class="dw-input tag-search" type="search" bind:value={tagSearch} placeholder="Find a tag…" aria-label="Find a tag" />
       <div class="tags-head">
         <p class="dw-eyebrow">Tags</p>
@@ -975,9 +976,9 @@
       </div>
       <div class="results-toolbar">
         <p class="dw-muted status-line" role="status">{statusLine}</p>
-        <button class="dw-chip" class:is-active={scope.mayDos === 'any' || activeStatuses.length > 0} aria-pressed={scope.mayDos === 'any' || activeStatuses.length > 0} disabled={libraryView === 'maydos'} title={libraryView === 'maydos' ? 'MayDos view includes entries with actions' : 'Filter entries with any saved MayDos'} on:click={() => { mayDoFilter = mayDoFilter ? '' : 'any'; mayDoStatuses = []; }}>MayDos</button>
-        <button class="dw-chip" class:is-active={scope.starred} aria-pressed={scope.starred} disabled={libraryView === 'starred'} title={libraryView === 'starred' ? 'Starred view includes starred entries' : 'Filter starred entries'} on:click={() => (starredOnly = !starredOnly)}>★ Starred</button>
-        <button class="dw-btn-secondary dw-btn-compact" aria-expanded={filtersOpen} bind:this={filterButton} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}>Filters</button>
+        <button class="dw-chip" class:is-active={scope.mayDos === 'any' || activeStatuses.length > 0} aria-pressed={scope.mayDos === 'any' || activeStatuses.length > 0} disabled={libraryView === 'maydos'} title={libraryView === 'maydos' ? 'MayDos view includes entries with actions' : 'Filter entries with any saved MayDos'} on:click={() => { mayDoFilter = mayDoFilter ? '' : 'any'; mayDoStatuses = []; }}><AppIcon name="maydos" size={14}/>MayDos</button>
+        <button class="dw-chip" class:is-active={scope.starred} aria-pressed={scope.starred} disabled={libraryView === 'starred'} title={libraryView === 'starred' ? 'Starred view includes starred entries' : 'Filter starred entries'} on:click={() => (starredOnly = !starredOnly)}><AppIcon name="star" size={14}/>Starred</button>
+        <button class="dw-btn-secondary dw-btn-compact" aria-expanded={filtersOpen} bind:this={filterButton} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}><AppIcon name="filter" size={16}/>Filters</button>
         <label class="sort-label">Sort
           <select class="dw-input dw-select" value={effectiveSort(searchKey)} on:change={event => setSort(event.target.value)}>
             <option value="recent">Newest first</option><option value="oldest">Oldest first</option>
@@ -1117,7 +1118,9 @@
   .library-links button, .date-nav button { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; border-radius: 0.5rem; padding: 0.5rem 0.65rem; background: transparent; color: var(--dw-text-muted); font: inherit; font-size: 0.875rem; cursor: pointer; text-align: left; }
   .library-links button:hover, .date-nav button:hover { background: var(--dw-bg-hover); color: var(--dw-text); }
   .library-links button.is-active, .date-nav button.is-active { background: rgb(245 158 11 / 0.12); color: var(--dw-accent-bright); }
-  .library-links button span { font-size: 0.75rem; }
+  .library-links button { justify-content: flex-start; gap: 10px; min-height: 44px; }
+  .library-links .nav-label { flex: 1; }
+  .library-links .nav-count { font-size: 0.75rem; font-variant-numeric: tabular-nums; }
   .date-heading { margin-top: 0.6rem; }
   summary { cursor: pointer; padding: 0.5rem 0; color: var(--dw-text); font-size: 0.875rem; }
   .year-row { display: flex; align-items: center; }

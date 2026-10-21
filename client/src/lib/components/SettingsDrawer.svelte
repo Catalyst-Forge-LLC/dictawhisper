@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from './AppIcon.svelte';
   import {tick,onDestroy,createEventDispatcher} from 'svelte';
   import CleanupRetries from './CleanupRetries.svelte';
   import {copyTranscriptText} from '../entryPresentation.js';
@@ -11,6 +12,7 @@
   export let open=false, connected=false, noteFilter='all', section='General';
   const dispatch=createEventDispatcher();
   const sections=['General','Folders','Transcription','Cleanup and MayDos','Search','Data and maintenance','Integrations','About'];
+  const sectionIcons={General:'settings',Folders:'folder',Transcription:'waveform','Cleanup and MayDos':'maydos',Search:'search','Data and maintenance':'library',Integrations:'link',About:'info'};
   let dialog,priorFocus,settings=null,health=null,stats=null,probe=null,error='',message='',busy=false,timer,markSelected={},markConfirm=false;
   async function fetchJson(url,body){const response=await fetch(url,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Request failed');return data;}
   async function refresh(){error='';try{[settings,stats,probe]=await Promise.all([fetchJson('/settings'),fetchJson('/notes/stats'),fetchJson('/tools/probe')]);}catch(e){error=e.message;}}
@@ -24,7 +26,7 @@
 <dialog bind:this={dialog} aria-label="Settings" on:cancel|preventDefault={()=>open=false}>
   <header><h2>Settings</h2><button class="dw-btn-secondary" on:click={()=>open=false}>Close Settings</button></header>
   {#if open}
-  <nav aria-label="Settings sections">{#each sections as name}<button class="dw-btn-secondary" aria-current={section===name?'page':undefined} on:click={()=>{section=name;error='';message='';}}>{name}</button>{/each}</nav>
+  <nav aria-label="Settings sections">{#each sections as name}<button class="dw-btn-secondary" aria-current={section===name?'page':undefined} on:click={()=>{section=name;error='';message='';}}><AppIcon name={sectionIcons[name]} size={16}/>{name}</button>{/each}</nav>
   {#if error}<p class="dw-error" role="alert">{error}</p><button class="dw-btn-secondary" on:click={refresh}>Retry loading Settings</button>{/if}
   {#if !settings}<p>Loading effective settings…</p>{:else}
     <h3>{section}</h3>

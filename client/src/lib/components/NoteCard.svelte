@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from './AppIcon.svelte';
   import TranscriptionQuality from './TranscriptionQuality.svelte';
   import { afterUpdate, createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
   import { displayName, markPreview } from '../markPreview.js';
@@ -61,6 +62,16 @@
   }
   let moreButton;
   let morePanel;
+  function closeActions() {
+    moreOpen = false;
+    moreButton?.focus({ preventScroll: true });
+  }
+  function fitMore() {
+    if (!moreOpen || !morePanel) return;
+    const readerBottom = card?.closest('.detail-scroll')?.getBoundingClientRect().bottom ?? window.innerHeight;
+    const available = Math.min(window.innerHeight, readerBottom) - morePanel.getBoundingClientRect().top - 8;
+    morePanel.style.maxHeight = `${Math.max(0, Math.min(620, available))}px`;
+  }
   let findButton;
   let selectedPassages = [];
   let selectingPassages = false;
@@ -170,12 +181,14 @@
     const closeMore = event => { if (moreOpen && !card.querySelector('.more')?.contains(event.target)) moreOpen = false; };
     const escapeMore = event => { if (moreOpen && event.key === 'Escape' && card.contains(document.activeElement)) { moreOpen = false; moreButton?.focus(); } };
     window.addEventListener('pointerdown', closeMore); window.addEventListener('keydown', escapeMore);
+    window.addEventListener('resize', fitMore);
+    reader?.addEventListener('scroll', fitMore, { passive: true });
     reader?.addEventListener('wheel', manual, { passive: true });
     reader?.addEventListener('touchstart', manual, { passive: true });
     reader?.addEventListener('pointerdown', manual, { passive: true });
     reader?.addEventListener('keydown', manual);
     window.addEventListener('dw-recording-started', pause);
-    return () => { window.removeEventListener('pointerdown', closeMore); window.removeEventListener('keydown', escapeMore); reader?.removeEventListener('wheel', manual); reader?.removeEventListener('touchstart', manual); reader?.removeEventListener('pointerdown', manual); reader?.removeEventListener('keydown', manual); window.removeEventListener('dw-recording-started', pause); };
+    return () => { window.removeEventListener('resize', fitMore); reader?.removeEventListener('scroll', fitMore); window.removeEventListener('pointerdown', closeMore); window.removeEventListener('keydown', escapeMore); reader?.removeEventListener('wheel', manual); reader?.removeEventListener('touchstart', manual); reader?.removeEventListener('pointerdown', manual); reader?.removeEventListener('keydown', manual); window.removeEventListener('dw-recording-started', pause); };
   });
   onDestroy(() => { clearTimeout(copyTimer); clearTimeout(playWaitTimer); audioElement?.pause(); });
   function chooseTab(tab) { detailTab = tab; dispatch('tab', { file: transcription.jsonFile, tab }); }
@@ -377,7 +390,7 @@
       disabled={busy}
       on:click={() => dispatch('star', { jsonFile: transcription.jsonFile, starred: !starred })}
     >
-      ★
+      <AppIcon name="star" size={16} filled={starred}/>
     </button>
   </div>
 
@@ -418,29 +431,36 @@
       <div class="reader-controls">
       <div class="reader-command-row">
       <div class="detail-tabs" role="group" aria-label="Entry sections">
-        <button class:is-on={detailTab === 'transcript'} aria-pressed={detailTab === 'transcript'} on:click={() => chooseTab('transcript')}>Transcript</button>
-        <button class:is-on={detailTab === 'maydos'} aria-pressed={detailTab === 'maydos'} on:click={() => chooseTab('maydos')} title="Count of Suggested and Selected actions; all saved actions are available here">MayDos <span>{activeMayDoCount(transcription.transcriptionJson)} / {mayDoCounts(transcription.transcriptionJson).mayDoTotalCount}</span>{#if transcription.transcriptionJson?.mayDoError} !{/if}</button>
-        <button class:is-on={detailTab === 'tags'} aria-pressed={detailTab === 'tags'} on:click={() => chooseTab('tags')}>Tags <span>{tags.length}</span></button>
+        <button class="dw-with-icon" class:is-on={detailTab === 'transcript'} aria-pressed={detailTab === 'transcript'} on:click={() => chooseTab('transcript')}><AppIcon name="transcript" size={16}/>Transcript</button>
+        <button class="dw-with-icon" class:is-on={detailTab === 'maydos'} aria-pressed={detailTab === 'maydos'} on:click={() => chooseTab('maydos')} title="Count of Suggested and Selected actions; all saved actions are available here"><AppIcon name="maydos" size={16}/>MayDos <span>{activeMayDoCount(transcription.transcriptionJson)} / {mayDoCounts(transcription.transcriptionJson).mayDoTotalCount}</span>{#if transcription.transcriptionJson?.mayDoError} !{/if}</button>
+        <button class="dw-with-icon" class:is-on={detailTab === 'tags'} aria-pressed={detailTab === 'tags'} on:click={() => chooseTab('tags')}><AppIcon name="tags" size={16}/>Tags <span>{tags.length}</span></button>
       </div>
 
       <div class="reader-commands">
         {#if detailTab === 'transcript'}<div class="dw-segmented" role="group" aria-label="Transcript view"><button disabled={!cleaned} aria-pressed={!original} class:is-on={!original} on:click={() => dispatch('raw', { jsonFile: transcription.jsonFile, show: false })}>Readable</button><button aria-pressed={original} class:is-on={original} on:click={() => dispatch('raw', { jsonFile: transcription.jsonFile, show: true })}>Original</button></div>{/if}
-        <button class="dw-text-btn" aria-label="Copy full transcript" disabled={!fullText} on:click={copyFull}>Copy transcript</button>
-        <button bind:this={findButton} class="dw-text-btn" on:click={openFind}>Find in entry</button>
-        <details bind:open={moreOpen} class="more"><summary bind:this={moreButton}>More</summary><div class="more-menu" bind:this={morePanel}>
-          {#if detailTab === 'transcript'}<button class="dw-text-btn" disabled={!passages.length} on:click={beginPassageSelection}>Select passages</button>{/if}
-          <button class="dw-text-btn" on:click={beginTitleEdit}>Rename display title</button>
-          <div class="mobile-playback"><label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
-          <a href={audioDownloadUrl(transcription.jsonFile)}>Download audio</a><a href={sidecarDownloadUrl(transcription.jsonFile)}>Export entry JSON</a>
-          <details><summary>Processing details</summary><p>{presentation.path}</p><p>{presentation.dateLabel}{presentation.precision === 'month' ? ' · Month precision; no recording day is known.' : ''}</p>{#if presentation.sequence}<p>Recording {presentation.sequence}</p>{/if}{#if audioDuration != null}<p>Audio duration {formatTime(audioDuration)}</p>{/if}{#if transcription.transcriptionJson?.elapsed}<p>Processing time {transcription.transcriptionJson.elapsed}</p>{/if}{#if cleanedBy}<p>Cleaned {cleanedBy}</p>{/if}</details>
-          {#if searchMatches.length}<p>{searchMatches.length} matching passages</p><button class="dw-text-btn" on:click={() => { stepSearch(-1); moreOpen = false; }}>Previous search match</button><button class="dw-text-btn" on:click={() => { stepSearch(1); moreOpen = false; }}>Next search match</button>{/if}
-          <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('retry', transcription.jsonFile)}>Reprocess readable transcript</button>
-          <button class="dw-text-btn" disabled={busy} on:click={() => { moreOpen = false; audioElement?.pause(); improveAudioOpen = true; }}>Improve audio & retranscribe…</button>
-          <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('skip', transcription.jsonFile)}>Skip cleanup</button>
-          {#if holding || (unfiled && hasDateName(transcription.jsonFile))}<button class="dw-text-btn" disabled={busy} on:click={() => dispatch('resolve', { jsonFile: transcription.jsonFile, action: 'rename' })}>Organize / resolve conflict…</button>{/if}
-          {#if holding}<button class="dw-text-btn" disabled={busy} on:click={() => dispatch('resolve', { jsonFile: transcription.jsonFile, action: 'unfile' })}>Move to Unfiled</button>{/if}
-          <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('resolve', {jsonFile:transcription.jsonFile})}>Assign recording date…</button>
-          <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('delete', transcription.jsonFile)}>Move to Trash</button>
+        <button class="dw-text-btn dw-with-icon" aria-label="Copy full transcript" disabled={!fullText} on:click={copyFull}><AppIcon name="copy" size={16}/>Copy transcript</button>
+        <button bind:this={findButton} class="dw-text-btn dw-with-icon" on:click={openFind}><AppIcon name="search" size={16}/>Find in entry</button>
+        <details bind:open={moreOpen} on:toggle={fitMore} class="more"><summary class="dw-with-icon" bind:this={moreButton}><AppIcon name="more"/>More</summary><div class="more-menu" bind:this={morePanel} aria-label="Entry actions">
+          <div class="menu-group">
+            {#if detailTab === 'transcript'}<button class="menu-action" disabled={!passages.length} on:click={beginPassageSelection}><AppIcon name="select"/><span>Select passages</span></button>{/if}
+            <button class="menu-action" on:click={beginTitleEdit}><AppIcon name="rename"/><span>Rename display title</span></button>
+            <a class="menu-action" href={audioDownloadUrl(transcription.jsonFile)}><AppIcon name="download"/><span>Download audio</span></a>
+            <a class="menu-action" href={sidecarDownloadUrl(transcription.jsonFile)}><AppIcon name="json"/><span>Export entry JSON</span></a>
+          </div>
+          <div class="mobile-playback menu-group"><label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
+          {#if searchMatches.length}<div class="menu-group"><p>{searchMatches.length} matching passages</p><button class="menu-action" on:click={() => { stepSearch(-1); moreOpen = false; }}><AppIcon name="left"/><span>Previous search match</span></button><button class="menu-action" on:click={() => { stepSearch(1); moreOpen = false; }}><AppIcon name="chevron"/><span>Next search match</span></button></div>{/if}
+          <div class="menu-group">
+            <button class="menu-action" disabled={busy} on:click={() => { closeActions(); audioElement?.pause(); improveAudioOpen = true; }}><AppIcon name="waveform"/><span>Improve audio & retranscribe…</span></button>
+            <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('retry', transcription.jsonFile); }}><AppIcon name="refresh"/><span>Reprocess readable transcript</span></button>
+            <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('skip', transcription.jsonFile); }}><AppIcon name="skip"/><span>Skip cleanup</span></button>
+            <details class="processing-details"><summary class="menu-action"><AppIcon name="info"/><span>Processing details</span><span class="disclosure-chevron"><AppIcon name="chevron" size={14}/></span></summary><div class="processing-content"><p>{presentation.path}</p><p>{presentation.dateLabel}{presentation.precision === 'month' ? ' · Month precision; no recording day is known.' : ''}</p>{#if presentation.sequence}<p>Recording {presentation.sequence}</p>{/if}{#if audioDuration != null}<p>Audio duration {formatTime(audioDuration)}</p>{/if}{#if transcription.transcriptionJson?.elapsed}<p>Processing time {transcription.transcriptionJson.elapsed}</p>{/if}{#if cleanedBy}<p>Cleaned {cleanedBy}</p>{/if}</div></details>
+          </div>
+          <div class="menu-group">
+            {#if holding || (unfiled && hasDateName(transcription.jsonFile))}<button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('resolve', { jsonFile: transcription.jsonFile, action: 'rename' }); }}><AppIcon name="folder"/><span>Organize / resolve conflict…</span></button>{/if}
+            {#if holding}<button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('resolve', { jsonFile: transcription.jsonFile, action: 'unfile' }); }}><AppIcon name="folder"/><span>Move to Unfiled</span></button>{/if}
+            <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('resolve', {jsonFile:transcription.jsonFile}); }}><AppIcon name="date"/><span>Assign recording date…</span></button>
+          </div>
+          <div class="menu-group"><button class="menu-action is-danger" disabled={busy} on:click={() => { closeActions(); dispatch('delete', transcription.jsonFile); }}><AppIcon name="trash"/><span>Move to Trash</span></button></div>
         </div></details>
       </div></div>
       <div class="player-row"><audio bind:this={audioElement} data-position-restored={audioRestored} controls preload="metadata" on:loadedmetadata={restoreAudio} on:error={playbackFailed} src={audioUrl(transcription.jsonFile, audioVersion)} on:timeupdate={updateAudio} on:play={() => { for (const audio of document.querySelectorAll('audio')) if (audio !== audioElement) audio.pause(); }}></audio>
@@ -512,7 +532,7 @@
             {#if cueHasTime(cue)}<button class="cue-time" aria-label={`Play passage at ${formatTime(cue.start)}`} on:click={event => playCue(event, cue)}>{formatTime(cue.start)}</button>{:else}<span class="cue-time" aria-label="No timing available">—</span>{/if}
             <div class="cue-text">{@html markEntryMatch(cue.text, findOpen ? findQuery : '')}</div>
           </div>
-          <button class="segment-copy" aria-label="Copy passage" title="Copy passage" on:click={() => copySegment(cue.text, 'cue-' + index)}>{copiedSegment === 'cue-' + index ? '✓' : '⧉'}</button>
+          <button class="segment-copy" aria-label="Copy passage" title="Copy passage" on:click={() => copySegment(cue.text, 'cue-' + index)}><AppIcon name={copiedSegment === 'cue-' + index ? 'check' : 'copy'} size={16}/></button>
         </div>
       {:else}<p class="dw-muted">No transcript text is available.</p>{/each}
 
@@ -524,10 +544,10 @@
 {#if expanded && improveAudioOpen}<AudioImprovementDialog file={transcription.jsonFile} on:close={() => { improveAudioOpen = false; tick().then(() => moreButton?.focus({ preventScroll: true })); }} />{/if}
 
 <style lang="scss">
-  .detail-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.45rem; }
-  .detail-tabs button { border: 1px solid transparent; border-radius: 0.4rem; background: transparent; color: var(--dw-text-muted); font: inherit; font-size: 0.8125rem; padding: 0.3rem 0.55rem; cursor: pointer; }
+  .detail-tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.45rem; }
+  .detail-tabs button { flex-shrink: 0; white-space: nowrap; border: 1px solid transparent; border-radius: 0.4rem; background: transparent; color: var(--dw-text-muted); font: inherit; font-size: 0.8125rem; padding: 0.3rem 0.55rem; cursor: pointer; }
   .detail-tabs button.is-on { border-color: var(--dw-border); background: rgb(245 158 11 / 0.08); color: var(--dw-accent-bright); }
-  .detail-tabs span { margin-left: 0.25rem; font-size: 0.7rem; }
+  .detail-tabs span { white-space: nowrap; font-size: 0.7rem; }
   .note.is-selected { border-color: var(--dw-accent); background: rgb(245 158 11 / 0.08); }
   .maydo-badge { margin-top: 0.45rem; color: var(--dw-accent-bright); }
   .cue-row { position: relative; padding-right: 76px; min-height: 44px; }
@@ -758,10 +778,24 @@
   button.cue-time { border: 0; background: transparent; color: var(--dw-accent-bright); cursor: pointer; align-self: start; padding: 4px; font: inherit; font-size: 12px; }
   .cue-text { user-select: text; white-space: pre-wrap; }
   .more { position: static; }
-  .more summary { cursor: pointer; }
+  .more summary { cursor: pointer; list-style: none; }
+  .more summary::-webkit-details-marker { display: none; }
+  .more > summary { padding: 6px 8px; border-radius: 6px; color: var(--dw-text-muted); min-height: 36px; }
+  .more[open] > summary, .more > summary:hover { color: var(--dw-text); background: var(--dw-bg-hover); }
   .mobile-playback { display: none; }
-  .more-menu { position: absolute; right: 0; top: 100%; width: min(300px, 70vw); max-height: 45dvh; overflow-y: auto; border: 1px solid var(--dw-border); border-radius: 8px; background: #242427; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 6; overflow-wrap: anywhere; }
-  .more-menu a { color: var(--dw-text); text-decoration: underline; text-underline-offset: 3px; }
+  .more-menu { position: absolute; right: 0; top: calc(100% + 4px); width: min(320px, calc(100vw - 40px)); max-height: min(620px, 55dvh); overflow-y: auto; overscroll-behavior: contain; border: 1px solid rgb(255 255 255 / 0.14); border-radius: 12px; background: #202023; padding: 6px; box-shadow: 0 12px 36px #0009, 0 2px 8px #0006; z-index: 6; overflow-wrap: anywhere; }
+  .menu-group + .menu-group { border-top: 1px solid var(--dw-border); margin-top: 4px; padding-top: 4px; }
+  .menu-action { display: grid; grid-template-columns: 18px minmax(0,1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: var(--dw-text); font: inherit; font-size: 13px; line-height: 1.35; text-align: left; text-decoration: none; cursor: pointer; }
+  .menu-action :global(> .dw-icon) { color: var(--dw-text-muted); }
+  .menu-action:hover:not(:disabled) { background: var(--dw-bg-hover); }
+  .menu-action:disabled { opacity: .45; cursor: not-allowed; }
+  .menu-action.is-danger, .menu-action.is-danger :global(.dw-icon) { color: var(--dw-danger); }
+  .menu-action.is-danger:hover:not(:disabled) { background: rgb(248 113 113 / .09); }
+  .menu-action:focus-visible, .more > summary:focus-visible { outline: 2px solid var(--dw-accent-bright); outline-offset: -2px; }
+  .processing-details[open] .disclosure-chevron { transform: rotate(90deg); }
+  .processing-content { padding: 0 10px 10px 38px; color: var(--dw-text-muted); font-size: 12px; }
+  .processing-content p + p { margin-top: 8px; }
+  .mobile-playback { padding: 10px; }
   .more-menu summary, .more-menu p { white-space: normal; }
   .title-editor, .find-bar { padding: 8px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; }
   .title-editor label, .find-bar label { flex: 1; min-width: 140px; }
@@ -771,10 +805,12 @@
   .original-status { font-size: 12px; }
   @media (hover: none), (pointer: coarse), (max-width: 959px) { .segment-copy { opacity: 1; } button.cue-time, .segment-copy { min-width: 44px; min-height: 44px; } .reader-command-row { align-items: start; } }
   @media (max-width: 599px) {
+    .detail-tabs { gap: 2px; }
+    .detail-tabs button { gap: 4px; padding-inline: 6px; font-size: 12px; }
     .player-row > .speed, .player-row > .follow { display: none; }
     .mobile-playback { display: flex; flex-wrap: wrap; gap: 12px; }
     .reader-commands > button, .reader-commands .dw-segmented button, .more > summary, .mobile-playback select { min-height: 44px; }
     .more > summary { display: flex; align-items: center; }
-    .more-menu { right: 0; width: min(300px, calc(100vw - 48px)); }
+    .more-menu { right: 0; }
   }
 </style>
