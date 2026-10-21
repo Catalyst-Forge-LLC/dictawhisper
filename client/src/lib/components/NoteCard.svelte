@@ -123,6 +123,13 @@
   }
   $: presentation = entryPresentation(transcription);
   $: original = !cleaned || showRaw;
+  $: cleanupRunning = ['queued_cleanup', 'cleaning'].includes(activityItem?.stage);
+  $: cleanupFailed = Boolean(transcription.transcriptionJson?.cleanupError && transcription.transcriptionJson.cleanupError !== 'skipped');
+  function createReadable() {
+    if (busy || cleanupRunning) return;
+    dispatch('raw', { jsonFile: transcription.jsonFile, show: false });
+    dispatch('retry', transcription.jsonFile);
+  }
   $: passages = transcriptPassages(transcription.transcriptionJson, original);
   $: if (matchCursor >= findMatches.length) matchCursor = -1;
   $: fullText = transcriptCopyText(transcription.transcriptionJson, original);
@@ -367,7 +374,7 @@
         {#if activityItem && !['ready','raw_only'].includes(activityItem.stage)}
           <span class="status">{activityItem.stage.replaceAll('_',' ')}</span>
         {:else if transcription.transcriptionJson?.cleanupSkipped}
-          <span class="status">cleanup skipped</span>
+          <span class="status">original only</span>
         {:else if !cleaned}
           <span class="status">{transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'raw only'}</span>
         {/if}
@@ -454,7 +461,7 @@
       </div>
 
       <div class="reader-commands">
-        {#if detailTab === 'transcript'}<div class="dw-segmented" role="group" aria-label="Transcript view"><button disabled={!cleaned} aria-pressed={!original} class:is-on={!original} on:click={() => dispatch('raw', { jsonFile: transcription.jsonFile, show: false })}>Readable</button><button aria-pressed={original} class:is-on={original} on:click={() => dispatch('raw', { jsonFile: transcription.jsonFile, show: true })}>Original</button></div>{/if}
+        {#if detailTab === 'transcript'}<div class="dw-segmented" role="group" aria-label="Transcript view"><button disabled={!cleaned && (busy || cleanupRunning || !transcription.transcriptionJson?.text?.trim())} aria-pressed={!original} class:is-on={!original} title={cleaned ? 'Read with punctuation and filler-only pauses removed' : 'Create punctuated paragraphs from this transcript; no retranscription needed'} on:click={() => cleaned ? dispatch('raw', { jsonFile: transcription.jsonFile, show: false }) : createReadable()}>{cleaned ? 'Readable' : cleanupRunning ? 'Creating readable…' : 'Create readable'}</button><button aria-pressed={original} class:is-on={original} on:click={() => dispatch('raw', { jsonFile: transcription.jsonFile, show: true })}>Original</button></div>{/if}
         <button class="dw-text-btn dw-with-icon" aria-label="Copy full transcript" disabled={!fullText} on:click={copyFull}><AppIcon name="copy" size={16}/>Copy transcript</button>
         <button bind:this={findButton} class="dw-text-btn dw-with-icon" on:click={openFind}><AppIcon name="search" size={16}/>Find in entry</button>
         <details bind:open={moreOpen} on:toggle={fitMore} class="more"><summary class="dw-with-icon" bind:this={moreButton}><AppIcon name="more"/>More</summary><div class="more-menu" bind:this={morePanel} aria-label="Entry actions">
@@ -468,7 +475,7 @@
           {#if searchMatches.length}<div class="menu-group"><p>{searchMatches.length} matching passages</p><button class="menu-action" on:click={() => { stepSearch(-1); moreOpen = false; }}><AppIcon name="left"/><span>Previous search match</span></button><button class="menu-action" on:click={() => { stepSearch(1); moreOpen = false; }}><AppIcon name="chevron"/><span>Next search match</span></button></div>{/if}
           <div class="menu-group">
             <button class="menu-action" disabled={busy} on:click={event => { closeActions(); openAudioReview(event, pendingVersions[0]?.id || ''); reviewTrigger = moreButton; }}><AppIcon name="waveform"/><span>{pendingVersions.length ? 'Review new transcript…' : 'Improve audio & retranscribe…'}</span></button>
-            <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('retry', transcription.jsonFile); }}><AppIcon name="refresh"/><span>Reprocess readable transcript</span></button>
+            <button class="menu-action" disabled={busy || cleanupRunning} on:click={() => { closeActions(); createReadable(); }}><AppIcon name="refresh"/><span>{cleaned ? 'Reprocess readable transcript' : 'Create readable transcript'}</span></button>
             <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('skip', transcription.jsonFile); }}><AppIcon name="skip"/><span>Skip cleanup</span></button>
             <details class="processing-details"><summary class="menu-action"><AppIcon name="info"/><span>Processing details</span><span class="disclosure-chevron"><AppIcon name="chevron" size={14}/></span></summary><div class="processing-content"><p>{presentation.path}</p><p>{presentation.dateLabel}{presentation.precision === 'month' ? ' · Month precision; no recording day is known.' : ''}</p>{#if presentation.sequence}<p>Recording {presentation.sequence}</p>{/if}{#if audioDuration != null}<p>Audio duration {formatTime(audioDuration)}</p>{/if}{#if transcription.transcriptionJson?.elapsed}<p>Processing time {transcription.transcriptionJson.elapsed}</p>{/if}{#if cleanedBy}<p>Cleaned {cleanedBy}</p>{/if}</div></details>
           </div>
@@ -541,7 +548,13 @@
         </div>
       </form>
       {:else}
-      {#if original}<p class="original-status dw-muted">Original transcript{#if !cleaned} · {transcription.transcriptionJson?.cleanupError ? 'cleanup failed' : 'readable version unavailable'} <button class="dw-text-btn" disabled={busy} on:click={() => dispatch('retry', transcription.jsonFile)}>Retry cleanup</button>{/if}</p>{/if}
+      {#if original}<div class="original-status dw-muted" role="status">
+        {#if cleaned}Original transcript · includes speech pauses and filler words.
+        {:else if cleanupRunning}Creating readable text with punctuation and paragraphs. You can keep reading the original.
+        {:else}<span>{cleanupFailed ? 'Readable cleanup failed.' : 'Original transcript · readable cleanup has not run.'} Create readable text to add punctuation, join fragments, and remove filler-only pauses.</span>
+          <button class="dw-text-btn dw-with-icon" disabled={busy || !transcription.transcriptionJson?.text?.trim()} on:click={createReadable}><AppIcon name="refresh" size={16}/>{cleanupFailed ? 'Retry readable cleanup' : 'Create readable'}</button>
+        {/if}
+      </div>{/if}
       {#each passages as cue, index}
         <div class="cue-row" class:find-match={findMatches[matchCursor]?.index === index} class:passage-selected={selectedPassages.includes(index)} class:selection-mode={selectingPassages}>
           <label class="passage-select" title={`Select passage ${index + 1}`}><input type="checkbox" aria-label={`Select passage ${index + 1}`} checked={selectedPassages.includes(index)} on:change={event => selectPassage(index, event.currentTarget.checked)} /></label>
@@ -558,7 +571,7 @@
     </div>
   {/if}
 </article>
-{#if expanded && improveAudioOpen}<AudioImprovementDialog file={transcription.jsonFile} initialAttemptId={reviewAttemptId} on:changed={() => { void audioReviews.refresh(); dispatch('versionchanged'); }} on:close={() => { improveAudioOpen = false; void audioReviews.refresh(); tick().then(() => (reviewTrigger?.isConnected ? reviewTrigger : moreButton)?.focus({ preventScroll: true })); }} />{/if}
+{#if expanded && improveAudioOpen}<AudioImprovementDialog file={transcription.jsonFile} initialAttemptId={reviewAttemptId} on:cleanup={createReadable} on:changed={() => { void audioReviews.refresh(); dispatch('versionchanged'); }} on:close={() => { improveAudioOpen = false; void audioReviews.refresh(); tick().then(() => (reviewTrigger?.isConnected ? reviewTrigger : moreButton)?.focus({ preventScroll: true })); }} />{/if}
 
 <style lang="scss">
   .review-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--dw-accent-bright); font-size: 12px; }
@@ -824,7 +837,9 @@
   .find-bar button { color: inherit; background: #27272a; border: 1px solid var(--dw-border); padding: 6px; border-radius: 4px; }
   .find-match { outline: 1px solid var(--dw-accent); border-radius: 4px; }
   .copy-success { position: absolute; right: 4px; top: 100%; background: #292922; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-  .original-status { font-size: 12px; }
+  .original-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; margin: 8px 0 12px; }
+  .original-status span { flex: 1 1 280px; }
+  .original-status button { min-height: 44px; }
   @media (hover: none), (pointer: coarse), (max-width: 959px) { .segment-copy { opacity: 1; } button.cue-time, .segment-copy { min-width: 44px; min-height: 44px; } .reader-command-row { align-items: start; } }
   @media (max-width: 599px) {
     .detail-tabs { gap: 2px; }

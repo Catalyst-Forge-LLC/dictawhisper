@@ -27,15 +27,28 @@ This is a cleanup pass only. It is not a summary, rewrite, or interpretation.
 - Do not change names, places, or uncommon words to more common lookalikes.
 - Always remove vocalized pauses: uh, um, umm, hmm. Do not leave them in.
 - "Yeah", "yes", and "no" are content when they answer something. Keep those.
-- Drop "like" and "you know" when they are only pacing, not meaning.
+- Drop "like" and "you know" when they are only pacing, not meaning. Keep meaningful uses such as "I like this", "it looks like rain", and "do you know the address?".
 - Collapse immediate repeats from speech or ASR: "the the the" → "the", "it's, it's, it's" → "it's", "very very very very" → "very".
 - If two consecutive sentences or lines say the same thing, keep one.
 - Do not keep Whisper hallucination loops (the same word or clause pasted many times).
-- Fix punctuation, capitalization, and broken grammar from speech so it reads cleanly, keeping the original words.
+- Restore punctuation and capitalization using the meaning of the surrounding speech. Raw line breaks, pauses, and short audio segments are not sentence boundaries.
+- Read across fragments to join a continuing clause. Split complete thoughts into sentences; do not join independent sentences with only a comma. Use commas within sentences where needed.
+- Remove filler-only pauses before deciding sentence boundaries. A pause or removed "um"/"like" does not by itself require a period or paragraph break.
+- Preserve the speaker's words and meaning when punctuating; do not invent missing subjects, connecting phrases, explanations, or endings. Keep an unfinished thought unfinished, using an ellipsis or dash where appropriate.
 - Keep the speaker's tone and stream-of-consciousness, including jumps.
 - Insert a blank line at each topic shift, roughly every 2–4 sentences. Do not emit one unbroken paragraph.
 - No commentary outside the JSON.
 </KEY_RULES>
+
+<PUNCTUATION_EXAMPLES>
+Examples illustrate editing only; never include their content in the result.
+Raw: "um I tried it\nit didn't work\nso I'm like really frustrated\nI don't know what to do"
+Cleaned: "I tried it. It didn't work, so I'm really frustrated. I don't know what to do."
+Raw: "I like the blue one\nit looks like rain\ndo you know the address"
+Cleaned: "I like the blue one. It looks like rain. Do you know the address?"
+Raw: "I was going to\ncall the office\nbut they're basically"
+Cleaned: "I was going to call the office, but they're basically…"
+</PUNCTUATION_EXAMPLES>
 
 <TOPIC_TAGS>
 Generate topic tags based solely on the content. Tags MUST:

@@ -132,15 +132,18 @@ export function ensurePlaybackCues(json: {
 
   if (words.length && cleaned && sections.length) {
     const existing = json.playbackCues;
+    // Text can change without the paragraph count changing, and a new ASR pass
+    // can move word timestamps without changing text. Validate both.
+    const aligned = alignCleanedToWords(cleaned, words);
     if (
       json.playbackCuesSource === 'words' &&
       Array.isArray(existing) &&
-      existing.length === sections.length &&
-      existing.every((cue) => cue && typeof cue.text === 'string')
+      existing.length === aligned.length &&
+      existing.every((cue, index) => cue && cue.text === aligned[index].text && cue.start === aligned[index].start && cue.end === aligned[index].end)
     ) {
       return false;
     }
-    json.playbackCues = alignCleanedToWords(cleaned, words);
+    json.playbackCues = aligned;
     json.playbackCuesSource = 'words';
     return true;
   }

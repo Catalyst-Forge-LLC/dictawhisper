@@ -15,7 +15,7 @@ import { AudioRescueService } from '../src/lib/audioRescueService.ts';
 import { TranscriptionBatchService } from '../src/lib/transcriptionBatchLib.ts';
 import { createTranscriptionBatchRoutes } from '../src/transcriptionBatchRoutes.ts';
 import { findAudioForSidecar } from '../src/lib/audioLib.ts';
-import { setTranscriptionIo, transcriptions, readTranscription } from '../src/lib/transcriptionLib.ts';
+import { setTranscriptionIo, transcriptions, readTranscription, emitTranscription } from '../src/lib/transcriptionLib.ts';
 import { JournalIndex, EntryCursorError, setJournalIndex } from '../src/lib/journalIndexLib.ts';
 import { MayDoJobStore } from '../src/lib/mayDoJobLib.ts';
 import { extractMayDos } from '../src/lib/mayDoService.ts';
@@ -82,6 +82,24 @@ app.use((req, res, next) => { if (req.query.clipboardDenied === '1') res.setHead
 app.use((req, _res, next) => { if (!req.path.startsWith('/_app')) requests.push({ method: req.method, path: req.path, query: req.query }); next(); });
 let uploadMode='normal';
 let batchFixture;
+// Opt-in readable journey: deterministic UI states, never invokes a model.
+if (process.env.DICTA_FIXTURE_CLEANUP === '1') {
+  app.post('/process/force', (req, res) => {
+    const file = String(req.body.file || '');
+    if (!notes.has(file)) return res.status(404).json({error:'Fixture entry not found.'});
+    if (['queued_cleanup','cleaning'].includes(activity.find(file)?.stage)) return res.status(202).json({ok:true});
+    activity.update(file, 'queued_cleanup', {hasTranscript:true});
+    res.status(202).json({ok:true});
+    setTimeout(() => activity.update(file, 'cleaning', {hasTranscript:true}), 600);
+    setTimeout(() => {
+      const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+      json.cleanedTranscription = 'The printer stopped again. I checked the cable; it was plugged in. Why does it keep doing that?\n\nI like the new desk. It looks like oak. I was about to…';
+      delete json.cleanupSkipped; delete json.cleanupError; delete json.playbackCues;
+      fs.writeFileSync(file, JSON.stringify(json)); index.upsertSidecar(file);
+      activity.update(file, 'ready', {hasTranscript:true}); emitTranscription(null, file);
+    }, 3500);
+  });
+}
 app.post('/__fixture/upload-mode',(req,res)=>{uploadMode=req.body.mode;res.json({ok:true});});
 app.post('/audio',(req,res,next)=>{
   const mode=uploadMode;uploadMode='normal';

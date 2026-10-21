@@ -70,6 +70,7 @@
     finally { if (alive) busy = false; }
   }
   function close() { if (!busy) dispatch('close'); }
+  function createReadable() { if (!busy) { dispatch('cleanup'); close(); } }
   function switchAudio(next) {
     if (next === variant) return;
     position = audio?.currentTime || 0; resume = Boolean(audio && !audio.paused); audio?.pause(); variant = next;
@@ -125,8 +126,8 @@
         <p class="muted">Your title, stars, tags and MayDo decisions stay saved. Existing MayDo audio links will need refreshing for the new transcript.</p>
         <div class="actions"><button class="dw-btn-primary" disabled={busy || loading || attemptId !== job.id} on:click={() => act('apply', result.reviewToken ? { reviewToken: result.reviewToken } : {})}>{result.currentChanged ? 'Replace reviewed version' : 'Use new audio & transcript'}</button><button class="dw-btn-secondary" disabled={busy || loading || attemptId !== job.id} on:click={() => act('discard')}>Keep current version</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button></div>
       {:else if job.phase === 'applied'}
-        <p>The entry now uses the prepared audio and new transcript. Use <strong>More → Reprocess readable transcript</strong> to generate readable text and refresh suggested MayDos.</p>
-        <div class="actions">{#if result.canUndo}<button class="dw-btn-secondary" disabled={busy} on:click={() => act('restore')}>Undo · restore previous version</button>{/if}<button class="dw-text-btn" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
+        <p>The entry now uses the prepared audio and new transcript.{#if !result.currentReadableText}{' '}Create readable text to restore punctuation, join speech fragments, remove filler-only pauses, and refresh suggested MayDos.{/if}</p>
+        <div class="actions">{#if !result.currentReadableText}<button class="dw-btn-primary" disabled={busy} on:click={createReadable}>Create readable & return to entry</button>{:else}<button class="dw-btn-primary" on:click={close}>Return to entry</button>{/if}{#if result.canUndo}<button class="dw-btn-secondary" disabled={busy} on:click={() => act('restore')}>Undo · restore previous version</button>{/if}<button class="dw-text-btn" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
         <p class="muted">{job.firstImport ? 'This is the first transcript for this recording; there is no previous transcript to restore.' : 'Undo keeps your latest tags and MayDo statuses. It is available until this transcript is changed again; the saved previous version remains on disk.'}</p>
       {:else if job.phase === 'discarded'}
         <p>Your saved audio and transcript are unchanged. This candidate has been removed.</p>

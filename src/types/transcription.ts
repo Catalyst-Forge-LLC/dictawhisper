@@ -1,4 +1,4 @@
-export const CLEAN_PROMPT_VERSION = 2;
+export const CLEAN_PROMPT_VERSION = 3;
 
 export type MayDoStatus = 'suggested' | 'selected' | 'done' | 'dismissed';
 export type MayDo = {
