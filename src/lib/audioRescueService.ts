@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { config } from '../config.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
 import { enhanceAudio, enhancementPresets, findOriginalAudio, type EnhancementPreset, type EnhancementReport } from './audioEnhancementLib.ts';
-import { whisperTranscribe } from './whisperLib.ts';
+import { transcribeWithQuality } from './transcriptionQualityLib.ts';
 import { allowedRoots, resolveAllowedPath } from './pathAllowLib.ts';
 import { assertEntryWritable, withEntryOperation } from './entryOperationLib.ts';
 import { isSkippedWatchPath } from './fileSettleLib.ts';
@@ -14,21 +14,22 @@ import { emitTranscription, emitNotesIndex } from './transcriptionLib.ts';
 import { writeEntryJson } from './entryBundleLib.ts';
 
 type Phase = 'preparing' | 'preview' | 'transcribing' | 'ready' | 'failed' | 'applied' | 'reverted' | 'discarded';
-type Model = 'large-v3' | 'turbo';
+type Model = string;
 export type RescueJob = {
   version: 1; id: string; entryId: string; file: string; phase: Phase;
   preset: EnhancementPreset; model: Model; vadFilter: boolean; createdAt: string;
   sourceExt: string; sourceOriginal: boolean; baseline: string;
   report?: EnhancementReport; error?: string; failedStage?: 'preparing' | 'transcribing';
   acceptedFingerprint?: string;
+  sourceSize?: number; sourceMtimeMs?: number; sourceHash?: string;
 };
 type Dependencies = {
   enhance: typeof enhanceAudio;
-  transcribe: (audio: string, output: string, model: Model, vad: boolean) => Promise<void>;
+  transcribe: (audio: string, output: string, model: Model, vad: boolean, report?: EnhancementReport) => Promise<void>;
 };
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const SOURCE_EXT = /^\.(webm|mp3|m4a|wav|ogg)$/i;
-const transcriptKeys = ['text', 'segments', 'language', 'elapsed', 'whisper', 'cleanedTranscription', 'cleanup', 'cleanupHistory', 'thinking', 'meta', 'promptVersion', 'playbackCues', 'playbackCuesSource', 'cleanupError', 'cleanupAttempts', 'cleanupSkipped', 'audioError', 'audioEnhancement'] as const;
+const transcriptKeys = ['text', 'segments', 'language', 'elapsed', 'whisper', 'cleanedTranscription', 'cleanup', 'cleanupHistory', 'thinking', 'meta', 'promptVersion', 'playbackCues', 'playbackCuesSource', 'cleanupError', 'cleanupAttempts', 'cleanupSkipped', 'audioError', 'audioEnhancement', 'transcriptionQuality'] as const;
 const jsonRead = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const fingerprint = (json: TranscriptionDocument) => createHash('sha256').update(JSON.stringify([json.text, json.segments, json.cleanedTranscription, json.cleanup, json.whisper, json.audioEnhancement])).digest('hex');
 const samePath = (a: string, b: string) => process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);
@@ -73,11 +74,19 @@ function changed(file: string) { emitTranscription(null, file); emitNotesIndex()
 /** Jobs persist under watch roots; only explicit acceptance changes transcript/audio. */
 export class AudioRescueService {
   private running = new Map<string, Promise<void>>();
+  private importing = new Set<string>();
+  // Index identities once per process; reread only this entry's manifests, not the entire library per poll.
+  private history = new Map<string, Map<string, Set<string>>>();
+  private historyStamp = new Map<string, number>();
   private deps: Dependencies;
   constructor(deps: Partial<Dependencies> = {}) {
-    this.deps = { enhance: enhanceAudio, transcribe: (audio, output, model, vad) => new Promise((resolve, reject) => {
-      void whisperTranscribe(audio, output, payload => payload.err ? reject(payload.err) : resolve(), model, { vadFilter: vad });
-    }), ...deps };
+    this.deps = { enhance: enhanceAudio, transcribe: transcribeWithQuality, ...deps };
+  }
+  private register(root: string, job: RescueJob) {
+    save(root, job);
+    const index = this.history.get(root);
+    if (index) { const ids = index.get(job.entryId) || new Set<string>(); ids.add(job.id); index.set(job.entryId, ids); }
+    this.historyStamp.set(root, fs.statSync(owned(root)).mtimeMs);
   }
   private jobs(json: TranscriptionDocument) {
     const rows: { root: string; job: RescueJob }[] = [];
@@ -85,14 +94,28 @@ export class AudioRescueService {
     for (const inputRoot of [...new Set(allowedRoots())]) {
       const root = checked(inputRoot).path, base = owned(root);
       if (!fs.existsSync(base)) continue;
-      for (const id of fs.readdirSync(base)) {
+      let index = this.history.get(root);
+      if (!index || this.historyStamp.get(root) !== fs.statSync(base).mtimeMs) {
+        index = new Map();
+        for (const id of fs.readdirSync(base)) {
+          if (!ID.test(id)) continue;
+          const file = owned(root, id, 'job.json');
+          if (!fs.existsSync(file)) continue;
+          const job = jsonRead(file) as RescueJob;
+          if (!job.entryId) continue;
+          const ids = index.get(job.entryId) || new Set<string>(); ids.add(id); index.set(job.entryId, ids);
+        }
+        this.history.set(root, index);
+        this.historyStamp.set(root, fs.statSync(base).mtimeMs);
+      }
+      for (const id of index.get(json.entryId) || []) {
         if (!ID.test(id)) continue;
         const file = owned(root, id, 'job.json');
         if (!fs.existsSync(file)) continue;
         const job = jsonRead(file) as RescueJob;
         if (job.version !== 1 || job.id !== id || !SOURCE_EXT.test(job.sourceExt)) throw new Error('Unreadable audio improvement history. Saved files were kept.');
         if (job.entryId !== json.entryId) continue;
-        if (['preparing', 'transcribing'].includes(job.phase) && !this.running.has(id)) {
+        if (['preparing', 'transcribing'].includes(job.phase) && !this.running.has(id) && !this.importing.has(id)) {
           job.failedStage = job.phase as 'preparing' | 'transcribing'; job.phase = 'failed';
           job.error = 'The server stopped before this attempt finished. Retry when you are ready.'; save(root, job);
         }
@@ -117,7 +140,7 @@ export class AudioRescueService {
     if (id && !selected) throw new Error('Audio improvement not found for this entry.');
     const job = selected?.job;
     return {
-      job: job ? { ...job, text: ['ready', 'applied'].includes(job.phase) ? String(jsonRead(owned(selected!.root, job.id, 'candidate.json')).text || '') : undefined } : null,
+      job: job ? { ...job, ...(['ready', 'applied'].includes(job.phase) ? { text: String(jsonRead(owned(selected!.root, job.id, 'candidate.json')).text || ''), quality: jsonRead(owned(selected!.root, job.id, 'candidate.json')).transcriptionQuality } : {}) } : null,
       currentText: current.json.text || '', activeVersionId: current.json.audioEnhancement?.versionId || null,
       history: rows.filter(row => ['applied', 'reverted'].includes(row.job.phase)).map(({ job }) => ({ id: job.id, preset: job.preset, model: job.model, createdAt: job.createdAt, phase: job.phase })),
       transcriptionEnabled: config.queues.transcription.active,
@@ -147,12 +170,13 @@ export class AudioRescueService {
     const entryId = ensureEntryId(current.json);
     writeEntryJson(current.path, JSON.stringify(current.json, null, 2));
     const job: RescueJob = { version: 1, id: randomUUID(), entryId, file: current.path, phase: 'preparing', preset: options.preset as EnhancementPreset, model: options.model, vadFilter: options.vadFilter, createdAt: new Date().toISOString(), sourceExt: path.extname(source.file).toLowerCase(), sourceOriginal: source.original, baseline: fingerprint(current.json) };
-    save(current.root, job);
+    this.register(current.root, job);
     this.launch(current.root, job, current.path, async () => {
       const before = fs.statSync(source.file), snapshot = owned(current.root, job.id, 'source' + job.sourceExt);
       await fs.promises.copyFile(checked(source.file).path, snapshot, fs.constants.COPYFILE_EXCL);
       const after = fs.statSync(source.file);
       if (before.size !== after.size || before.mtimeMs !== after.mtimeMs) throw new Error('Source audio changed during preparation. Start a new attempt after syncing finishes.');
+      job.sourceSize = before.size; job.sourceMtimeMs = before.mtimeMs; job.sourceHash = await fileHash(snapshot);
       job.report = await this.deps.enhance(snapshot, owned(current.root, job.id, 'enhanced.wav'), job.preset);
       job.phase = 'preview'; save(current.root, job);
     });
@@ -169,7 +193,12 @@ export class AudioRescueService {
     this.launch(root, job, current.path, async () => {
       const output = owned(root, id, 'candidate.json');
       if (fs.existsSync(output)) fs.unlinkSync(output);
-      await this.deps.transcribe(owned(root, id, 'enhanced.wav'), output, job.model, job.vadFilter);
+      await this.deps.transcribe(owned(root, id, 'enhanced.wav'), output, job.model, job.vadFilter, job.report);
+      const candidate = jsonRead(output) as TranscriptionDocument;
+      if (candidate.transcriptionQuality) {
+        candidate.transcriptionQuality.source = { size: job.sourceSize!, mtimeMs: job.sourceMtimeMs!, sha256: job.sourceHash };
+        writeEntryJson(output, JSON.stringify(candidate, null, 2));
+      }
       assertCandidate(jsonRead(output)); job.phase = 'ready'; save(root, job);
     });
     return this.status(file, id);
@@ -202,7 +231,7 @@ export class AudioRescueService {
       writeEntryJson(owned(root, id, 'previous.json'), JSON.stringify(fresh, null, 2));
       const next = { ...fresh };
       for (const key of transcriptKeys) delete next[key];
-      for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
+      for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
       next.audioEnhancement = { versionId: id, preset: job.preset, model: job.model, appliedAt: new Date().toISOString() };
       // Existing decisions survive; old timestamps may refer to trimmed audio.
       next.mayDos = fresh.mayDos?.map(row => ({ ...row, start: null, end: null }));
@@ -210,6 +239,52 @@ export class AudioRescueService {
       writeEntryJson(current.path, JSON.stringify(next, null, 2));
       job.phase = 'applied'; job.acceptedFingerprint = fingerprint(next); save(root, job); changed(current.path);
       return this.status(file, id);
+    });
+  }
+  /** Normal capture uses the same preparation and diagnostics, publishing only after success. */
+  async importAudio(audio: string, file: string, model: string, preprocess = true) {
+    const current = checked(file);
+    const source = findOriginalAudio(file) || { file: checked(audio).path, original: false };
+    checked(source.file);
+    return withEntryOperation([current.path, source.file], async () => {
+      const initial = fs.existsSync(file) ? jsonRead(file) as TranscriptionDocument : {};
+      const baseline = fingerprint(initial), identity = { ...initial };
+      const job: RescueJob = { version: 1, id: randomUUID(), entryId: ensureEntryId(identity), file: current.path, phase: 'preparing', preset: preprocess ? 'auto' : 'original', model, vadFilter: false, createdAt: new Date().toISOString(), sourceExt: path.extname(source.file).toLowerCase(), sourceOriginal: source.original, baseline };
+      this.register(current.root, job);
+      this.importing.add(job.id);
+      const snapshot = owned(current.root, job.id, 'source' + job.sourceExt), prepared = owned(current.root, job.id, 'enhanced.wav'), output = owned(current.root, job.id, 'candidate.json');
+      try {
+        const before = fs.statSync(source.file);
+        await fs.promises.copyFile(checked(source.file).path, snapshot, fs.constants.COPYFILE_EXCL);
+        const after = fs.statSync(source.file);
+        if (before.size !== after.size || before.mtimeMs !== after.mtimeMs) throw new Error('Recording changed during preparation. Retry after syncing finishes.');
+        job.sourceSize = before.size; job.sourceMtimeMs = before.mtimeMs; job.sourceHash = await fileHash(snapshot);
+        job.report = await this.deps.enhance(snapshot, prepared, job.preset);
+        job.phase = 'transcribing'; save(current.root, job);
+        await this.deps.transcribe(prepared, output, model, false, job.report);
+        const candidate = jsonRead(output) as TranscriptionDocument;
+        // An empty first import is retained for review; an empty retry must not erase existing words.
+        if (initial.text?.trim()) assertCandidate(candidate);
+        const fresh = fs.existsSync(file) ? jsonRead(file) as TranscriptionDocument : {};
+        if (fingerprint(fresh) !== baseline) throw new Error('Transcript changed during processing. Candidate saved; current version kept.');
+        const next: TranscriptionDocument = { ...fresh, entryId: identity.entryId };
+        for (const key of transcriptKeys) delete next[key];
+        for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
+        if (next.transcriptionQuality) next.transcriptionQuality.source = { size: before.size, mtimeMs: before.mtimeMs, sha256: job.sourceHash };
+        writeEntryJson(output, JSON.stringify({ ...candidate, transcriptionQuality: next.transcriptionQuality }, null, 2));
+        const destination = checked(file.slice(0, -5) + `_enhanced-${job.id}.wav`).path;
+        await fs.promises.copyFile(prepared, destination, fs.constants.COPYFILE_EXCL);
+        if (await fileHash(destination) !== await fileHash(prepared)) throw new Error('Prepared audio copy could not be verified.');
+        if (fingerprint(fs.existsSync(file) ? jsonRead(file) : {}) !== baseline) throw new Error('Transcript changed before publication. Current version kept.');
+        writeEntryJson(owned(current.root, job.id, 'previous.json'), JSON.stringify(fresh, null, 2));
+        next.audioEnhancement = { versionId: job.id, preset: job.report.selectedPreset || job.preset, model, appliedAt: new Date().toISOString() };
+        next.mayDos = fresh.mayDos?.map(row => ({ ...row, start: null, end: null }));
+        writeEntryJson(file, JSON.stringify(next, null, 2));
+        job.phase = 'applied'; job.acceptedFingerprint = fingerprint(next); save(current.root, job);
+        return { transcriptionFile: file, elapsed: next.elapsed };
+      } catch (error) {
+        job.failedStage = job.phase === 'transcribing' ? 'transcribing' : 'preparing'; job.phase = 'failed'; job.error = String(error); save(current.root, job); throw error;
+      } finally { this.importing.delete(job.id); }
     });
   }
   async restore(file: string, id: string) {

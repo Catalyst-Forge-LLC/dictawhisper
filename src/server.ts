@@ -1,4 +1,4 @@
-import { preserveHumanEdits } from './lib/humanEditsLib.ts';
+import { audioRescue } from './lib/audioRescueService.ts';
 import { ActivityStore, activity, setActivityStore } from './lib/activityLib.ts';
 import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
@@ -23,9 +23,8 @@ import {
 import { initVoiceRootPipeline } from './lib/organizationLib.ts';
 import { closeAllWatchers } from './classes/Watcher.ts';
 import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
-import { startWhisperWorker, stopWhisperWorker, whisperTranscribe } from './lib/whisperLib.ts';
+import { startWhisperWorker, stopWhisperWorker, resolveWhisperModel } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
-import { cleanAudioFile, probeAudioFile } from './lib/audioLib.ts';
 import { collectHealth, printHealthReport } from './lib/healthLib.ts';
 import { initJournalIndex, startJournalIndex } from './lib/journalService.ts';
 import {
@@ -70,34 +69,8 @@ function startQueues(): void {
     transcription: {
       processor: async (task, callback) => {
         try {
-          const probe = await probeAudioFile(task.file);
-          if (!probe.ok) {
-            throw new Error(`unreadable audio: ${probe.reason}`);
-          }
-          console.log(`[queue-transcription] Cleaning file: ${task.file}`);
-          let working = task.file;
-          if (config.audio.preprocess) {
-            working = await cleanAudioFile(task.file, false);
-          }
-          console.log(
-            `[queue-transcription] Transcribing file: ${working} -> ${task.transcriptionFile}`
-          );
-          const output = task.replacement ? task.transcriptionFile + '.replacement.json' : task.transcriptionFile;
-          activity.update(task.transcriptionFile, 'transcribing', {audioFile:working});
-          await whisperTranscribe(working, output, (payload) => {
-            try {
-              if (payload.err) { recordAudioFailure(task.transcriptionFile, payload.err); callback(payload.err); return; }
-              if (task.replacement) {
-                const fresh = JSON.parse(fs.readFileSync(task.transcriptionFile, 'utf8'));
-                const replacement = JSON.parse(fs.readFileSync(output, 'utf8'));
-                preserveHumanEdits(replacement, fresh, fresh);
-                replacement.mayDos = fresh.mayDos;
-                replacement.mayDoExtraction = fresh.mayDoExtraction;
-                fs.writeFileSync(output, JSON.stringify(replacement, null, 2), 'utf8'); fs.renameSync(output, task.transcriptionFile);
-              }
-              callback(null, payload.result);
-            } catch (error) { callback(error); }
-          });
+          const result = await audioRescue.importAudio(task.file, task.transcriptionFile, resolveWhisperModel(), config.audio.preprocess);
+          callback(null, result);
         } catch (error) {
           console.error(
             `[queue-transcription] skip unreadable audio ${task.file}:`,

@@ -2,11 +2,12 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { audioExtensions, probeAudioFile } from './audioLib.ts';
+import { assessAudio, type AudioAssessment } from './audioAssessmentLib.ts';
 
-export const enhancementPresets = ['quiet', 'uneven', 'noise', 'original'] as const;
+export const enhancementPresets = ['auto', 'quiet', 'uneven', 'noise', 'original'] as const;
 export type EnhancementPreset = typeof enhancementPresets[number];
 export type AudioLevels = { meanDb: number; peakDb: number; durationSec: number };
-export type EnhancementReport = AudioLevels & { gainDb: number; suggestedPreset: EnhancementPreset; warning?: string };
+export type EnhancementReport = AudioLevels & { gainDb: number; suggestedPreset: EnhancementPreset; selectedPreset?: EnhancementPreset; assessment?: AudioAssessment; warning?: string };
 
 /** Originals may have a different container from the working MP3. Never enhance an enhancement. */
 export function findOriginalAudio(jsonFile: string): { file: string; original: boolean } | null {
@@ -57,12 +58,13 @@ export function enhancementFilter(preset: EnhancementPreset, levels: AudioLevels
 export async function enhanceAudio(source: string, output: string, preset: EnhancementPreset): Promise<EnhancementReport> {
   if (!enhancementPresets.includes(preset)) throw new Error('Unknown audio preset.');
   if (path.resolve(source) === path.resolve(output) || fs.existsSync(output)) throw new Error('Audio output must be a new file.');
-  const levels = await measureAudio(source);
-  const { filter, gainDb } = enhancementFilter(preset, levels);
-  await ffmpeg(['-n', '-i', source, '-map', '0:a:0', '-vn', ...(filter ? ['-af', filter] : []), '-c:a', 'pcm_s16le', output]);
+  const assessment = await assessAudio(source);
+  const levels: AudioLevels = assessment;
+  const selectedPreset = preset === 'auto' ? assessment.suggestedPreset : preset;
+  const { filter, gainDb } = enhancementFilter(selectedPreset, { ...levels, meanDb: assessment.activeMedianDb });
+  await ffmpeg(['-n', '-i', source, '-map', '0:a:0', '-vn', ...(filter ? ['-af', filter] : []), '-ar', '16000', '-c:a', 'pcm_s16le', output]);
   const result = await probeAudioFile(output);
   if (!result.ok || Math.abs(result.durationSec! - levels.durationSec) > 0.15) throw new Error('Prepared audio did not preserve the recording duration.');
-  return { ...levels, gainDb, suggestedPreset: levels.meanDb < -30 ? 'quiet' : 'uneven',
-    warning: levels.peakDb < -70 ? 'Very little signal was detected. More volume may amplify noise without recovering speech.'
-      : preset === 'quiet' && gainDb < 1 && levels.meanDb < -30 ? 'Loud peaks limit the boost. Try Uneven volume to lift quieter passages.' : undefined };
+  return { meanDb: levels.meanDb, peakDb: levels.peakDb, durationSec: levels.durationSec, gainDb, selectedPreset, assessment, suggestedPreset: assessment.suggestedPreset,
+    warning: assessment.warnings.join(' ') || (selectedPreset === 'quiet' && gainDb < 1 && levels.meanDb < -30 ? 'Loud peaks limit the boost. Try Uneven volume to lift quieter passages.' : undefined) };
 }

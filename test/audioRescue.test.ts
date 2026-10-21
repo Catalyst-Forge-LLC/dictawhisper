@@ -39,6 +39,18 @@ async function ready(svc: AudioRescueService, file: string) {
   assert.equal(svc.status(file, id).job!.phase, 'ready'); return id;
 }
 
+test('normal imports share preparation and preserve originals, sidecar metadata and recovery history', async () => {
+  const svc = service(), file = makeEntry();
+  await svc.importAudio(file.slice(0, -5) + '.mp3', file, 'large-v3');
+  const json = read(file);
+  assert.equal(json.text, 'Recovered words'); assert.equal(json.starred, true); assert.equal(json.displayTitle, 'My title');
+  assert.equal(json.cleanedTranscription, undefined); assert.equal(json.cleanupSkipped, undefined, 'normal imports proceed to cleanup');
+  assert.equal(read(file).mayDos[0].status, 'selected');
+  assert.equal(fs.readFileSync(file.slice(0, -5) + '_original.m4a', 'utf8'), 'original bytes');
+  assert.equal(svc.status(file).job!.phase, 'applied');
+  await svc.restore(file, json.audioEnhancement.versionId); assert.equal(read(file).text, 'Old words');
+});
+
 test('preview/candidate isolation, current human decisions, timed audio swap, idempotence and Undo', async () => {
   const svc = service(), file = makeEntry(), id = await ready(svc, file);
   assert.equal(read(file).text, 'Old words'); assert.equal(read(file).cleanedTranscription, 'Old readable words');

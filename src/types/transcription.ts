@@ -27,6 +27,9 @@ export type WhisperSegment = {
   end: number;
   text: string;
   words?: WhisperWord[];
+  avg_logprob?: number;
+  compression_ratio?: number;
+  no_speech_prob?: number;
 };
 
 export type PlaybackCue = {
@@ -77,6 +80,7 @@ export type TranscriptionDocument = {
   audioError?: string;
   /** Immutable enhanced sibling; the UUID travels with the entry bundle. */
   audioEnhancement?: { versionId: string; preset: string; model: string; appliedAt: string };
+  transcriptionQuality?: import('../lib/transcriptionQualityLib.ts').TranscriptionQuality;
   starred?: boolean;
   promptVersion?: number;
 };
