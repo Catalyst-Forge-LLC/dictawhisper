@@ -192,6 +192,34 @@ input[type='date'].dw-input {
   width: auto;
 }
 
+// Native popup menus do not consistently inherit the select's dark surface on
+// Windows. Give every option an opaque foreground/background pair.
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  color: var(--dw-text);
+  background-color: #27272a;
+}
+
+select option:disabled {
+  color: var(--dw-text-muted);
+}
+
+@media (forced-colors: active) {
+  select option,
+  select optgroup {
+    color: CanvasText;
+    background-color: Canvas;
+  }
+
+  select option:disabled {
+    color: GrayText;
+  }
+}
+
 .dw-input::placeholder {
   color: rgb(212 212 216 / 0.8);
 }
