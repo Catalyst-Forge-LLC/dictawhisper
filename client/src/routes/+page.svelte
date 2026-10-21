@@ -27,15 +27,17 @@
     const change=event=>{const next=mergeActivity(activitySnapshot,event);if(next)activitySnapshot=next;else void refreshActivity();};
     const snapshot=data=>{if(!activityReady || data.epoch!==activitySnapshot.epoch || data.revision>=activitySnapshot.revision){activitySnapshot=data;activityReady=true;}void refreshActivity();};
     const jobChange = job => { activitySnapshot = { ...activitySnapshot, mayDoBackfill: job }; };
+    const batchChange = () => { void refreshActivity(); };
+    socket.on('transcription-batch-change', batchChange);
     socket.on('maydo-job-change', jobChange);
     socket.on('connect',connect);socket.on('disconnect',disconnect);socket.on('connect_error',disconnect);socket.on('activity-change',change);socket.on('activity-snapshot',snapshot);
     if(socket.connected)connect();else void refreshActivity();
-    return()=>{socket.off('maydo-job-change', jobChange);socket.off('connect',connect);socket.off('disconnect',disconnect);socket.off('connect_error',disconnect);socket.off('activity-change',change);socket.off('activity-snapshot',snapshot);};
+    return()=>{socket.off('transcription-batch-change',batchChange);socket.off('maydo-job-change', jobChange);socket.off('connect',connect);socket.off('disconnect',disconnect);socket.off('connect_error',disconnect);socket.off('activity-change',change);socket.off('activity-snapshot',snapshot);};
   });
 </script>
 
 <div class="dw-app-shell">
-  <AppHeader {navigationOpen} {connected} workingCount={activitySnapshot.items.filter(working).length} failureCount={activitySnapshot.items.filter(failure).length} on:activity={() => activityOpen=true} on:openentry={event=>openActivityEntry(event.detail)} on:accepted={refreshActivity} on:navigation={() => navigationOpen = !navigationOpen}
+  <AppHeader {navigationOpen} {connected} workingCount={activitySnapshot.items.filter(working).length + (activitySnapshot.transcriptionBatch?.running ? 1 : 0)} failureCount={activitySnapshot.items.filter(failure).length + (activitySnapshot.transcriptionBatch?.failed || 0) + (activitySnapshot.transcriptionBatch?.review || 0)} on:activity={() => activityOpen=true} on:openentry={event=>openActivityEntry(event.detail)} on:accepted={refreshActivity} on:navigation={() => navigationOpen = !navigationOpen}
     on:help={() => {
       helpOpen = !helpOpen;
       if (helpOpen) toolsOpen = false;

@@ -13,6 +13,7 @@ import type { TranscriptionDocument } from '../types/transcription.ts';
 import { requestCleanup } from './transcriptionLib.ts';
 import { q } from './queueLib.ts';
 import { ollanetIsConfigured } from './ollanetReadyLib.ts';
+import { assertEntryWritable } from './entryOperationLib.ts';
 
 export type BatchScope = { year: string; selection: 'outdated' | 'flagged' | 'all'; model: 'large-v3' | 'turbo' };
 type Policy = 'review' | 'replace_unflagged';
@@ -83,6 +84,7 @@ export class TranscriptionBatchService {
       createdAt: this.job.createdAt, finishedAt: this.job.finishedAt, persistenceError: this.persistenceError,
       rows: rows.slice(safeOffset, safeOffset + 50).map(row => ({ file: row.file, title: row.title, outcome: row.outcome || 'pending', note: row.note, candidateId: row.candidateId })), offset: safeOffset, filteredTotal: rows.length };
   }
+  summary() { const { rows, offset, filteredTotal, ...summary } = this.snapshot(); return summary; }
   async preview(scope: BatchScope) {
     this.validateScope(scope);
     if (this.planning || this.snapshot().running || (this.job.state !== 'preview' && this.snapshot().remaining)) throw new Error('Finish or resume the current batch before previewing another scope.');
@@ -177,9 +179,11 @@ export class TranscriptionBatchService {
           const readiness = inspectFileReadiness(source.file);
           if (!readiness.ready) throw new Error('Source is still syncing: ' + readiness.reason);
           if (isWorkingStage(activity.find(row.file)?.stage || 'ready')) throw new Error('Entry is processing elsewhere. Retry this failed item after it finishes.');
+          assertEntryWritable(row.file);
           let state = row.candidateId ? this.deps.rescue.status(row.file, row.candidateId) : null;
           if (!state || state.job?.phase === 'failed' && state.job.failedStage === 'preparing') {
             state = this.deps.rescue.prepare(row.file, { preset: 'auto', model: this.job.scope.model, vadFilter: false });
+            if (state.job?.preset !== 'auto' || state.job.model !== this.job.scope.model || state.job.vadFilter !== false) throw new Error('Another audio attempt is running with different settings. Retry after it finishes.');
             row.candidateId = state.job!.id; row.entryId = state.job!.entryId; this.persist();
             await this.deps.rescue.wait(row.candidateId);
             state = this.deps.rescue.status(row.file, row.candidateId);

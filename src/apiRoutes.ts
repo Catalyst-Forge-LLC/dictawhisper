@@ -2,6 +2,7 @@ import { ollanetIsConfigured } from './lib/ollanetReadyLib.ts';
 import express from 'express';
 import { audioRescueRoutes } from './audioRescueRoutes.ts';
 import { createTranscriptionBatchRoutes } from './transcriptionBatchRoutes.ts';
+import { getTranscriptionBatch } from './lib/transcriptionBatchLib.ts';
 import multer from 'multer';
 import { process, cleanTranscription, countStatus, getTranscriptionFilename, listNoteSummaries, patchTranscription, readTranscription, skipCleanup, emitNotesIndex } from './lib/transcriptionLib.ts';
 import {
@@ -94,7 +95,7 @@ export const apiRoutes = [
     const item = activity.byUpload(String(req.query.uploadId || '')); res.json({ found: Boolean(item), item });
   } },
   { path: '/notes/activity', method: 'GET', handler: (_req: express.Request, res: express.Response) => {
-    res.json({ ...activity.snapshot(), mayDoBackfill: getMayDoBackfill(), queues: { transcription: { queued: q.transcription?.length() || 0, running: q.transcription?.running() || 0 }, cleanup: { queued: q.processing?.length() || 0, running: q.processing?.running() || 0 } } });
+    res.json({ ...activity.snapshot(), mayDoBackfill: getMayDoBackfill(), transcriptionBatch: getTranscriptionBatch().summary(), queues: { transcription: { queued: q.transcription?.length() || 0, running: q.transcription?.running() || 0 }, cleanup: { queued: q.processing?.length() || 0, running: q.processing?.running() || 0 } } });
   } },
   { path: '/notes/activity/retry', method: 'POST', handler: async (req: express.Request, res: express.Response) => {
     const item = activity.byId(String(req.body?.id || ''));

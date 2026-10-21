@@ -12,6 +12,8 @@ import { config } from '../src/config.ts';
 import { apiRoutes } from '../src/apiRoutes.ts';
 import { createAudioRescueRoutes } from '../src/audioRescueRoutes.ts';
 import { AudioRescueService } from '../src/lib/audioRescueService.ts';
+import { TranscriptionBatchService } from '../src/lib/transcriptionBatchLib.ts';
+import { createTranscriptionBatchRoutes } from '../src/transcriptionBatchRoutes.ts';
 import { findAudioForSidecar } from '../src/lib/audioLib.ts';
 import { setTranscriptionIo, transcriptions, readTranscription } from '../src/lib/transcriptionLib.ts';
 import { JournalIndex, EntryCursorError, setJournalIndex } from '../src/lib/journalIndexLib.ts';
@@ -24,6 +26,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dictawhisper-ux01-'));
 config.watch.roots=[root]; config.watch.browserDropFolder=path.join(root,'captures');
 config.journal.search='lex';config.journal.index=path.join(root,'journal.sqlite');config.http.tailscale=false;config.http.port=17778;
 config.queues.transcription.active=false; config.queues.processing.active=false;
+config.whisper.promptTerms=[]; config.whisper.python='python'; config.ollanet.machine=''; config.ollanet.cleanModel='';
 const activity = new ActivityStore(path.join(root,'.dictawhisper','activity.json')); setActivityStore(activity);
 const notes = new Map();
 const requests = [];
@@ -72,6 +75,7 @@ app.use(express.json());
 app.use((req, res, next) => { if (req.query.clipboardDenied === '1') res.setHeader('Permissions-Policy', 'clipboard-write=()'); next(); });
 app.use((req, _res, next) => { if (!req.path.startsWith('/_app')) requests.push({ method: req.method, path: req.path, query: req.query }); next(); });
 let uploadMode='normal';
+let batchFixture;
 app.post('/__fixture/upload-mode',(req,res)=>{uploadMode=req.body.mode;res.json({ok:true});});
 app.post('/audio',(req,res,next)=>{
   const mode=uploadMode;uploadMode='normal';
@@ -79,7 +83,7 @@ app.post('/audio',(req,res,next)=>{
   if(mode==='unknown'){res.json=()=>{res.status(200).type('json').end('{');return res;};}
   next();
 });
-app.get('/notes/activity',(_req,res)=>res.json({...activity.snapshot(),mayDoBackfill:{...jobs.snapshot(),...capabilities}}));
+app.get('/notes/activity',(_req,res)=>res.json({...activity.snapshot(),mayDoBackfill:{...jobs.snapshot(),...capabilities},transcriptionBatch:batchFixture?.summary()}));
 app.post('/notes/activity/retry',async(req,res,next)=>{const item=activity.byId(req.body.id);if(item?.stage==='failed_maydos'||item?.stage==='interrupted'&&item.resumeStage==='extracting_maydos'){try{await fixtureExtract(item.jsonFile);res.status(202).json({ok:true,item:activity.byId(item.id)});}catch(error){res.status(409).json({error:error.message});}}else next();});
 for(const route of apiRoutes.filter(route=>['/audio/capabilities','/audio/upload','/notes/activity/retry','/notes/activity/process-now'].includes(route.path) || route.path==='/audio'&&route.method==='POST'))app[route.method.toLowerCase()](route.path,route.handler);
 app.post('/notes/trash/remove',(req,res,next)=>{if(trashMode==='fail'){trashMode='normal';return res.status(503).json({error:'Fixture removal unavailable. Entry retained; try again.'});}next();});
@@ -156,15 +160,20 @@ const fixtureAudio=path.join(root,'fixture-audio.wav');fs.writeFileSync(fixtureA
 // DICTA_FIXTURE_AUDIO_RESCUE=1 node --experimental-strip-types scripts/ux01-fixture.mjs
 if (process.env.DICTA_FIXTURE_AUDIO_RESCUE === '1') {
   config.queues.transcription.active = true;
+  config.watch.settleMinutes = 0;
   const quiet = Buffer.from(wav.subarray(0, 44 + 16000 * 4));
   quiet.writeUInt32LE(quiet.length - 8, 4); quiet.writeUInt32LE(quiet.length - 44, 40);
   for (let i = 0; i < (quiet.length - 44) / 2; i++) quiet.writeInt16LE(Math.round(100 * Math.sin(i * 2 * Math.PI * 440 / 8000)), 44 + i * 2);
   for (const file of [...notes.keys()].filter(file => /Fixture (19[89]|20[01])/.test(file))) fs.writeFileSync(file.slice(0, -5) + '_original.wav', quiet);
-  const rescue = new AudioRescueService({ transcribe: async (_audio, output, model, vad) => {
+  let candidateCount = 0;
+  const rescue = new AudioRescueService({ transcribe: async (_audio, output, model, vad, report) => {
     await new Promise(resolve => setTimeout(resolve, 2200));
-    fs.writeFileSync(output, JSON.stringify({ text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair. This is deterministic test text, not speech recognition output.', segments: [{ start: 0, end: 4, text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair.' }], whisper: { model, vad_filter: vad } }));
+    fs.writeFileSync(output, JSON.stringify({ text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair. This is deterministic test text, not speech recognition output.', segments: [{ start: 0, end: 4, text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair.' }], whisper: { model, vad_filter: vad }, transcriptionQuality: {version:1,model,vadFilter:vad,preparation:report,issues:++candidateCount % 2 ? [] : [{kind:'uncertain',start:1,end:3,message:'Fixture review signal: listen to this passage.',alternative:'Alternative fixture speech retained for review.'}]} }));
   } });
   for (const route of createAudioRescueRoutes(rescue)) app[route.method.toLowerCase()](route.path, route.handler);
+  const batches = new TranscriptionBatchService(path.join(root,'.dictawhisper','transcription-batch.json'),{rescue,list:()=>index.list({all:true,folder:'active'}),emit:()=>io.emit('transcription-batch-change')});
+  batchFixture=batches;
+  for (const route of createTranscriptionBatchRoutes(()=>batches)) app[route.method.toLowerCase()](route.path,route.handler);
   app.get('/audio', (req, res, next) => { const file = findAudioForSidecar(String(req.query.file || '')); if (file) res.sendFile(file); else next(); });
 }
 app.get('/audio', (req, res) => { if (String(req.query.file).includes('Fixture 197')) { res.status(404).json({ error: 'Missing fixture audio' }); return; } res.sendFile(fixtureAudio); });

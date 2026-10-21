@@ -17,18 +17,18 @@ config.journal.index = path.join(root, 'index.sqlite'); config.journal.embedMode
 config.queues.transcription.active = true; setActivityStore(new ActivityStore());
 const read = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const scope = { year: '', selection: 'outdated', model: 'large-v3' } as const;
-function setup(count = 2, flagged = false) {
+function setup(count = 2, flagged = false, afterFirstTranscript?: () => void) {
   const directory = path.join(root, randomUUID()); fs.mkdirSync(directory);
   const files = Array.from({ length: count }, (_, i) => {
     const jsonFile = path.join(directory, `entry-${i}.json`);
     fs.writeFileSync(jsonFile, JSON.stringify({ entryId: randomUUID(), text: 'Old transcript', cleanedTranscription: 'Old readable', tags: ['keep'], displayTitle: 'My title', mayDos: [{ id: 'action', status: 'done' }] }));
     fs.writeFileSync(jsonFile.slice(0, -5) + '_original.wav', 'original source');
-    return { jsonFile, day: '2025-01-01' };
+    return { jsonFile, day: '2025-01-01', entryId: read(jsonFile).entryId };
   });
   let calls = 0;
   const rescue = new AudioRescueService({
     enhance: async (_source, out) => { fs.writeFileSync(out, 'prepared'); return { meanDb: -40, peakDb: -10, durationSec: 3, gainDb: 18, suggestedPreset: 'quiet' }; },
-    transcribe: async (_audio, out) => { calls++; fs.writeFileSync(out, JSON.stringify({ text: 'New words', segments: [{ start: 0, end: 2, text: 'New words' }], transcriptionQuality: { version: 1, model: 'large-v3', vadFilter: false, issues: flagged ? [{ kind: 'uncertain', message: 'Listen again' }] : [] } })); },
+    transcribe: async (_audio, out) => { calls++; fs.writeFileSync(out, JSON.stringify({ text: 'New words', segments: [{ start: 0, end: 2, text: 'New words' }], transcriptionQuality: { version: 1, model: 'large-v3', vadFilter: false, issues: flagged ? [{ kind: 'uncertain', message: 'Listen again' }] : [] } })); if (calls === 1) afterFirstTranscript?.(); },
   });
   const jobFile = path.join(directory, 'batch.json'), deps = { rescue, list: () => files };
   return { files, rescue, jobFile, deps, calls: () => calls, service: new TranscriptionBatchService(jobFile, deps) };
@@ -99,6 +99,25 @@ test('HTTP requires an explicit preview token and validated commands; returns su
     const response = await post({ action: 'preview', scope }), json = await response.json(); assert.equal(response.status, 200);
     assert.equal(JSON.stringify(json).includes('Old transcript'), false); assert.equal(t.calls(), 0);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+});
+
+test('checkpoint failure stops further model work and recovery reuses the saved candidate', async () => {
+  const t = setup(3, false, () => { fs.renameSync(t.jobFile, t.jobFile + '.backup'); fs.mkdirSync(t.jobFile); });
+  const plan = await t.service.preview(scope); t.service.start(plan.id, 'review');
+  await assert.rejects(t.service.wait(), /could not be saved/);
+  assert.equal(t.calls(), 1); assert.equal(t.service.snapshot().state, 'interrupted');
+  fs.rmdirSync(t.jobFile); fs.renameSync(t.jobFile + '.backup', t.jobFile);
+  const recovered = new TranscriptionBatchService(t.jobFile, t.deps);
+  recovered.resume(plan.id); await recovered.wait(); assert.equal(t.calls(), 3); assert.equal(recovered.snapshot().review, 3);
+});
+
+test('execution resolves an entry moved after preview by identity and optional cleanup is queued only after acceptance', async () => {
+  const t = setup(1), cleaned: string[] = [];
+  const service = new TranscriptionBatchService(t.jobFile, { ...t.deps, cleanupEnabled: () => true, cleanup: file => { assert.equal(read(file).text, 'New words'); cleaned.push(file); } });
+  const plan = await service.preview(scope), original = t.files[0].jsonFile, moved = original.replace('entry-0.json', 'moved.json');
+  fs.renameSync(original, moved); fs.renameSync(original.slice(0,-5) + '_original.wav', moved.slice(0,-5) + '_original.wav'); t.files[0].jsonFile = moved;
+  service.start(plan.id, 'replace_unflagged', true); await service.wait();
+  assert.equal(service.snapshot().applied, 1); assert.deepEqual(cleaned, [moved]); assert.equal(service.snapshot().rows[0].file, moved);
 });
 
 test.after(() => { fs.rmSync(root, { recursive: true, force: true }); });

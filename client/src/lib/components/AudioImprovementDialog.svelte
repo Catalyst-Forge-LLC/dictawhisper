@@ -1,8 +1,11 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
+  import TranscriptionQuality from './TranscriptionQuality.svelte';
   export let file;
+  export let initialAttemptId = '';
   const dispatch = createEventDispatcher();
   const presets = [
+    { id: 'auto', name: 'Automatic · recommended', description: 'Measure the recording and choose unfiltered audio, gain or leveling.' },
     { id: 'quiet', name: 'Quiet speech', description: 'Raise the level while protecting loud peaks.' },
     { id: 'uneven', name: 'Uneven volume', description: 'Lift quiet passages and balance changing levels.' },
     { id: 'noise', name: 'Background noise', description: 'Reduce steady noise and low rumble, then level speech.' },
@@ -10,8 +13,8 @@
   ];
   const phases = { preparing: 'Preparing audio preview…', preview: 'Audio preview ready', transcribing: 'Waiting for Whisper or transcribing…', ready: 'New transcript ready to review', applied: 'Improved version saved', reverted: 'Previous version restored', discarded: 'Attempt discarded', failed: 'This attempt needs attention' };
   let dialog, audio, heading, priorFocus, timer, alive = true, request = 0;
-  let loading = true, busy = false, error = '', result = null, attemptId = '', showSetup = false;
-  let preset = 'quiet', model = 'large-v3', vadFilter = false, variant = 'enhanced', position = 0, resume = false;
+  let loading = true, busy = false, error = '', result = null, attemptId = initialAttemptId, showSetup = false;
+  let preset = 'auto', model = 'large-v3', vadFilter = false, variant = 'enhanced', position = 0, resume = false;
   $: job = result?.job;
   $: running = ['preparing', 'transcribing'].includes(job?.phase);
   $: previewAvailable = ['preview', 'transcribing', 'ready', 'applied'].includes(job?.phase) || job?.phase === 'failed' && job?.failedStage === 'transcribing';
@@ -99,21 +102,22 @@
           <audio bind:this={audio} controls preload="metadata" src={audioSource} on:loadedmetadata={loaded} on:play={() => { for (const player of document.querySelectorAll('audio')) if (player !== audio) player.pause(); }} on:error={() => error = 'The audio preview could not load. Refresh status or start a new attempt.'}></audio>
           {#if !job.sourceOriginal}<p class="muted">No separate original was found. This attempt uses the available recording; it may already have been processed.</p>{/if}
           {#if job.report?.warning}<p>{job.report.warning}</p>{/if}
-          {#if job.report}<details><summary>Audio measurements</summary><p class="muted">Average {job.report.meanDb.toFixed(1)} dB · peak {job.report.peakDb.toFixed(1)} dB{job.preset === 'quiet' ? ` · boost ${job.report.gainDb.toFixed(1)} dB` : ''}. Lossless working copy; duration preserved.</p></details>{/if}
+          {#if job.report}<details><summary>Audio measurements · {job.report.selectedPreset || job.preset}</summary><p class="muted">Average {job.report.meanDb.toFixed(1)} dB · peak {job.report.peakDb.toFixed(1)} dB{job.report.gainDb ? ` · boost ${job.report.gainDb.toFixed(1)} dB` : ''}. PCM working copy; duration preserved.</p>{#if job.report.assessment}<p class="muted">{job.report.assessment.reasons.join(' ')}</p>{/if}</details>{/if}
         </section>
       {/if}
       {#if job.phase === 'preview' || job.phase === 'failed' && job.failedStage === 'transcribing'}
         {#if !result.transcriptionEnabled}<p role="status">Transcription is disabled in Settings. Enable it to create a transcript.</p>{/if}
         <div class="actions"><button class="dw-btn-primary" disabled={busy || !result.transcriptionEnabled} on:click={() => act('transcribe')}>{job.phase === 'failed' ? 'Retry transcription' : 'Create new transcript'}</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button><button class="dw-text-btn" disabled={busy} on:click={() => act('discard')}>Discard attempt</button></div>
       {:else if job.phase === 'ready'}
+        <TranscriptionQuality quality={job.quality} listen={(event,cue)=>{audio.currentTime=cue.start;void audio.play().catch(()=>error='Press Play to listen to this passage.');}}/>
         <p>Compare the original machine transcripts below. Readable cleanup can be generated after acceptance.</p>
         <div class="transcript-compare"><section aria-label="Current transcript"><h3>Current transcript</h3><textarea class="transcript" aria-label="Current transcript text" readonly rows="10" value={result.currentText || 'No current transcript.'}></textarea></section><section aria-label="New transcript"><h3>New transcript</h3><textarea class="transcript" aria-label="New transcript text" readonly rows="10" value={job.text}></textarea></section></div>
         <p class="muted">Your title, stars, tags and MayDo decisions stay saved. Existing MayDo audio links will need refreshing for the new transcript.</p>
         <div class="actions"><button class="dw-btn-primary" disabled={busy} on:click={() => act('apply')}>Use new audio & transcript</button><button class="dw-btn-secondary" disabled={busy} on:click={() => act('discard')}>Keep current version</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button></div>
       {:else if job.phase === 'applied'}
         <p>The entry now uses the prepared audio and new transcript. Use <strong>More → Reprocess readable transcript</strong> to generate readable text and refresh suggested MayDos.</p>
-        <div class="actions">{#if result.activeVersionId === job.id}<button class="dw-btn-secondary" disabled={busy} on:click={() => act('restore')}>Undo · restore previous version</button>{/if}<button class="dw-text-btn" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
-        <p class="muted">Undo keeps your latest tags and MayDo statuses. It is available until this transcript is changed again; the saved previous version remains on disk.</p>
+        <div class="actions">{#if result.canUndo}<button class="dw-btn-secondary" disabled={busy} on:click={() => act('restore')}>Undo · restore previous version</button>{/if}<button class="dw-text-btn" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
+        <p class="muted">{job.firstImport ? 'This is the first transcript for this recording; there is no previous transcript to restore.' : 'Undo keeps your latest tags and MayDo statuses. It is available until this transcript is changed again; the saved previous version remains on disk.'}</p>
       {:else if job.phase === 'reverted'}
         <div class="actions"><button class="dw-btn-secondary" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
       {:else if job.phase === 'failed'}
