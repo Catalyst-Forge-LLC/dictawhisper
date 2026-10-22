@@ -1,5 +1,5 @@
 schemaVersion: 0.2.0
-scan_id: scan-26569c8525b8
+scan_id: scan-6cac876713a7
 product:
   name: DictaWhisper
   type: typescript-node
@@ -50,7 +50,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-26569c8525b8
+      last_seen_scan_id: scan-6cac876713a7
       reason: Current source evidence is available.
     evidence:
       - id: cmd-doctor-capability
@@ -68,7 +68,7 @@ features:
           symbol: doctor
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.4
+          adapter_version: 0.2.5
           origin: deterministic
           method: surface-cluster
       - id: cmd-doctor-recognition
@@ -144,7 +144,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-26569c8525b8
+      last_seen_scan_id: scan-6cac876713a7
       reason: Current source evidence is available.
     evidence:
       - id: cmd-init-capability
@@ -162,7 +162,7 @@ features:
           symbol: init
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.4
+          adapter_version: 0.2.5
           origin: deterministic
           method: surface-cluster
       - id: cmd-init-recognition
@@ -243,7 +243,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-26569c8525b8
+      last_seen_scan_id: scan-6cac876713a7
       reason: Current source evidence is available.
     evidence:
       - id: cmd-start-capability
@@ -261,7 +261,7 @@ features:
           symbol: start
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.4
+          adapter_version: 0.2.5
           origin: deterministic
           method: surface-cluster
       - id: cmd-start-recognition
@@ -338,7 +338,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-26569c8525b8
+      last_seen_scan_id: scan-6cac876713a7
       reason: Current source evidence is available.
     evidence:
       - id: route-home-capability
@@ -353,7 +353,7 @@ features:
           content_sha256: 726e0544596bfb858cde9bff30c44b0dc716421d2b2c499d699ebebfa488941a
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.4
+          adapter_version: 0.2.5
           origin: deterministic
           method: surface-cluster
     editorial:

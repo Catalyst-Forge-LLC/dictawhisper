@@ -1,9 +1,9 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-26569c8525b8",
+  "scan_id": "scan-6cac876713a7",
   "tool": "featurefacts",
   "tool_version": "0.2.6",
-  "generated_at": "2026-10-22T09:34:54.958-04:00",
+  "generated_at": "2026-10-22T13:49:18.235-04:00",
   "root": ".",
   "status": "complete",
   "scope": {
@@ -197,8 +197,8 @@
       },
       {
         "path": "client/src/lib/components/AudioImprovementDialog.svelte",
-        "sha256": "2be6cc06ce88272d11b12c9e497ea7ee6d61807c479702fd25899b00dfc5df20",
-        "bytes": 19350,
+        "sha256": "48df8bc99e7114d5342c3ad635269fe59246363ef7c9720dc699218ca490dd10",
+        "bytes": 21615,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -210,6 +210,17 @@
         "path": "client/src/lib/components/AudioRecorder.svelte",
         "sha256": "4e59ed1d352188ce13b9a10628a91c678407b0945c690dec2a93d2d4fa60eca3",
         "bytes": 12565,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/BarkComparison.svelte",
+        "sha256": "9f4a07ee83a11f00fca4c76b2d6663adf056f6381006f0360cdeeba41fe41406",
+        "bytes": 4809,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -318,8 +329,8 @@
       },
       {
         "path": "client/src/lib/components/NoteCard.svelte",
-        "sha256": "57831fa55041de4c622fb9124e9627ad62febff61d5934a21001ab523bf352fc",
-        "bytes": 48296,
+        "sha256": "38b822b5a5fa42ca3b75762cd1f2c276c017e1e12e8e509e95cd70a74d214688",
+        "bytes": 48796,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -648,8 +659,21 @@
       },
       {
         "path": "docs/AUDIO_IMPROVEMENT.md",
-        "sha256": "bc0acea49e4ed33aa7b66c5a620313aab7ccc80235c328b7931895fd7d2f9eb7",
-        "bytes": 38325,
+        "sha256": "1b450f17836b515c687d5f74922bb4eab35766ceb2ed86a7d4bdea15d0fcb8ec",
+        "bytes": 38436,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/BARK_EXPERIMENT.md",
+        "sha256": "7840a7f47a15c481b8dbe2812da7c4288094e85aa1536dd6fc3f2ef07e420e1a",
+        "bytes": 9640,
         "eligible_adapter_ids": [
           "typescript-tree",
           "markdown-document"
@@ -843,8 +867,8 @@
       },
       {
         "path": "package.json",
-        "sha256": "34d8a85477ce7c8270334ee7cd607867a8b18b5f79b707c906b547f617c2e875",
-        "bytes": 3447,
+        "sha256": "22b0fd5d423b3ceb61687ff24f57ed7c60d8c15e142b483a38bb3a8711e2480d",
+        "bytes": 3608,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -856,8 +880,8 @@
       },
       {
         "path": "README.md",
-        "sha256": "5e9c9cc1f265e0ba2465652594f44b8da5c495f557377fbecbcef3e767e870a6",
-        "bytes": 13513,
+        "sha256": "b7488f2d356fa57d9164c6a4d2f4a6cc0c88fc6cf82f6a796b7c07f4935182b0",
+        "bytes": 14367,
         "eligible_adapter_ids": [
           "typescript-tree",
           "markdown-document"
@@ -1064,8 +1088,21 @@
       },
       {
         "path": "src/lib/audioRescueService.ts",
-        "sha256": "4aae801067736163b4c03254b1f522d585c1be579f07e1cd81272de7299dc175",
-        "bytes": 25809,
+        "sha256": "9f8dc85c707b529458477aeba7189851e1d203bc62ea2ab05a5bd001c028996e",
+        "bytes": 27045,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/barkLib.ts",
+        "sha256": "989dd06d480a27d35dcf81f67fd9167dc9461df84668f75644d749acb4ae57b5",
+        "bytes": 2508,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1532,8 +1569,8 @@
       },
       {
         "path": "src/lib/whisperLib.ts",
-        "sha256": "b68f8b05fc7e3f6cb811bdc77a2cb85ef9abd9af648cd54c86964f8001626f26",
-        "bytes": 13534,
+        "sha256": "babac4d3771e43929a1b1f86d46cdef0a0fa04a60756b8452a016d7a1c5cc39c",
+        "bytes": 13772,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1675,8 +1712,8 @@
       },
       {
         "path": "src/types/transcription.ts",
-        "sha256": "e7d48c889eb08954aac1c6723e26db68d0cbce6003e992f5d783dbc7488afa6d",
-        "bytes": 2325,
+        "sha256": "51b8cdd922e377d184ca444e65f6e927436986b32439ee98d3cb7c7ac9b52080",
+        "bytes": 2770,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1740,8 +1777,8 @@
       },
       {
         "path": "test/audioRescue.test.ts",
-        "sha256": "c0325fbcf210eaa19d13d1a301b8c5c28ead756cab515be3e93bce89290f1007",
-        "bytes": 15661,
+        "sha256": "beca00fec7690535771b3272c89b64837526ffeba716cd94d2df192a0c44a78e",
+        "bytes": 19636,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -1755,6 +1792,30 @@
         "path": "test/audioReviewState.test.ts",
         "sha256": "631af2ac031682cc292437d7a52e8feefc89c0b697787bd8fa8dba49c07f7b77",
         "bytes": 2431,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/bark_adapter_test.py",
+        "sha256": "b8b6e45ef3ad3c105302d178becc6330d6985f7ef033f772c9e58d575e8729b9",
+        "bytes": 2119,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "test/barkAdapter.test.ts",
+        "sha256": "b439ccdde4f87e55e686cb62cdc5efefe440e22ba0f6762b0a62b46a3302e7b1",
+        "bytes": 577,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2273,8 +2334,8 @@
       },
       {
         "path": "test/whisperOptions.test.ts",
-        "sha256": "e807eb8cea268c27b0798027560eb3da7691602e9c6e555e0d6c0235afaa1c13",
-        "bytes": 5383,
+        "sha256": "f722c6d53b072b4c14f8f5fd58932a86e24976e72307b6df66003797ec768082",
+        "bytes": 5848,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2306,6 +2367,18 @@
       {
         "path": ".git",
         "reason": "exclude-pattern"
+      },
+      {
+        "path": ".venv-bark/Lib/site-packages/certifi/cacert.pem",
+        "reason": "secret-or-key"
+      },
+      {
+        "path": ".venv-bark/Lib/site-packages/pip/_internal/operations/build",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": ".venv-bark/Lib/site-packages/pip/_vendor/certifi/cacert.pem",
+        "reason": "secret-or-key"
       },
       {
         "path": "client/.svelte-kit",
@@ -2371,6 +2444,7 @@
         "client/src/lib/components/AppIcon.svelte",
         "client/src/lib/components/AudioImprovementDialog.svelte",
         "client/src/lib/components/AudioRecorder.svelte",
+        "client/src/lib/components/BarkComparison.svelte",
         "client/src/lib/components/CleanupRetries.svelte",
         "client/src/lib/components/CollapsibleAside.svelte",
         "client/src/lib/components/EntryListPane.svelte",
@@ -2409,6 +2483,7 @@
         "client/vite.config.js",
         "docs/APP_UX_SPEC.md",
         "docs/AUDIO_IMPROVEMENT.md",
+        "docs/BARK_EXPERIMENT.md",
         "docs/IMPROVEMENT_SPEC.md",
         "docs/INBOX_SEARCH_UX_SPEC.md",
         "docs/SCALE_SEARCH_SPEC.md",
@@ -2441,6 +2516,7 @@
         "src/lib/audioLib.ts",
         "src/lib/audioProbeLib.ts",
         "src/lib/audioRescueService.ts",
+        "src/lib/barkLib.ts",
         "src/lib/cleanupProvenanceLib.ts",
         "src/lib/devChild.ts",
         "src/lib/devPorts.ts",
@@ -2494,6 +2570,8 @@
         "test/audioRecency.test.ts",
         "test/audioRescue.test.ts",
         "test/audioReviewState.test.ts",
+        "test/bark_adapter_test.py",
+        "test/barkAdapter.test.ts",
         "test/captureActivity.test.ts",
         "test/captureApi.test.ts",
         "test/checkoutProxy.test.ts",
@@ -2552,6 +2630,7 @@
         "client/src/lib/components/AppIcon.svelte",
         "client/src/lib/components/AudioImprovementDialog.svelte",
         "client/src/lib/components/AudioRecorder.svelte",
+        "client/src/lib/components/BarkComparison.svelte",
         "client/src/lib/components/CleanupRetries.svelte",
         "client/src/lib/components/CollapsibleAside.svelte",
         "client/src/lib/components/EntryListPane.svelte",
@@ -2590,6 +2669,7 @@
         "client/vite.config.js",
         "docs/APP_UX_SPEC.md",
         "docs/AUDIO_IMPROVEMENT.md",
+        "docs/BARK_EXPERIMENT.md",
         "docs/IMPROVEMENT_SPEC.md",
         "docs/INBOX_SEARCH_UX_SPEC.md",
         "docs/SCALE_SEARCH_SPEC.md",
@@ -2622,6 +2702,7 @@
         "src/lib/audioLib.ts",
         "src/lib/audioProbeLib.ts",
         "src/lib/audioRescueService.ts",
+        "src/lib/barkLib.ts",
         "src/lib/cleanupProvenanceLib.ts",
         "src/lib/devChild.ts",
         "src/lib/devPorts.ts",
@@ -2675,6 +2756,8 @@
         "test/audioRecency.test.ts",
         "test/audioRescue.test.ts",
         "test/audioReviewState.test.ts",
+        "test/bark_adapter_test.py",
+        "test/barkAdapter.test.ts",
         "test/captureActivity.test.ts",
         "test/captureApi.test.ts",
         "test/checkoutProxy.test.ts",
@@ -2721,7 +2804,7 @@
     },
     {
       "id": "typescript-node-surface",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "kind": "surface",
       "state": "completed",
       "eligible_files": [
@@ -2757,6 +2840,7 @@
         "src/lib/audioLib.ts",
         "src/lib/audioProbeLib.ts",
         "src/lib/audioRescueService.ts",
+        "src/lib/barkLib.ts",
         "src/lib/cleanupProvenanceLib.ts",
         "src/lib/devChild.ts",
         "src/lib/devPorts.ts",
@@ -2838,6 +2922,7 @@
         "src/lib/audioLib.ts",
         "src/lib/audioProbeLib.ts",
         "src/lib/audioRescueService.ts",
+        "src/lib/barkLib.ts",
         "src/lib/cleanupProvenanceLib.ts",
         "src/lib/devChild.ts",
         "src/lib/devPorts.ts",
@@ -2896,6 +2981,7 @@
       "eligible_files": [
         "docs/APP_UX_SPEC.md",
         "docs/AUDIO_IMPROVEMENT.md",
+        "docs/BARK_EXPERIMENT.md",
         "docs/IMPROVEMENT_SPEC.md",
         "docs/INBOX_SEARCH_UX_SPEC.md",
         "docs/SCALE_SEARCH_SPEC.md",
@@ -2915,6 +3001,7 @@
       "inspected_files": [
         "docs/APP_UX_SPEC.md",
         "docs/AUDIO_IMPROVEMENT.md",
+        "docs/BARK_EXPERIMENT.md",
         "docs/IMPROVEMENT_SPEC.md",
         "docs/INBOX_SEARCH_UX_SPEC.md",
         "docs/SCALE_SEARCH_SPEC.md",
@@ -2945,6 +3032,7 @@
         "test/audioRecency.test.ts",
         "test/audioRescue.test.ts",
         "test/audioReviewState.test.ts",
+        "test/barkAdapter.test.ts",
         "test/captureActivity.test.ts",
         "test/captureApi.test.ts",
         "test/checkoutProxy.test.ts",
@@ -2994,6 +3082,7 @@
         "test/audioRecency.test.ts",
         "test/audioRescue.test.ts",
         "test/audioReviewState.test.ts",
+        "test/barkAdapter.test.ts",
         "test/captureActivity.test.ts",
         "test/captureApi.test.ts",
         "test/checkoutProxy.test.ts",
@@ -3041,11 +3130,11 @@
   ],
   "rules_version": "featurefacts-core@0.2.0",
   "fingerprints": {
-    "source": "082ab488a539896c11b27cd1f511c8bdf8e6285d5ff044dac7d97e097093d899",
+    "source": "c945d412ad71aae4c9c899e5f7c53f3af79febdb49cdbfbc2e58e87004457f06",
     "config": "8af1f9e51973ca0635870d1d47cc112db2fafd38f0e3101910af6204165c412d",
-    "adapters": "04d451e412ce42b8c594b784923933b2dba060dfc0acaafcafd74c212714058d",
+    "adapters": "bfa59a2c62e4f45e5bade6f848e11727f03db8c185a16f19beaa6f857876c223",
     "rules": "c7f728a22bf07a27d20f2b0ba60c59d2528cf27f6b218a22272fcbbe465f8971",
-    "registry": "da4d9659832d7cdf86df5599a11b748e2de5b14c55c92f79cbb4562913363a2d",
+    "registry": "0fc4a4d46822b6ea901dc74d46e95b4b1e44bcfb39f879f02b5d311663607b32",
     "projection": "171901605e9398b9a3b1296a1e6e0d43b310509875f49a900e3c1c487bc3bcfd"
   },
   "artifacts": [
@@ -3055,31 +3144,31 @@
     },
     {
       "path": ".featurefacts/docs-index.json",
-      "sha256": "afa2e9e5c8b3a0f5349a6325cd3f3ba740d05490360c8d93afdafe9b3e116c1c"
+      "sha256": "233782bea053338273483fd90cb033420d33036453152c8f91a0d7df2b8fba4f"
     },
     {
       "path": ".featurefacts/features.json",
-      "sha256": "cf392b104f8349ddb428671bab7c0011e7807b9810b00af67c2fc60df4f3934d"
+      "sha256": "ed4e3ff8fd3edf792386e5899fb8a7926fc2ad6dac54bef02f9fe023f2687929"
     },
     {
       "path": ".featurefacts/FEATURES.md",
-      "sha256": "1f17036cfb68f6a651b6827710f6703b758492621fc811288a753a57c9a89b26"
+      "sha256": "b35c75e309e830b1c676ac9b6e672adeed3f3c654c9a744e8d60ee71228eca2e"
     },
     {
       "path": ".featurefacts/features.yaml",
-      "sha256": "1c0fc2b18dbe5eaa31b4af6acbfb69ba4326d71b0b66935b3af671502420c358"
+      "sha256": "d24b9202231bed0ec8b32fb9fbba2134ebb241ce224662e310c1599e79a770d9"
     },
     {
       "path": ".featurefacts/gaps.yaml",
-      "sha256": "f050f90543809b5e09fd094aeedaf35168a4f8f7405410cc3cc4a802b9a8dc69"
+      "sha256": "d8beda3ec7646f48becbcb320383b54773648bbb31a754ef12a27cc5c49db8a2"
     },
     {
       "path": ".featurefacts/surfaces.json",
-      "sha256": "723880b895e631e66b9e3282bb5c599b75134f37774a9fafb962b05bd3ade116"
+      "sha256": "72df92e24184181a623a1fef8b0fed403db34bf2327a905f3d5d1dc4692ebc0d"
     },
     {
       "path": ".featurefacts/test-index.json",
-      "sha256": "186c7d133cf181ecc314a7792fecc7a47c2dc79d92d66cebef9b6d39a70b34d4"
+      "sha256": "eac88792d91f5e114e4a26ac52e8d4425fc90477a299476a4731718eb1e983c1"
     },
     {
       "path": "FEATURE_FACTS.md",
