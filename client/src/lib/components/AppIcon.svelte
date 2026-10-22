@@ -27,6 +27,8 @@
     info: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 11v6M12 7h.01'],
     refresh: ['M20 7a9 9 0 0 0-15-2L2 8m0-5v5h5M4 17a9 9 0 0 0 15 2l3-3m0 5v-5h-5'],
     waveform: ['M3 10v4M7 6v12M12 3v18M17 7v10M21 10v4'],
+    play: ['m7 3 14 9-14 9Z'],
+    stop: ['M5 5h14v14H5Z'],
     skip: ['m5 4 11 8L5 20ZM19 4v16'],
     folder: ['M3 6V4h6l3 3h9v13H3Z'],
     date: ['M4 5h16v16H4ZM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2'],

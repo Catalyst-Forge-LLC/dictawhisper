@@ -36,7 +36,10 @@ async function ready(svc: AudioRescueService, file: string) {
   const id = svc.prepare(file, options).job!.id; await svc.wait(id);
   assert.equal(svc.status(file, id).job!.phase, 'preview');
   svc.transcribe(file, id); await svc.wait(id);
-  assert.equal(svc.status(file, id).job!.phase, 'ready'); return id;
+  const candidate = svc.status(file, id).job!;
+  assert.equal(candidate.phase, 'ready');
+  assert.deepEqual(candidate.segments, [{start:1,end:3,text:'Recovered words'}], 'review context comes from the candidate, not the current transcript');
+  return id;
 }
 
 test('normal imports share preparation and preserve originals, sidecar metadata and recovery history', async () => {

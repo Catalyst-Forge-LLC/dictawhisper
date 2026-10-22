@@ -502,7 +502,7 @@
       {#if findOpen}<div class="find-bar"><label>Find in entry<input class="dw-input" bind:this={findInput} bind:value={findQuery} on:input={() => matchCursor = -1} on:keydown={event => { if (event.key === 'Enter') stepMatch(event.shiftKey ? -1 : 1); if (event.key === 'Escape') { findOpen = false; findButton?.focus(); } }} /></label><span role="status">{findMatches.length ? (matchCursor < 0 ? `${findMatches.length} matches` : `${matchCursor + 1} of ${findMatches.length} matches`) : '0 matches'}</span><button disabled={!findMatches.length} on:click={() => stepMatch(-1)}>Previous match</button><button disabled={!findMatches.length} on:click={() => stepMatch(1)}>Next match</button><button on:click={() => { findOpen = false; findButton?.focus(); }}>Close find</button></div>{/if}
       </div>
 
-      {#if detailTab === 'transcript'}<TranscriptionQuality quality={transcription.transcriptionJson?.transcriptionQuality} listen={playCue}/>{/if}
+      {#if detailTab === 'transcript'}<TranscriptionQuality quality={transcription.transcriptionJson?.transcriptionQuality} segments={transcription.transcriptionJson?.segments || []} audio={audioElement} improve={openAudioReview} on:listen={() => { followAudio = false; pendingSeek = null; audioRestored = true; }}/>{/if}
       {#if detailTab === 'maydos'}
       <MayDoReview json={transcription.transcriptionJson} file={transcription.jsonFile} {connected} saveStatus={saveMayDoStatus} extract={extractMayDos} playSource={playCue} on:configure={() => dispatch('configurecleanup')} />
       {:else if detailTab === 'tags'}

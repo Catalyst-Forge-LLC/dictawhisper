@@ -153,9 +153,10 @@ export class AudioRescueService {
     const selected = id ? rows.find(row => row.job.id === id) : rows[0];
     if (id && !selected) throw new Error('Audio improvement not found for this entry.');
     const job = selected?.job;
+    const candidate: TranscriptionDocument | null = job && ['ready', 'applied'].includes(job.phase) ? jsonRead(owned(selected!.root, job.id, 'candidate.json')) : null;
     return {
       pending: reviewCandidates(rows, current.json.audioEnhancement?.versionId),
-      job: job ? { ...job, ...(['ready', 'applied'].includes(job.phase) ? { text: String(jsonRead(owned(selected!.root, job.id, 'candidate.json')).text || ''), quality: jsonRead(owned(selected!.root, job.id, 'candidate.json')).transcriptionQuality } : {}) } : null,
+      job: job ? { ...job, ...(candidate ? { text: String(candidate.text || ''), quality: candidate.transcriptionQuality, segments: Array.isArray(candidate.segments) ? candidate.segments.map(({start, end, text}) => ({start, end, text})) : [] } : {}) } : null,
       currentText: current.json.text || '', activeVersionId: current.json.audioEnhancement?.versionId || null,
       currentReadableText: current.json.cleanedTranscription || '',
       reviewToken: job?.phase === 'ready' ? fingerprint(current.json) : null,

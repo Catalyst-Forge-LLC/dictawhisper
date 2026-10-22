@@ -61,6 +61,17 @@ for (let i = 0; i < 200; i++) {
     json.segments = [{text:json.text,start:0,end:words.at(-1).end,words}];
     json.playbackCues = [{text:json.text,start:0,end:words.at(-1).end}]; json.playbackCuesSource = 'words';
   }
+  if (i === 192 && process.env.DICTA_FIXTURE_SIGNALS === '1') {
+    json.segments = Array.from({length:48}, (_,n) => ({start:n*1.8,end:n*1.8+1.2,text:`Planning detail ${n+1}: check the kitchen measurements before ordering materials.`}));
+    json.text = json.segments.map(row=>row.text).join(' ');
+    json.cleanedTranscription = json.segments.map(row=>row.text).join('\n\n');
+    json.playbackCues = json.segments;
+    json.transcriptionQuality = {version:1,model:'large-v3',createdAt:'2026-10-21T00:00:00Z',preparation:{selectedPreset:'uneven',durationSec:90,assessment:{reasons:['Audible levels vary across the recording.']}},issues:[
+      ...json.segments.map((row,n)=>({kind:n%2?'uncovered_audio':'uncertain',start:row.start,end:row.end,message:n%2?'Audio was detected without matching transcript text. It may be speech, music or noise.':'Whisper reported uncertain speech here.',...(n===0?{alternative:'Check the kitchen measurements before we order materials.'}:n===1?{alternative:''}:n===2?{retryError:'Fixture alternate pass unavailable.'}:n===3?{alternative:'Long alternate text for overflow testing. '.repeat(130)}:{})})),
+      {kind:'audio',message:'The available recording has varying volume.'},
+      {kind:'timing',message:'A segment had invalid timing.'},{kind:'timing',message:'A segment had invalid timing.'},
+    ]};
+  }
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(json));
   notes.set(file, { jsonFile: file, day, transcriptionJson: json });
 }
