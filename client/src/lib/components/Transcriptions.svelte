@@ -971,14 +971,15 @@
     <EntryListPane loading={requestBusy || moreBusy} hiddenOnMobile={Boolean(selectedFile)} bind:scrollElement={entryScroll} on:scroll={() => saveListAnchor()}>
     <div slot="search" class="dw-card search-card">
       <div class="search">
+        <span class="search-symbol"><AppIcon name="search" size={18}/></span>
         <input class="dw-input" type="search" bind:this={searchInput} bind:value={searchQuery} on:keydown={event => { if (event.key === 'Enter') submitSearch(); }} placeholder="Search entries" aria-label="Search entries" />
-        {#if searchQuery}<button class="dw-text-btn" on:click={clearSearch}>Clear search</button>{/if}
+        {#if searchQuery}<button class="dw-text-btn clear-search" aria-label="Clear search" title="Clear search" on:click={clearSearch}><AppIcon name="close" size={16}/></button>{/if}
       </div>
       <div class="results-toolbar">
         <p class="dw-muted status-line" role="status">{statusLine}</p>
         <button class="dw-chip" class:is-active={scope.mayDos === 'any' || activeStatuses.length > 0} aria-pressed={scope.mayDos === 'any' || activeStatuses.length > 0} disabled={libraryView === 'maydos'} title={libraryView === 'maydos' ? 'MayDos view includes entries with actions' : 'Filter entries with any saved MayDos'} on:click={() => { mayDoFilter = mayDoFilter ? '' : 'any'; mayDoStatuses = []; }}><AppIcon name="maydos" size={14}/>MayDos</button>
         <button class="dw-chip" class:is-active={scope.starred} aria-pressed={scope.starred} disabled={libraryView === 'starred'} title={libraryView === 'starred' ? 'Starred view includes starred entries' : 'Filter starred entries'} on:click={() => (starredOnly = !starredOnly)}><AppIcon name="star" size={14}/>Starred</button>
-        <button class="dw-btn-secondary dw-btn-compact" aria-expanded={filtersOpen} bind:this={filterButton} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}><AppIcon name="filter" size={16}/>Filters</button>
+        <button class="dw-btn-secondary dw-btn-compact" class:filters-active={Boolean(optionalFilters)} aria-expanded={filtersOpen} bind:this={filterButton} aria-controls="note-filters" on:click={() => (filtersOpen = !filtersOpen)}><AppIcon name="filter" size={16}/>Filters</button>
         <label class="sort-label">Sort
           <select class="dw-input dw-select" value={effectiveSort(searchKey)} on:change={event => setSort(event.target.value)}>
             <option value="recent">Newest first</option><option value="oldest">Oldest first</option>
@@ -1104,7 +1105,7 @@
 </section>
 
 <style lang="scss">
-  .trash-undo { position: fixed; z-index: 90; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 24px); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; color: var(--dw-text); background: #18181b; border: 1px solid var(--dw-border); border-radius: 12px; box-shadow: 0 6px 24px #0008; }
+  .trash-undo { position: fixed; z-index: 90; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 24px); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; color: var(--dw-text); background:var(--dw-surface); border: 1px solid var(--dw-border); border-radius: 12px; box-shadow: 0 6px 24px #0008; }
   .tag-undo { bottom: 100px; }
   .trash-undo button { min-height: 44px; }
 
@@ -1140,7 +1141,7 @@
   .tag-cloud-body .dw-chip { max-width: 100%; overflow-wrap: anywhere; text-align: left; white-space: normal; }
   .tag-cloud-more { margin-top: 0.65rem; }
   .search-card { padding: 8px; margin-bottom: 8px; box-shadow: none; }
-  .search { display: flex; align-items: center; gap: 0.5rem; }
+  .search { display: flex; align-items: center; position:relative; gap: 0.5rem; } .search-symbol{position:absolute;left:12px;pointer-events:none;color:var(--dw-text-muted);} .search .dw-input{padding-left:38px;padding-right:44px;} .clear-search{position:absolute;right:4px;width:36px;min-height:40px;display:grid;place-items:center;} .filters-active{border-color:var(--dw-accent);color:var(--dw-accent-bright);}
   .search .dw-input { min-width: 0; }
   .search .dw-text-btn { flex-shrink: 0; }
   .results-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }

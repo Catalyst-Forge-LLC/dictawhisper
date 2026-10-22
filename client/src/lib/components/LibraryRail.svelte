@@ -42,7 +42,7 @@
   </aside>
 {/if}
 <style>
-  .library { min-height: 0; overflow-y: auto; padding: 12px; border: 1px solid var(--dw-border); border-radius: 8px; background: #18181b; }
+  .library { min-height: 0; overflow-y: auto; padding: 12px; border: 1px solid var(--dw-border); border-radius: 8px; background:var(--dw-surface); }
   .scrim, .drawer-close { display: none; }
   @media (max-width: 1199px) {
     .scrim { display: block; position: fixed; inset: 0; z-index: 29; background: #0009; border: 0; }

@@ -88,6 +88,6 @@
   .error-detail{max-height:6rem;overflow:auto;}
   .processing{color:var(--dw-text-muted);} .processing summary,.recording-notes summary{font-size:12px;color:var(--dw-text-muted);}
   ul{margin:0 0 8px;padding-left:20px;max-height:10rem;overflow:auto;overflow-wrap:anywhere;} li{margin:6px 0;}
-  summary:focus-visible,.excerpt:focus-visible{outline:2px solid var(--dw-accent-bright);outline-offset:2px;}
+  summary:focus-visible,.excerpt:focus-visible{outline:2px solid var(--dw-focus);outline-offset:2px;}
   @media(max-width:600px){.navigation button{width:44px;padding:8px;}.navigation button span{display:none;}.excerpt{max-height:7rem;}.passage{padding:10px;}}
 </style>

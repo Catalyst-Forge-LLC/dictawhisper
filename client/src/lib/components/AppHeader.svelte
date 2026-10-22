@@ -26,7 +26,7 @@
     </div>
     <div class="tools">
       <AudioRecorder {connected} on:accepted on:openentry on:activity />
-      <button class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('activity')} aria-label={`Activity${workingCount ? ', work in progress' : ''}${failureCount ? ', ' + failureCount + ' need attention' : ''}`}><AppIcon name="activity" size={16}/><span>Activity{#if workingCount} <span aria-hidden="true">●</span>{/if}{#if failureCount} <span>{failureCount}</span>{/if}</span></button>
+      <button class="dw-btn-secondary dw-btn-compact" on:click={() => dispatch('activity')} aria-label={`Activity${workingCount ? ', ' + workingCount + ' in progress' : ''}${failureCount ? ', ' + failureCount + ' need attention' : ''}`}><AppIcon name="activity" size={16}/><span>Activity</span>{#if failureCount}<span class="activity-count dw-tone-danger" aria-hidden="true">{failureCount}</span>{:else if workingCount}<span class="activity-count dw-tone-info" aria-hidden="true">{workingCount}</span>{/if}</button>
       <button type="button" class="dw-btn-secondary dw-btn-compact" data-settings-trigger on:click={() => dispatch('tools')}>
         <AppIcon name="settings" size={16}/>Settings
       </button>
@@ -38,6 +38,8 @@
 </header>
 
 <style lang="scss">
+  .activity-count{border-radius:5px;min-width:18px;padding:1px 4px;font-size:11px;font-variant-numeric:tabular-nums;} .tools>button{position:relative;} @media(max-width:599px){.activity-count{position:absolute;right:3px;top:2px;}}
+
   .dw-header {
     z-index: 20;
     flex-shrink: 0;

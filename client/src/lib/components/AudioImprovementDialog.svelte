@@ -143,9 +143,9 @@
 </dialog>
 
 <style>
-  dialog { position: fixed; inset: 0; margin: auto; width: min(960px, calc(100vw - 32px)); max-width: 100vw; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--dw-border); border-radius: 12px; background: #18181b; color: var(--dw-text); box-sizing: border-box; overflow: auto; }
+  dialog { position: fixed; inset: 0; margin: auto; width: min(960px, calc(100vw - 32px)); max-width: 100vw; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--dw-border); border-radius: 12px; background:var(--dw-surface); color: var(--dw-text); box-sizing: border-box; overflow: auto; }
   dialog::backdrop { background: #000b; }
-  header { position: sticky; top: 0; z-index: 2; display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 16px 24px; background: #18181b; border-bottom: 1px solid var(--dw-border); }
+  header { position: sticky; top: 0; z-index: 2; display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 16px 24px; background:var(--dw-surface); border-bottom: 1px solid var(--dw-border); }
   h2 { font-size: 22px; line-height: 1.3; margin: 2px 0 0; } h3 { font-size: 16px; margin: 0; }
   .eyebrow { color: var(--dw-accent-bright); font-size: 11px; letter-spacing: .1em; margin: 0; }
   .content { padding: 0 24px 24px; } p { line-height: 1.5; margin: 12px 0; overflow-wrap: anywhere; }
@@ -158,7 +158,7 @@
   small { display: block; color: var(--dw-text-muted); font-size: 13px; line-height: 1.4; margin-top: 4px; }
   .model { display: flex; align-items: center; gap: 16px; margin: 20px 0 14px; } select { width: auto; min-width: 0; }
   summary { cursor: pointer; min-height: 36px; padding: 6px 0; } .check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
-  button { min-height: 44px; } .actions { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 20px; padding: 12px 0; background: #18181b; border-top: 1px solid var(--dw-border); }
+  button { min-height: 44px; } .actions { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 20px; padding: 12px 0; background:var(--dw-surface); border-top: 1px solid var(--dw-border); }
   .status { margin: 20px 0 12px; } .status p { margin: 4px 0; }
   .preview { padding: 16px; border: 1px solid var(--dw-border); border-radius: 8px; margin-top: 16px; }
   .preview-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
@@ -168,6 +168,6 @@
   .transcript { box-sizing: border-box; width: 100%; resize: vertical; color: var(--dw-text); font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; font-size: 15px; background: #121214; padding: 14px; border: 1px solid var(--dw-border); border-radius: 8px; min-height: 140px; height: clamp(140px, calc(100dvh - 560px), 280px); overflow: auto; }
   .error { color: #fca5a5; } .saved-version { border-top: 1px solid var(--dw-border); padding-top: 12px; }
   .review-warning { padding: 12px 16px; border-left: 3px solid var(--dw-accent); background: rgb(245 158 11 / .07); margin-top: 16px; } .review-warning p { margin: 6px 0 0; }
-  :is(button, input, select, summary, .transcript):focus-visible { outline: 2px solid var(--dw-accent-bright); outline-offset: 3px; }
+  :is(button, input, select, summary, .transcript):focus-visible { outline: 2px solid var(--dw-focus); outline-offset: 3px; }
   @media (max-width: 600px) { dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } header { padding: 12px 16px; } h2 { font-size: 19px; } .content { padding: 0 16px 20px; } .preset-grid, .transcript-compare { grid-template-columns: 1fr; } .transcript-compare section:last-child { order: -1; } .model { align-items: stretch; flex-direction: column; gap: 6px; } .transcript { max-height: 220px; } .actions { bottom: 0; } }
 </style>

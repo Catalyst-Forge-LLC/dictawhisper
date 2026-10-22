@@ -53,5 +53,5 @@
   {/if}
 </section>
 <style>
-  .backfill {overflow-wrap:anywhere;} h3,h4 {font-size:15px;margin:12px 0;} p {margin:8px 0;} form,label {display:flex;gap:8px;flex-direction:column;} form {align-items:flex-start;} label {width:100%;} .check {flex-direction:row;align-items:center;} .check input {width:22px;height:22px;} .actions {display:flex;gap:8px;flex-wrap:wrap;} button,summary,select,input:not([type=checkbox]) {min-height:44px;} summary {padding:10px 0;cursor:pointer;} .current {overflow-wrap:anywhere;} button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible {outline:2px solid var(--dw-accent);outline-offset:2px;}
+  .backfill {overflow-wrap:anywhere;} h3,h4 {font-size:15px;margin:12px 0;} p {margin:8px 0;} form,label {display:flex;gap:8px;flex-direction:column;} form {align-items:flex-start;} label {width:100%;} .check {flex-direction:row;align-items:center;} .check input {width:22px;height:22px;} .actions {display:flex;gap:8px;flex-wrap:wrap;} button,summary,select,input:not([type=checkbox]) {min-height:44px;} summary {padding:10px 0;cursor:pointer;} .current {overflow-wrap:anywhere;} button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible {outline:2px solid var(--dw-focus);outline-offset:2px;}
 </style>

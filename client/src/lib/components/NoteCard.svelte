@@ -589,7 +589,7 @@
   .passage-select { position: absolute; right: 36px; top: 0.35rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; border-radius: 6px; }
   .passage-select input { width: 18px; height: 18px; margin: 0; accent-color: var(--dw-accent); cursor: pointer; }
   .cue-row:hover .passage-select, .cue-row:focus-within .passage-select, .selection-mode .passage-select { opacity: 1; }
-  .passage-select:focus-within { outline: 2px solid var(--dw-accent-bright); outline-offset: 1px; }
+  .passage-select:focus-within { outline: 2px solid var(--dw-focus); outline-offset: 1px; }
   .passage-selected { background: rgb(245 158 11 / 0.08); border-radius: 6px; }
   .passage-selection-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; }
   .passage-selection-bar button { min-height: 36px; }
@@ -826,7 +826,7 @@
   .menu-action:disabled { opacity: .45; cursor: not-allowed; }
   .menu-action.is-danger, .menu-action.is-danger :global(.dw-icon) { color: var(--dw-danger); }
   .menu-action.is-danger:hover:not(:disabled) { background: rgb(248 113 113 / .09); }
-  .menu-action:focus-visible, .more > summary:focus-visible { outline: 2px solid var(--dw-accent-bright); outline-offset: -2px; }
+  .menu-action:focus-visible, .more > summary:focus-visible { outline: 2px solid var(--dw-focus); outline-offset: -2px; }
   .processing-details[open] .disclosure-chevron { transform: rotate(90deg); }
   .processing-content { padding: 0 10px 10px 38px; color: var(--dw-text-muted); font-size: 12px; }
   .processing-content p + p { margin-top: 8px; }
