@@ -8,6 +8,7 @@ import { getWhisperWorkerStatus, resolveWhisperModel } from './whisperLib.ts';
 import { getJournalIndex, openJournalIndex } from './journalIndexLib.ts';
 import { resolveEmbedClient, type EmbedResolution } from './journalEmbedLib.ts';
 import { configuredMachine, resolveOllanetMachine } from './ollanetLib.ts';
+import { barkAvailability, barkPaths } from './barkLib.ts';
 
 export type HealthLevel = 'ok' | 'warn' | 'fail';
 
@@ -25,6 +26,7 @@ export type HealthReport = {
   degraded: boolean;
   node: string;
   configPath: string;
+  transcription: { model: string; device: string; python: string };
   whisper: {
     model: string;
     device: string;
@@ -221,6 +223,18 @@ export async function collectHealth(
   }
 
   const python = config.whisper.python;
+  if (config.transcription.model === 'bark-pro') {
+    const ready = barkAvailability(), paths = barkPaths();
+    add(checks, 'bark-model', ready.available ? 'ok' : 'fail', ready.available ? 'Bark Pro model and isolated runtime installed' : ready.reason);
+    if (ready.available) {
+      const probe = spawnPython(paths.python, [paths.script, '--check', '--model-dir', paths.model]);
+      try {
+        if (probe.status !== 0) throw new Error(probe.error || probe.stderr || 'runtime probe failed');
+        const info = JSON.parse(probe.stdout), cpu = process.env.DICTA_BARK_DEVICE === 'cpu';
+        add(checks, 'bark-runtime', cpu || info.cuda && info.bf16 ? 'ok' : 'fail', cpu ? `Bark Pro on CPU (torch ${info.torch})` : info.cuda && info.bf16 ? `Bark Pro on CUDA / BF16 (torch ${info.torch})` : 'Bark Pro requires a CUDA device with BF16 support, or DICTA_BARK_DEVICE=cpu.');
+      } catch (error) { add(checks, 'bark-runtime', 'fail', `Bark runtime check failed: ${String(error)}`); }
+    }
+  } else {
   const pythonExists = pythonOnPath(python) || fs.existsSync(python);
   if (!pythonExists) {
     add(checks, 'python', 'fail', `python not found: ${python}`);
@@ -271,6 +285,7 @@ export async function collectHealth(
     }
   }
 
+  }
   const ffmpeg = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8', timeout: 15_000, windowsHide: true });
   if (ffmpeg.status === 0) {
     const version = (ffmpeg.stdout || '').match(/ffmpeg version (\S+)/i)?.[1];
@@ -349,6 +364,7 @@ export async function collectHealth(
     }
   } else if (options.mode === 'live') {
     add(checks, 'port', 'ok', `listening on ${bindHost}:${config.http.port}`);
+    if (config.transcription.model !== 'bark-pro') {
     const worker = getWhisperWorkerStatus();
     add(
       checks,
@@ -356,9 +372,10 @@ export async function collectHealth(
       worker === 'ready' || worker === 'starting' ? 'ok' : 'warn',
       `whisper worker ${worker}`
     );
+    }
   }
 
-  for(const check of checks) check.group = ['python','faster-whisper','device','ffmpeg','ffprobe','whisper-worker'].includes(check.id) ? 'transcription' : check.id==='ollanet' ? 'cleanup' : check.id.startsWith('journal-') ? 'search' : 'runtime';
+  for(const check of checks) check.group = ['bark-model','bark-runtime','python','faster-whisper','device','ffmpeg','ffprobe','whisper-worker'].includes(check.id) ? 'transcription' : check.id==='ollanet' ? 'cleanup' : check.id.startsWith('journal-') ? 'search' : 'runtime';
   const failed = checks.some((check) => check.level === 'fail');
   const degraded = checks.some((check) => check.level === 'warn');
 
@@ -367,6 +384,7 @@ export async function collectHealth(
     degraded,
     node: process.version,
     configPath,
+    transcription: { model: config.transcription.model, device: config.transcription.model === 'bark-pro' ? process.env.DICTA_BARK_DEVICE || 'cuda' : config.whisper.device, python: config.transcription.model === 'bark-pro' ? barkPaths().python : python },
     whisper: {
       model: resolveWhisperModel(),
       device: config.whisper.device,
@@ -392,6 +410,7 @@ export async function getHealthReport(
     options.mode === 'live' &&
     !options.fresh &&
     liveCache &&
+    liveCache.report.transcription.model === config.transcription.model &&
     Date.now() - liveCache.at < LIVE_CACHE_MS
   ) {
     return {

@@ -4,7 +4,7 @@ import { config } from '../src/config.ts';
 import { findAudioForSidecar } from '../src/lib/audioLib.ts';
 import { isSkippedWatchPath } from '../src/lib/fileSettleLib.ts';
 import { ensurePlaybackCues, flattenSegmentWords } from '../src/lib/alignLib.ts';
-import { whisperTranscribe } from '../src/lib/whisperLib.ts';
+import { audioRescue } from '../src/lib/audioRescueService.ts';
 import { cleanTranscription } from '../src/lib/transcriptionLib.ts';
 
 function walkJsonFiles(dir: string, out: string[]) {
@@ -24,13 +24,8 @@ function hasWordTimestamps(json: { segments?: { words?: unknown }[] }): boolean 
   return flattenSegmentWords(json.segments as any).length > 0;
 }
 
-function transcribeOne(audio: string, jsonFile: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    void whisperTranscribe(audio, jsonFile, (payload) => {
-      if (payload.err) reject(payload.err);
-      else resolve();
-    });
-  });
+async function transcribeOne(audio: string, jsonFile: string): Promise<void> {
+  await audioRescue.importAudio(audio, jsonFile, config.transcription.model, config.audio.preprocess);
 }
 
 function argValue(name: string): string | undefined {

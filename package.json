@@ -2,7 +2,7 @@
   "name": "dictawhisper",
   "version": "0.1.15",
   "private": false,
-  "description": "Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.",
+  "description": "Local voice journal. Record or drop audio, transcribe with local Bark Pro or Whisper, keep the .json next to the file.",
   "homepage": "https://dictawhisper.com",
   "repository": {
     "type": "git",
@@ -48,7 +48,7 @@
     "cli": "node --experimental-strip-types src/cli.ts",
     "dev": "node --experimental-strip-types src/dev.ts",
     "serve": "node --experimental-strip-types src/dev.ts",
-    "turbo": "WHISPER_MODEL=turbo node --experimental-strip-types src/server.ts",
+    "turbo": "DICTA_TRANSCRIPTION_MODEL=turbo node --experimental-strip-types src/server.ts",
     "ui": "pnpm --dir client dev",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --experimental-strip-types --test test/*.test.ts",

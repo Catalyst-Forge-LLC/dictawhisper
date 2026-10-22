@@ -155,7 +155,7 @@ def main():
         for block in iter(lambda: audio.read(1024 * 1024), b''):
             digest.update(block)
     payload = {'text': text, 'segments': segments, 'language': 'en', 'elapsed': f'{elapsed:.3f}s',
-               'asrExperiment': {'engine': 'bark-pro', 'model': MODEL, 'revision': REVISION, 'comparisonOnly': True,
+               'asr': {'engine': 'bark-pro', 'model': MODEL, 'revision': REVISION,
                                  'device': args.device, 'dtype': str(dtype), 'runtime': f'transformers {transformers.__version__}',
                                  'timing': 'model-token-estimates' if segments else 'unavailable', 'warnings': warnings,
                                  'chunkSeconds': args.chunk_seconds, 'windows': windows, 'audioSha256': digest.hexdigest(),

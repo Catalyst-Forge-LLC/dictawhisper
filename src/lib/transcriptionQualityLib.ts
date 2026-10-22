@@ -15,7 +15,7 @@ export const runWhisper: AsrRunner = (audio, output, model, vad) => new Promise(
 
 export function inspectTranscript(json: TranscriptionDocument, report?: EnhancementReport): QualityIssue[] {
   const issues: QualityIssue[] = [];
-  const duration = report?.durationSec ?? Number(json.whisper?.duration ?? Infinity);
+  const duration = report?.durationSec ?? Number(json.asr?.durationSec ?? json.asrExperiment?.durationSec ?? json.whisper?.duration ?? Infinity);
   const segments = json.segments || [];
   if (!json.text?.trim() || !segments.length) issues.push({ kind: 'empty', start: 0, end: Math.min(30, duration), message: 'No timed speech was returned.' });
   let previous = -1;
@@ -23,7 +23,7 @@ export function inspectTranscript(json: TranscriptionDocument, report?: Enhancem
   for (const row of segments) {
     if (!Number.isFinite(row.start) || !Number.isFinite(row.end) || row.start < 0 || row.end < row.start || row.end > duration + .5 || row.start < previous - 1) issues.push({ kind: 'timing', message: 'Some timestamps are outside the recording or out of order.' });
     previous = row.start;
-    const text = row.text.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ');
+    const text = String(row.text || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ');
     const count = (repeated.get(text) || 0) + 1; repeated.set(text, count);
     if ((text.length > 15 && count === 3) || (row.compression_ratio ?? 0) > 2.4) issues.push({ kind: 'repetition', start: row.start, end: row.end, message: 'Repeated wording may need a listen.' });
     else if ((row.avg_logprob ?? 0) < -1 || (row.no_speech_prob ?? 0) > .65) issues.push({ kind: 'uncertain', start: row.start, end: row.end, message: 'Whisper reported uncertain speech here.' });
@@ -40,6 +40,29 @@ export function inspectTranscript(json: TranscriptionDocument, report?: Enhancem
   }
   for (const message of report?.assessment?.warnings || []) issues.push({ kind: 'audio', message });
   return issues.slice(0, 100);
+}
+
+/** Never manufacture timing or confidence for an engine that did not return it. */
+export function barkHasUsableTiming(json: TranscriptionDocument) {
+  const record = json.asr || json.asrExperiment;
+  const normalized = (text: string) => text.replace(/\s+/g, ' ').trim();
+  return record?.engine === 'bark-pro' && record.timing === 'model-token-estimates'
+    && typeof json.text === 'string' && Boolean(json.text.trim())
+    && Array.isArray(json.segments) && json.segments.length > 0
+    && json.segments.every(row => typeof row.text === 'string')
+    && normalized(json.segments.map(row => row.text).join(' ')) === normalized(json.text)
+    && !inspectTranscript(json).some(issue => issue.kind === 'timing');
+}
+
+export function annotateBarkCandidate(json: TranscriptionDocument, report?: EnhancementReport) {
+  const record = json.asr || json.asrExperiment;
+  if (record?.engine !== 'bark-pro' || !json.text?.trim()) throw new Error('Bark produced no usable transcript. Your saved transcript is unchanged.');
+  const { comparisonOnly: _legacy, ...provenance } = record;
+  json.asr = provenance;
+  delete json.asrExperiment;
+  const issues = inspectTranscript(json, report);
+  if (!barkHasUsableTiming(json)) issues.push({kind: 'timing', message: 'Bark did not return usable passage timing. This result can be compared but cannot replace a timed transcript.'});
+  json.transcriptionQuality = { ...json.transcriptionQuality, version: TRANSCRIPTION_PIPELINE_VERSION, createdAt: json.transcriptionQuality?.createdAt || new Date().toISOString(), model: 'bark-pro', vadFilter: false, preparation: report, issues };
 }
 
 /** Keep the first pass intact; bounded alternate listens are evidence for review, never a synthetic merge. */

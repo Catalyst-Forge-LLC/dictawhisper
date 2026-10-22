@@ -49,9 +49,11 @@ export type CleanupRecord = {
 };
 
 /** Sidecar JSON next to a recording. Disk is the source of truth. */
+export type AsrRecord = { engine: string; model: string; revision: string; comparisonOnly?: boolean; timing: string; warnings: string[]; windows: {start:number;end:number;text:string}[]; durationSec: number; totalSeconds: number; loadSeconds: number; inferenceSeconds: number; audioSha256: string; device: string; dtype: string; runtime: string; chunkSeconds: number };
 export type TranscriptionDocument = {
-  /** Experimental output stays in candidate storage, never a live transcript. */
-  asrExperiment?: { engine: string; model: string; revision: string; comparisonOnly: boolean; timing: string; warnings: string[]; windows: {start:number;end:number;text:string}[]; durationSec: number; totalSeconds: number; loadSeconds: number; inferenceSeconds: number; audioSha256: string; device: string; dtype: string; runtime: string; chunkSeconds: number };
+  asr?: AsrRecord;
+  /** Legacy Bark candidates are upgraded when reviewed and accepted. */
+  asrExperiment?: AsrRecord;
   entryId?: string;
   recordedDate?: string;
   recordedAt?: string;

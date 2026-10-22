@@ -14,14 +14,16 @@ import { requestCleanup } from './transcriptionLib.ts';
 import { q } from './queueLib.ts';
 import { ollanetIsConfigured } from './ollanetReadyLib.ts';
 import { assertEntryWritable } from './entryOperationLib.ts';
+import {isTranscriptionModel, type TranscriptionModel} from './asrModels.ts';
+import {barkAvailability} from './barkLib.ts';
 
-export type BatchScope = { year: string; selection: 'outdated' | 'flagged' | 'all'; model: 'large-v3' | 'turbo' };
+export type BatchScope = { year: string; selection: 'outdated' | 'flagged' | 'all'; model: TranscriptionModel };
 type Policy = 'review' | 'replace_unflagged';
 type State = 'idle' | 'preview' | 'running' | 'stopping' | 'stopped' | 'interrupted' | 'completed';
 type Outcome = 'current' | 'unavailable' | 'review' | 'applied' | 'failed';
 type Row = { file: string; entryId?: string; title: string; source?: { size: number; mtimeMs: number }; candidateId?: string; outcome?: Outcome; note?: string };
 type Job = { version: 1; id: string; state: State; scope: BatchScope; policy: Policy; cleanup?: boolean; rows: Row[]; current: string; createdAt?: string; finishedAt?: string };
-type Dependencies = { rescue: AudioRescueService; list: () => { jsonFile: string; day?: string; entryId?: string }[]; enabled: () => boolean; cleanupEnabled: () => boolean; cleanup: (file: string) => void; emit: () => void };
+type Dependencies = { rescue: AudioRescueService; list: () => { jsonFile: string; day?: string; entryId?: string }[]; modelIssue: (model: string) => string; enabled: () => boolean; cleanupEnabled: () => boolean; cleanup: (file: string) => void; emit: () => void };
 const read = (file: string): TranscriptionDocument => JSON.parse(fs.readFileSync(file, 'utf8'));
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 const yieldLoop = () => new Promise<void>(resolve => setImmediate(resolve));
@@ -44,14 +46,14 @@ export function currentPipeline(json: TranscriptionDocument, source: { size: num
 
 /** One explicit, durable batch. Neither construction nor preview starts FFmpeg/ASR. */
 export class TranscriptionBatchService {
-  private job: Job = { version: 1, id: '', state: 'idle', scope: { year: '', selection: 'outdated', model: 'large-v3' }, policy: 'review', rows: [], current: '' };
+  private job: Job = { version: 1, id: '', state: 'idle', scope: { year: '', selection: 'outdated', model: config.transcription.model }, policy: 'review', rows: [], current: '' };
   private deps: Dependencies;
   private task: Promise<void> | null = null;
   private planning = false;
   persistenceError = '';
   constructor(privateFile: string, deps: Partial<Dependencies> = {}) {
     this.file = privateFile;
-    this.deps = { rescue: audioRescue, list: () => listInboxNotes({ all: true, folder: 'active' }), enabled: () => config.queues.transcription.active, cleanupEnabled: () => ollanetIsConfigured() && Boolean(q.processing), cleanup: file => { requestCleanup(file); }, emit: () => {}, ...deps };
+    this.deps = { rescue: audioRescue, modelIssue: model => model === 'bark-pro' ? barkAvailability().reason : '', list: () => listInboxNotes({ all: true, folder: 'active' }), enabled: () => config.queues.transcription.active, cleanupEnabled: () => ollanetIsConfigured() && Boolean(q.processing), cleanup: file => { requestCleanup(file); }, emit: () => {}, ...deps };
     if (fs.existsSync(this.file)) {
       try {
         const saved = JSON.parse(fs.readFileSync(this.file, 'utf8')) as Job;
@@ -63,7 +65,7 @@ export class TranscriptionBatchService {
   }
   private file: string;
   private validateScope(value: BatchScope) {
-    if (!value || !/^(\d{4})?$/.test(value.year) || !['outdated', 'flagged', 'all'].includes(value.selection) || !['large-v3', 'turbo'].includes(value.model)) throw new Error('Choose a valid year, selection and model.');
+    if (!value || !/^(\d{4})?$/.test(value.year) || !['outdated', 'flagged', 'all'].includes(value.selection) || !isTranscriptionModel(value.model)) throw new Error('Choose a valid year, selection and model.');
   }
   private persist() {
     const temp = this.file + '.' + randomUUID() + '.tmp';
@@ -78,7 +80,7 @@ export class TranscriptionBatchService {
     const count = (outcome: Outcome) => this.job.rows.filter(row => row.outcome === outcome).length;
     const rows = this.job.rows.filter(row => filter === 'all' || (filter === 'work' ? !row.outcome || ['review','applied','failed'].includes(row.outcome) : row.outcome === filter));
     const safeOffset = Math.max(0, Math.min(Number.isFinite(offset) ? Math.floor(offset) : 0, Math.floor(Math.max(0, rows.length - 1) / 50) * 50));
-    return { id: this.job.id, state: this.job.state, scope: this.job.scope, policy: this.job.policy, planning: this.planning,
+    return { id: this.job.id, state: this.job.state, scope: this.job.scope, defaultModel: config.transcription.model, modelIssue: this.deps.modelIssue(this.job.scope.model), policy: this.job.policy, planning: this.planning,
       running: ['running', 'stopping'].includes(this.job.state), enabled: this.deps.enabled(), cleanupEnabled: this.deps.cleanupEnabled(), cleanup: this.job.cleanup, current: this.job.current,
       total: this.job.rows.length, remaining: this.job.rows.filter(row => !row.outcome).length, applied: count('applied'), review: count('review'), failed: count('failed'), skipped: count('current') + count('unavailable'),
       createdAt: this.job.createdAt, finishedAt: this.job.finishedAt, persistenceError: this.persistenceError,
@@ -120,6 +122,7 @@ export class TranscriptionBatchService {
     if (!['review', 'replace_unflagged'].includes(policy)) throw new Error('Choose how candidates should be saved.');
     if (!this.snapshot().remaining) throw new Error('There are no eligible recordings in this preview.');
     if (!this.deps.enabled()) throw new Error('Enable transcription in Settings before starting this batch.');
+    if (this.deps.modelIssue(this.job.scope.model)) throw new Error(this.deps.modelIssue(this.job.scope.model));
     if (cleanup && !this.deps.cleanupEnabled()) throw new Error('Readable processing is unavailable. Enable its queue/model, or start with original transcripts only.');
     this.job.policy = policy; this.job.cleanup = cleanup; this.launch(); return this.snapshot();
   }
@@ -138,6 +141,7 @@ export class TranscriptionBatchService {
     this.check(id);
     if (this.snapshot().running || this.job.state === 'preview') throw new Error('This batch is already running or has not been started.');
     if (!this.deps.enabled()) throw new Error('Enable transcription in Settings before resuming.');
+    if (this.deps.modelIssue(this.job.scope.model)) throw new Error(this.deps.modelIssue(this.job.scope.model));
     const targets = new Set(this.job.rows.filter(row => failedOnly ? row.outcome === 'failed' : !row.outcome || row.outcome === 'failed'));
     if (!targets.size) throw new Error('There is nothing left to resume.');
     for (const row of targets) { delete row.outcome; delete row.note; }

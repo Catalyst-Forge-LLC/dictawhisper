@@ -30,7 +30,7 @@ Config (first hit wins):
   ./config.json
   ~/.dictawhisper/config.json
 
-Requires Node 22.13+ and a Python with faster-whisper. See dictawhisper.com
+Requires Node 22.13+ and a local Bark Pro or faster-whisper runtime. See dictawhisper.com
 `;
 }
 
@@ -65,7 +65,7 @@ function init(home: boolean): void {
   mkdirSync(path.dirname(dest), { recursive: true });
   copyFileSync(exampleConfig, dest);
   console.log(`Wrote ${dest}`);
-  console.log('Edit whisper.python, then: dictawhisper doctor');
+  console.log('Install Bark Pro (scripts/setup-bark.ps1), or set transcription.model to large-v3/turbo and configure whisper.python. Then: dictawhisper doctor');
 }
 
 function runNode(script: string, extraEnv: NodeJS.ProcessEnv): ChildProcess {
@@ -85,7 +85,7 @@ function runNode(script: string, extraEnv: NodeJS.ProcessEnv): ChildProcess {
 function start(): void {
   const configFile = resolveExistingConfig();
   if (!configFile) {
-    fail('No config.json. Run: dictawhisper init\nThen edit whisper.python and run: dictawhisper doctor');
+    fail('No config.json. Run: dictawhisper init\nThen set up the selected transcription model and run: dictawhisper doctor');
   }
   if (!existsSync(uiDir)) {
     console.warn(`[ui] no packaged inbox at ${uiDir} — API only. In a checkout: pnpm --dir client build`);

@@ -52,16 +52,53 @@ for (const timed of [false,true]) test(`Bark ${timed ? 'timed' : 'untimed'} comp
   svc.transcribe(file,id); await svc.wait(id);
   const restarted = new AudioRescueService();
   const status = restarted.status(file,id);
-  assert.equal(status.job!.phase,'ready'); assert.equal(status.job!.comparisonOnly,true);
+  assert.equal(status.job!.phase,'ready'); assert.equal(status.job!.comparisonOnly,!timed);
   assert.equal(status.job!.text,'Bark words'); assert.equal(status.job!.segments!.length,timed?1:0);
   assert.equal(status.job!.experiment!.timing,timed?'model-token-estimates':'unavailable');
   assert.equal(restarted.summary(file).pending[0].model,'bark-pro');
-  await assert.rejects(restarted.apply(file,id,status.reviewToken),/comparison-only/);
+  if (timed) {
+    // Older saved candidates still use asrExperiment and must not require another run.
+    const candidateFile = path.join(root,'.dictawhisper','audio-improvements',id,'candidate.json');
+    const candidate = read(candidateFile); candidate.asrExperiment = {...candidate.asr,comparisonOnly:true}; delete candidate.asr;
+    fs.writeFileSync(candidateFile, JSON.stringify(candidate));
+    restarted.markBatch(file,id,randomUUID());
+    await restarted.apply(file,id,status.reviewToken);
+    assert.equal(read(file).text,'Bark words'); assert.equal(read(file).asr.engine,'bark-pro');
+    assert.equal(read(file).asrExperiment,undefined); assert.equal(read(file).asr.comparisonOnly,undefined);
+    assert.ok(read(file).transcriptionQuality.batchId); assert.ok(read(file).transcriptionQuality.source.sha256);
+    assert.equal(read(file).mayDos[0].status,'selected'); assert.equal(read(file).mayDos[0].start,null);
+    await restarted.restore(file,id);
+  } else await assert.rejects(restarted.apply(file,id,status.reviewToken),/no usable passage timing/);
   const after = read(file); delete after.entryId;
   assert.deepEqual(after,before);
   assert.equal(fs.readFileSync(file.slice(0,-5)+'.mp3','utf8'),'old working audio');
   assert.equal(fs.readFileSync(file.slice(0,-5)+'_original.m4a','utf8'),'original bytes');
   restarted.discard(file,id); assert.equal(restarted.summary(file).pending.length,0);
+});
+
+test('normal imports use the saved default, keep an in-flight model, restore engine metadata, and reject untimed Bark safely', async () => {
+  const file=makeEntry(), original=read(file); original.whisper={model:'large-v3'}; fs.writeFileSync(file,JSON.stringify(original));
+  let timed=true, whisperCalls=0;
+  const svc=new AudioRescueService({
+    barkAvailability:()=>({available:true,reason:''}),
+    enhance:async(_input,out)=>{fs.writeFileSync(out,'prepared'); config.transcription.model='turbo'; return {meanDb:-20,peakDb:-10,durationSec:4,gainDb:0,suggestedPreset:'original'};},
+    bark:async(_input,out)=>{fs.writeFileSync(out,JSON.stringify({text:'Bark words',segments:timed?[{start:1,end:3,text:'Bark words',words:[{word:'Bark',start:1,end:2},{word:'words',start:2,end:3}]}]:[],asr:{...experiment,timing:timed?'model-token-estimates':'unavailable'}}));},
+    transcribe:async(_input,out,model)=>{whisperCalls++;assert.equal(model,'turbo');fs.writeFileSync(out,JSON.stringify({text:'Whisper words',segments:[{start:0,end:2,text:'Whisper words'}],whisper:{model}}));},
+  });
+  const previous=config.transcription.model;
+  try {
+    config.transcription.model='bark-pro';
+    await svc.importAudio(file.slice(0,-5)+'.mp3',file);
+    const bark=read(file); assert.equal(whisperCalls,0);assert.equal(bark.asr.engine,'bark-pro');assert.equal(bark.whisper,undefined);
+    assert.equal(bark.segments[0].words.length,2);assert.equal(bark.transcriptionQuality.model,'bark-pro');assert.equal(bark.cleanupSkipped,undefined);
+    await svc.importAudio(file.slice(0,-5)+'.mp3',file);
+    assert.equal(whisperCalls,1);assert.equal(read(file).asr,undefined);assert.equal(read(file).whisper.model,'turbo');
+    await svc.restore(file,read(file).audioEnhancement.versionId);assert.equal(read(file).asr.engine,'bark-pro');assert.equal(read(file).whisper,undefined);
+    await svc.restore(file,bark.audioEnhancement.versionId);assert.equal(read(file).whisper.model,'large-v3');assert.equal(read(file).text,'Old words');
+    const before=fs.readFileSync(file,'utf8');timed=false;
+    await assert.rejects(svc.importAudio(file.slice(0,-5)+'.mp3',file,'bark-pro'),/no usable passage timing/);
+    assert.equal(fs.readFileSync(file,'utf8'),before);
+  } finally { config.transcription.model=previous; }
 });
 
 test('Bark runtime failure can be retried and malformed candidate timing is rejected', async () => {

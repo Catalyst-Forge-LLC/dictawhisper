@@ -19,6 +19,9 @@ test('empty config file gets defaults', () => {
   assert.equal(parsed.ollanet.required, false);
   assert.equal(parsed.audio.preprocess, true);
   assert.equal(parsed.journal.embedHost, 'local');
+  assert.equal(parsed.transcription.model, 'bark-pro');
+  assert.equal(dictaConfigFileSchema.parse({transcription:{model:'turbo'}}).transcription.model, 'turbo');
+  assert.throws(() => dictaConfigFileSchema.parse({transcription:{model:'shell command'}}));
 });
 
 test('unknown keys are stripped', () => {

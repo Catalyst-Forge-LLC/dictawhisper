@@ -64,6 +64,7 @@ const config = JSON.parse(original);
 config.watch.roots = [];
 config.whisper.python = path.join(work, 'missing-python');
 config.whisper.device = 'cpu';
+config.transcription.model = 'large-v3';
 config.audio.preprocess = false;
 config.ollanet.machine = '';
 config.ollanet.cleanModel = '';

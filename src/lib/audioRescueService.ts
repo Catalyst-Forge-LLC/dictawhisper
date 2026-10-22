@@ -4,7 +4,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { config } from '../config.ts';
 import type { TranscriptionDocument } from '../types/transcription.ts';
 import { enhanceAudio, enhancementPresets, findOriginalAudio, type EnhancementPreset, type EnhancementReport } from './audioEnhancementLib.ts';
-import { transcribeWithQuality } from './transcriptionQualityLib.ts';
+import { transcribeWithQuality, annotateBarkCandidate, barkHasUsableTiming } from './transcriptionQualityLib.ts';
+import { isTranscriptionModel } from './asrModels.ts';
 import { allowedRoots, resolveAllowedPath } from './pathAllowLib.ts';
 import { assertEntryWritable, withEntryOperation } from './entryOperationLib.ts';
 import { isSkippedWatchPath } from './fileSettleLib.ts';
@@ -34,7 +35,7 @@ type Dependencies = {
 };
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const SOURCE_EXT = /^\.(webm|mp3|m4a|wav|ogg)$/i;
-const transcriptKeys = ['text', 'segments', 'language', 'elapsed', 'whisper', 'cleanedTranscription', 'cleanup', 'cleanupHistory', 'thinking', 'meta', 'promptVersion', 'playbackCues', 'playbackCuesSource', 'cleanupError', 'cleanupAttempts', 'cleanupSkipped', 'audioError', 'audioEnhancement', 'transcriptionQuality'] as const;
+const transcriptKeys = ['text', 'segments', 'language', 'elapsed', 'whisper', 'asr', 'asrExperiment', 'cleanedTranscription', 'cleanup', 'cleanupHistory', 'thinking', 'meta', 'promptVersion', 'playbackCues', 'playbackCuesSource', 'cleanupError', 'cleanupAttempts', 'cleanupSkipped', 'audioError', 'audioEnhancement', 'transcriptionQuality'] as const;
 const jsonRead = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const fingerprint = (json: TranscriptionDocument) => createHash('sha256').update(JSON.stringify([json.text, json.segments, json.cleanedTranscription, json.cleanup, json.whisper, json.audioEnhancement])).digest('hex');
 const samePath = (a: string, b: string) => process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);
@@ -159,7 +160,8 @@ export class AudioRescueService {
     const candidate: TranscriptionDocument | null = job && ['ready', 'applied'].includes(job.phase) ? jsonRead(owned(selected!.root, job.id, 'candidate.json')) : null;
     return {
       pending: reviewCandidates(rows, current.json.audioEnhancement?.versionId),
-      job: job ? { ...job, comparisonOnly: job.model === BARK_MODEL, ...(candidate ? { text: String(candidate.text || ''), experiment: candidate.asrExperiment, quality: candidate.transcriptionQuality, segments: Array.isArray(candidate.segments) ? candidate.segments.map(({start, end, text}) => ({start, end, text})) : [] } : {}) } : null,
+      defaultModel: config.transcription.model,
+      job: job ? { ...job, comparisonOnly: job.model === BARK_MODEL && (!candidate || !barkHasUsableTiming(candidate)), ...(candidate ? { text: String(candidate.text || ''), experiment: candidate.asr || candidate.asrExperiment, quality: candidate.transcriptionQuality, segments: Array.isArray(candidate.segments) ? candidate.segments.map(({start, end, text}) => ({start, end, text})) : [] } : {}) } : null,
       bark: this.deps.barkAvailability(),
       currentText: current.json.text || '', activeVersionId: current.json.audioEnhancement?.versionId || null,
       currentReadableText: current.json.cleanedTranscription || '',
@@ -192,10 +194,10 @@ export class AudioRescueService {
     if (existing) return this.status(file, existing.job.id);
     entry(file, true);
     if (!enhancementPresets.includes(options.preset as EnhancementPreset)) throw new Error('Choose a supported audio preset.');
-    if (options.model !== 'large-v3' && options.model !== 'turbo' && options.model !== BARK_MODEL) throw new Error('Choose large-v3, turbo or experimental Bark Pro.');
+    if (!isTranscriptionModel(options.model)) throw new Error('Choose Bark Pro, Whisper large-v3 or Whisper turbo.');
     if (options.model === BARK_MODEL && !this.deps.barkAvailability().available) throw new Error(this.deps.barkAvailability().reason);
     if (typeof options.vadFilter !== 'boolean') throw new Error('Choose a speech detection setting.');
-    if (options.model === BARK_MODEL && options.vadFilter) throw new Error('Bark comparison includes all audio; speech detection must be off.');
+    if (options.model === BARK_MODEL && options.vadFilter) throw new Error('Bark includes all audio; speech detection must be off.');
     const source = findOriginalAudio(current.path);
     if (!source) throw new Error('Source audio was not found next to this entry.');
     checked(source.file);
@@ -228,12 +230,12 @@ export class AudioRescueService {
       if (job.model === BARK_MODEL) await this.deps.bark(owned(root, id, 'enhanced.wav'), output);
       else await this.deps.transcribe(owned(root, id, 'enhanced.wav'), output, job.model, job.vadFilter, job.report);
       const candidate = jsonRead(output) as TranscriptionDocument;
+      if (job.model === BARK_MODEL) annotateBarkCandidate(candidate, job.report);
       if (candidate.transcriptionQuality) {
         candidate.transcriptionQuality.source = { size: job.sourceSize!, mtimeMs: job.sourceMtimeMs!, sha256: job.sourceHash };
         writeEntryJson(output, JSON.stringify(candidate, null, 2));
       }
       if (job.model === BARK_MODEL) {
-        if (!candidate.text?.trim() || candidate.asrExperiment?.engine !== BARK_MODEL || candidate.asrExperiment.comparisonOnly !== true) throw new Error('Bark produced no usable comparison. Your saved transcript is unchanged.');
         if (candidate.segments?.length) assertCandidate(candidate);
       } else assertCandidate(candidate);
       job.phase = 'ready'; save(root, job);
@@ -250,7 +252,6 @@ export class AudioRescueService {
   }
   async apply(file: string, id: string, reviewToken?: unknown) {
     const { root, job, current } = this.locate(file, id);
-    if (job.model === BARK_MODEL) throw new Error('Bark Pro is comparison-only while recognition and timing are evaluated. Your saved transcript is unchanged.');
     if (current.json.audioEnhancement?.versionId === id) return this.status(file, id);
     entry(file, true);
     if (job.phase !== 'ready') throw new Error('A completed candidate transcript is required.');
@@ -261,7 +262,13 @@ export class AudioRescueService {
     return withEntryOperation([current.path], async () => {
       let fresh = jsonRead(current.path) as TranscriptionDocument;
       if (fingerprint(fresh) !== expected) throw new Error('The current transcript changed. Review the updated comparison before accepting; your current version was kept.');
-      const candidate = jsonRead(owned(root, id, 'candidate.json')) as TranscriptionDocument; assertCandidate(candidate);
+      const candidate = jsonRead(owned(root, id, 'candidate.json')) as TranscriptionDocument;
+      if (job.model === BARK_MODEL) {
+        if (!barkHasUsableTiming(candidate)) throw new Error('Bark returned no usable passage timing. Keep this result for comparison, or retry with Whisper in Settings.');
+        annotateBarkCandidate(candidate, job.report);
+        candidate.transcriptionQuality!.source = {size: job.sourceSize!, mtimeMs: job.sourceMtimeMs!, sha256: job.sourceHash};
+      }
+      assertCandidate(candidate);
       // The immutable sibling is installed first. One atomic JSON swap then selects
       // both its audio and transcript. A crash cannot pair new text with old audio.
       const destination = checked(current.path.slice(0, -5) + `_enhanced-${id}.wav`).path;
@@ -274,7 +281,7 @@ export class AudioRescueService {
       job.acceptedBaseline = fingerprint(fresh); save(root, job);
       const next = { ...fresh };
       for (const key of transcriptKeys) delete next[key];
-      for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
+      for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'asr', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
       next.audioEnhancement = { versionId: id, preset: job.preset, model: job.model, appliedAt: new Date().toISOString() };
       // Existing decisions survive; old timestamps may refer to trimmed audio.
       next.mayDos = fresh.mayDos?.map(row => ({ ...row, start: null, end: null }));
@@ -285,7 +292,9 @@ export class AudioRescueService {
     });
   }
   /** Normal capture uses the same preparation and diagnostics, publishing only after success. */
-  async importAudio(audio: string, file: string, model: string, preprocess = true) {
+  async importAudio(audio: string, file: string, model: string = config.transcription.model, preprocess = true) {
+    if (!isTranscriptionModel(model)) throw new Error('Choose a supported transcription model in Settings.');
+    if (model === BARK_MODEL && !this.deps.barkAvailability().available) throw new Error(this.deps.barkAvailability().reason);
     const current = checked(file);
     const source = findOriginalAudio(file) || { file: checked(audio).path, original: false };
     checked(source.file);
@@ -304,15 +313,21 @@ export class AudioRescueService {
         job.sourceSize = before.size; job.sourceMtimeMs = before.mtimeMs; job.sourceHash = await fileHash(snapshot);
         job.report = await this.deps.enhance(snapshot, prepared, job.preset);
         job.phase = 'transcribing'; save(current.root, job);
-        await this.deps.transcribe(prepared, output, model, false, job.report);
+        if (model === BARK_MODEL) await this.deps.bark(prepared, output);
+        else await this.deps.transcribe(prepared, output, model, false, job.report);
         const candidate = jsonRead(output) as TranscriptionDocument;
+        if (model === BARK_MODEL) {
+          annotateBarkCandidate(candidate, job.report);
+          writeEntryJson(output, JSON.stringify(candidate, null, 2));
+          if (!barkHasUsableTiming(candidate)) throw new Error('Bark returned no usable passage timing. Candidate saved; choose Whisper in Settings and retry. Your current transcript was kept.');
+        }
         // An empty first import is retained for review; an empty retry must not erase existing words.
         if (initial.text?.trim()) assertCandidate(candidate);
         const fresh = fs.existsSync(file) ? jsonRead(file) as TranscriptionDocument : {};
         if (fingerprint(fresh) !== baseline) throw new Error('Transcript changed during processing. Candidate saved; current version kept.');
         const next: TranscriptionDocument = { ...fresh, entryId: identity.entryId };
         for (const key of transcriptKeys) delete next[key];
-        for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
+        for (const key of ['text', 'segments', 'language', 'elapsed', 'whisper', 'asr', 'transcriptionQuality'] as const) if (candidate[key] !== undefined) (next as Record<string, unknown>)[key] = candidate[key];
         if (next.transcriptionQuality) next.transcriptionQuality.source = { size: before.size, mtimeMs: before.mtimeMs, sha256: job.sourceHash };
         writeEntryJson(output, JSON.stringify({ ...candidate, transcriptionQuality: next.transcriptionQuality }, null, 2));
         const destination = checked(file.slice(0, -5) + `_enhanced-${job.id}.wav`).path;

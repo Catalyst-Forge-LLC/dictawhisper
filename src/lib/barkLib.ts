@@ -18,7 +18,7 @@ export function barkAvailability() {
   const available = fs.existsSync(paths.python) && fs.existsSync(paths.script) && ['dictawhisper-model.json','model.safetensors','config.json','tokenizer.json'].every(file => fs.existsSync(path.join(paths.model, file)));
   return { available, reason: available ? '' : 'Install the separate Bark Pro runtime with scripts/setup-bark.ps1, then refresh status.' };
 }
-/** Local-only candidate; diagnostics stay bounded and no transcript is logged. */
+/** Local-only transcription; diagnostics stay bounded and no transcript is logged. */
 export function runBark(audio: string, output: string): Promise<void> {
   return runAlternateAsr(() => new Promise<void>((resolve, reject) => {
     const ready = barkAvailability();
@@ -35,8 +35,8 @@ export function runBark(audio: string, output: string): Promise<void> {
     child.on('error', error => { clearTimeout(timer); reject(new Error(`Bark runtime could not start: ${error.message}`)); });
     child.on('close', code => {
       clearTimeout(timer);
-      if (timedOut) reject(new Error('Bark comparison timed out after 45 minutes. Your saved transcript is unchanged.'));
-      else if (code !== 0) reject(new Error(`Bark comparison failed (${code}). ${tail.trim()}`));
+      if (timedOut) reject(new Error('Bark transcription timed out after 45 minutes. Your saved transcript is unchanged.'));
+      else if (code !== 0) reject(new Error(`Bark transcription failed (${code}). ${tail.trim()}`));
       else resolve();
     });
   }));

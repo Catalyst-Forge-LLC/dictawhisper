@@ -13,6 +13,9 @@
     "recursiveYears": true,
     "createMissingRoots": false
   },
+  "transcription": {
+    "model": "bark-pro"
+  },
   "whisper": {
     "python": "python",
     "model": "large-v3",

@@ -59,6 +59,30 @@ test('automatic replacement holds flagged candidates and refresh is explicit', a
   assert.equal(f.service.snapshot().review, 1); assert.equal(read(f.files[0].jsonFile).text, 'Old transcript');
 });
 
+test('Bark batch scope survives default changes and preserves provenance through automatic replacement', async () => {
+  const t=setup(1), previous=config.transcription.model;
+  const rescue=new AudioRescueService({
+    barkAvailability:()=>({available:true,reason:''}),
+    enhance:async(_source,out)=>{fs.writeFileSync(out,'prepared');return {meanDb:-20,peakDb:-10,durationSec:3,gainDb:0,suggestedPreset:'original'};},
+    bark:async(_source,out)=>{fs.writeFileSync(out,JSON.stringify({text:'Bark words',segments:[{start:0,end:2,text:'Bark words'}],asr:{engine:'bark-pro',timing:'model-token-estimates',durationSec:3}}));},
+    transcribe:async()=>{throw new Error('Saved Bark scope must not switch to Whisper');},
+  });
+  const deps={...t.deps,rescue,modelIssue:()=>''};
+  const service=new TranscriptionBatchService(t.jobFile,deps);
+  try {
+    const plan=await service.preview({...scope,model:'bark-pro'});config.transcription.model='turbo';
+    const restarted=new TranscriptionBatchService(t.jobFile,deps);
+    assert.equal(restarted.snapshot().scope.model,'bark-pro');assert.equal(restarted.snapshot().defaultModel,'turbo');
+    restarted.start(plan.id,'replace_unflagged');await restarted.wait();
+    assert.equal(restarted.snapshot().applied,1);
+    const json=read(t.files[0].jsonFile);assert.equal(json.asr.engine,'bark-pro');assert.equal(json.transcriptionQuality.batchId,plan.id);
+    const next=await restarted.preview({...scope,model:'bark-pro'});assert.equal(next.remaining,0);
+    const blocked=new TranscriptionBatchService(path.join(root,randomUUID()),{...deps,modelIssue:()=> 'Install Bark runtime'});
+    const preview=await blocked.preview({...scope,model:'bark-pro',selection:'all'});
+    assert.throws(()=>blocked.start(preview.id,'review'),/Install Bark/);assert.equal(blocked.snapshot().state,'preview');
+  }finally{config.transcription.model=previous;}
+});
+
 test('stop finishes current work; restart does not launch models; resume reuses candidates and acknowledges acceptance after a crash', async () => {
   const t = setup(3), plan = await t.service.preview(scope);
   t.service.start(plan.id, 'review'); t.service.stop(plan.id); await t.service.wait();

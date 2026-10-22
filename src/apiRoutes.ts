@@ -36,6 +36,7 @@ import { BundleError, listTrash, moveToTrash, previewRestore, restoreTrash, purg
 import { organizationPreview, organizeEntry } from './lib/entryOrganizationLib.ts';
 import { backfillEntryIds } from './lib/entryIdentityLib.ts';
 import { effectiveSettings } from './lib/settingsLib.ts';
+import { createTranscriptionSettingsRoutes } from './settingsRoutes.ts';
 import { rebuildJournalIndex } from './lib/journalService.ts';
 
 const upload = multer({
@@ -68,6 +69,7 @@ function requireAllowedFile(req: express.Request, res: express.Response): string
 }
 
 export const apiRoutes = [
+  ...createTranscriptionSettingsRoutes(),
   ...audioRescueRoutes,
   ...createTranscriptionBatchRoutes(),
   {path:'/tools/probe/mark',method:'POST',handler:async(req:express.Request,res:express.Response)=>{try{res.json(await markReviewedAudio(req.body?.files));}catch(error){res.status(409).json({error:String(error)});}}},
@@ -137,6 +139,7 @@ export const apiRoutes = [
         host: config.http.host,
         port: config.http.port,
         whisper: resolveWhisperModel(),
+        transcription: report.transcription,
         whisperWorker: report.whisper.worker,
         device: report.whisper.device,
         ollanet: {

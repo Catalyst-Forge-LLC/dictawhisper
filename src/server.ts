@@ -24,7 +24,7 @@ import {
 import { initVoiceRootPipeline } from './lib/organizationLib.ts';
 import { closeAllWatchers } from './classes/Watcher.ts';
 import { formatDuration, logSettleConfig } from './lib/fileSettleLib.ts';
-import { startWhisperWorker, stopWhisperWorker, resolveWhisperModel } from './lib/whisperLib.ts';
+import { startWhisperWorker, stopWhisperWorker } from './lib/whisperLib.ts';
 import { initQueues } from './lib/queueLib.ts';
 import { collectHealth, printHealthReport } from './lib/healthLib.ts';
 import { initJournalIndex, startJournalIndex } from './lib/journalService.ts';
@@ -71,7 +71,7 @@ function startQueues(): void {
     transcription: {
       processor: async (task, callback) => {
         try {
-          const result = await audioRescue.importAudio(task.file, task.transcriptionFile, resolveWhisperModel(), config.audio.preprocess);
+          const result = await audioRescue.importAudio(task.file, task.transcriptionFile, config.transcription.model, config.audio.preprocess);
           callback(null, result);
         } catch (error) {
           console.error(
@@ -200,7 +200,7 @@ async function main() {
   });
   initVoiceRootPipeline(config.watch.roots);
 
-  void startWhisperWorker().catch((error: Error) => {
+  if (config.transcription.model !== 'bark-pro') void startWhisperWorker(config.transcription.model).catch((error: Error) => {
     console.warn(`[whisper] worker did not start (${error.message}); one-shot fallback until it recovers`);
   });
 }

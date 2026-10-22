@@ -4,6 +4,7 @@ import path from 'path';
 import { z } from 'zod';
 import { localslipGet } from './lib/localslipGet.ts';
 import { resolveApiListenPort } from './lib/devPorts.ts';
+import { transcriptionModels, type TranscriptionModel } from './lib/asrModels.ts';
 export { resolveApiListenPort } from './lib/devPorts.ts';
 
 export function resolveConfigPath(
@@ -91,6 +92,7 @@ export const dictaConfigFileSchema = z
     http: httpSchema,
     watch: watchSchema,
     whisper: whisperSchema,
+    transcription: z.object({ model: z.enum(transcriptionModels).default('bark-pro') }).default({}),
     audio: z.object({ preprocess: z.boolean().default(true) }).default({}),
     queues: queuesSchema,
     ollanet: ollanetSchema,
@@ -99,6 +101,7 @@ export const dictaConfigFileSchema = z
   .strip();
 
 export type DictaConfig = {
+  transcription: { model: TranscriptionModel };
   http: {
     host: string;
     port: number;
@@ -176,6 +179,7 @@ export function loadConfig(configPath: string = resolveConfigPath()): DictaConfi
   const parsed = dictaConfigFileSchema.parse(readJson(configPath));
   const configDir = path.dirname(path.resolve(configPath));
   const config: DictaConfig = {
+    transcription: { model: z.enum(transcriptionModels).parse(process.env.DICTA_TRANSCRIPTION_MODEL?.trim() || parsed.transcription.model) },
     http: {
       host: process.env.HOST?.trim() || parsed.http.host,
       port: resolveListenPort(
