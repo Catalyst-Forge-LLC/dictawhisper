@@ -74,6 +74,12 @@ Open **Settings → Transcription → Retranscribe library** (also in Data and m
 
 Choose **Review before replacing**, or explicitly choose **Replace entries without review signals** to update unflagged entries with saved previous versions while holding flagged candidates for review. Optionally queue readable text, tags and MayDos for replacements. Then Start the previewed batch. Progress and candidate review are available in **Activity**; only 50 result summaries load at a time. Stop finishes the current entry. Restart never automatically starts a saved batch: Resume continues its checkpoints and Retry failed only targets failures. Current titles, stars, tags and MayDo decisions are retained. Undo is conditional on no later transcript/cleanup changes; earlier sidecars remain saved even when automatic Undo is blocked. A first import has no earlier transcript to undo.
 
+## Compare one recording with Bark Pro (experimental)
+
+**More → Improve audio & retranscribe → Bark Pro · experimental comparison** runs an optional local English model on one recording. It retains raw output separately, offers native model-estimated passage timing when valid, and supports listening, copy and JSON export. Done keeps the comparison for later; it cannot replace your saved transcript in this trial. Whisper remains the default and batch engine.
+
+Install once in PowerShell with `& ./scripts/setup-bark.ps1 -Python 'C:/path/to/Python311/python.exe'`, then restart DictaWhisper. The separate `.venv-bark` uses pinned PyTorch/Transformers and model weights; it does not change the Whisper runtime. The exercised setup uses NVIDIA CUDA/BF16. Full setup, limitations and test evidence: [Bark experiment guide](docs/BARK_EXPERIMENT.md).
+
 ## Review MayDos and extract older entries
 
 Cleanup also extracts **MayDos**: possible actions stated in the transcript, including tentative intentions. Each starts as **Suggested** and can become **Selected**, **Done**, or **Dismissed**. Its source quote and available audio timing stay with it. Re-extraction preserves IDs and your status choices, keeping decided items even when the model omits them. Filter entries by any MayDos or a particular status.

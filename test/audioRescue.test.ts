@@ -28,6 +28,60 @@ function makeEntry() {
   return file;
 }
 const options = { preset: 'quiet', model: 'large-v3', vadFilter: false };
+const barkOptions = { ...options, model: 'bark-pro' };
+const experiment = { engine:'bark-pro', model:'ConwayResearch/Underdog-Bark-3.0-Pro', revision:'pinned-fixture', comparisonOnly:true, device:'cuda', dtype:'torch.bfloat16', runtime:'fixture', timing:'unavailable', warnings:['No model timing'], chunkSeconds:60, windows:[{start:0,end:4,text:'Bark words'}], audioSha256:'fixture', durationSec:4, loadSeconds:1, inferenceSeconds:1, totalSeconds:2 };
+
+test('Bark setup and incompatible speech detection fail before creating an attempt', () => {
+  const file = makeEntry(), before = fs.readFileSync(file, 'utf8');
+  const unavailable = new AudioRescueService({barkAvailability:()=>({available:false,reason:'Install isolated runtime'})});
+  assert.throws(() => unavailable.prepare(file, barkOptions), /Install isolated/);
+  const available = new AudioRescueService({barkAvailability:()=>({available:true,reason:''})});
+  assert.throws(() => available.prepare(file, {...barkOptions,vadFilter:true}), /speech detection must be off/);
+  assert.equal(fs.readFileSync(file, 'utf8'), before);
+});
+
+for (const timed of [false,true]) test(`Bark ${timed ? 'timed' : 'untimed'} comparisons persist without replacing text, audio or decisions`, async () => {
+  const file = makeEntry(), before = read(file);
+  const svc = new AudioRescueService({
+    barkAvailability:()=>({available:true,reason:''}),
+    enhance:async (_source,output)=>{ fs.writeFileSync(output,'prepared'); return {meanDb:-30,peakDb:-15,durationSec:4,gainDb:0,suggestedPreset:'original'}; },
+    transcribe:async ()=>{ throw new Error('Whisper must not run for Bark'); },
+    bark:async (_audio,output)=>{ fs.writeFileSync(output,JSON.stringify({text:'Bark words',segments:timed?[{start:1,end:3,text:'Bark words'}]:[],asrExperiment:{...experiment,timing:timed?'model-token-estimates':'unavailable'}})); },
+  });
+  const id = svc.prepare(file,barkOptions).job!.id; await svc.wait(id);
+  svc.transcribe(file,id); await svc.wait(id);
+  const restarted = new AudioRescueService();
+  const status = restarted.status(file,id);
+  assert.equal(status.job!.phase,'ready'); assert.equal(status.job!.comparisonOnly,true);
+  assert.equal(status.job!.text,'Bark words'); assert.equal(status.job!.segments!.length,timed?1:0);
+  assert.equal(status.job!.experiment!.timing,timed?'model-token-estimates':'unavailable');
+  assert.equal(restarted.summary(file).pending[0].model,'bark-pro');
+  await assert.rejects(restarted.apply(file,id,status.reviewToken),/comparison-only/);
+  const after = read(file); delete after.entryId;
+  assert.deepEqual(after,before);
+  assert.equal(fs.readFileSync(file.slice(0,-5)+'.mp3','utf8'),'old working audio');
+  assert.equal(fs.readFileSync(file.slice(0,-5)+'_original.m4a','utf8'),'original bytes');
+  restarted.discard(file,id); assert.equal(restarted.summary(file).pending.length,0);
+});
+
+test('Bark runtime failure can be retried and malformed candidate timing is rejected', async () => {
+  const file = makeEntry(); let attempts = 0;
+  const svc = new AudioRescueService({
+    barkAvailability:()=>({available:true,reason:''}),
+    enhance:async (_source,output)=>{fs.writeFileSync(output,'prepared');return {meanDb:-30,peakDb:-15,durationSec:4,gainDb:0,suggestedPreset:'original'};},
+    bark:async (_audio,output)=>{
+      if (++attempts === 1) throw new Error('CUDA unavailable');
+      fs.writeFileSync(output,JSON.stringify({text:'Bark words',segments:attempts===2?[{start:-3,end:1,text:'Bark words'}]:[],asrExperiment:experiment}));
+    },
+  });
+  const id=svc.prepare(file,barkOptions).job!.id; await svc.wait(id);
+  for (const expected of ['CUDA unavailable','No usable timed','']) {
+    svc.transcribe(file,id); await svc.wait(id); const status=svc.status(file,id);
+    if (expected) { assert.equal(status.job!.phase,'failed'); assert.ok(status.job!.error!.includes(expected)); }
+    else assert.equal(status.job!.phase,'ready');
+    assert.equal(read(file).text,'Old words');
+  }
+});
 const service = () => new AudioRescueService({
   enhance: async (source, output) => { assert.equal(fs.readFileSync(source, 'utf8'), 'original bytes'); fs.writeFileSync(output, 'new audio'); return { meanDb: -40, peakDb: -25, durationSec: 4, gainDb: 18, suggestedPreset: 'quiet' }; },
   transcribe: async (_audio, output, model, vad) => { assert.equal(model, 'large-v3'); assert.equal(vad, false); fs.writeFileSync(output, JSON.stringify({ text: 'Recovered words', segments: [{ start: 1, end: 3, text: 'Recovered words' }], whisper: { model, vad_filter: vad } })); },

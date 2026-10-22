@@ -218,7 +218,13 @@ if (process.env.DICTA_FIXTURE_AUDIO_RESCUE === '1') {
   for (let i = 0; i < (quiet.length - 44) / 2; i++) quiet.writeInt16LE(Math.round(100 * Math.sin(i * 2 * Math.PI * 440 / 8000)), 44 + i * 2);
   for (const file of [...notes.keys()].filter(file => /Fixture (19[89]|20[01])/.test(file))) fs.writeFileSync(file.slice(0, -5) + '_original.wav', quiet);
   let candidateCount = 0;
-  const rescue = new AudioRescueService({ transcribe: async (_audio, output, model, vad, report) => {
+  const rescue = new AudioRescueService({
+    barkAvailability:()=>({available:true,reason:''}),
+    bark:async (_audio,output)=>{
+      await new Promise(resolve=>setTimeout(resolve,1200));
+      fs.writeFileSync(output,JSON.stringify({text:'Bark fixture speech. This is a comparison, not a replacement.',segments:[{start:0,end:2,text:'Bark fixture speech.'},{start:2,end:4,text:'This is a comparison, not a replacement.'}],asrExperiment:{engine:'bark-pro',model:'ConwayResearch/Underdog-Bark-3.0-Pro',revision:'fixture-only',comparisonOnly:true,device:'fixture',dtype:'fixture',runtime:'fixture',timing:'model-token-estimates',warnings:[],chunkSeconds:60,windows:[{start:0,end:4,text:'Bark fixture speech. This is a comparison, not a replacement.'}],audioSha256:'fixture-only',durationSec:4,loadSeconds:.1,inferenceSeconds:.2,totalSeconds:.3}}));
+    },
+    transcribe: async (_audio, output, model, vad, report) => {
     await new Promise(resolve => setTimeout(resolve, 2200));
     fs.writeFileSync(output, JSON.stringify({ text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair. This is deterministic test text, not speech recognition output.', segments: [{ start: 0, end: 4, text: 'Recovered fixture speech. Remember to call the contractor about the kitchen repair.' }], whisper: { model, vad_filter: vad }, transcriptionQuality: {version:1,model,vadFilter:vad,preparation:report,issues:++candidateCount % 2 ? [] : [{kind:'uncertain',start:1,end:3,message:'Fixture review signal: listen to this passage.',alternative:'Alternative fixture speech retained for review.'}]} }));
   } });

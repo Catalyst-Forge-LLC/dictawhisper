@@ -30,6 +30,11 @@
     "bin",
     "dist",
     "scripts/transcribe_faster_whisper.py",
+    "scripts/transcribe_bark.py",
+    "scripts/setup_bark.py",
+    "scripts/setup-bark.ps1",
+    "scripts/requirements-bark.txt",
+    "docs/BARK_EXPERIMENT.md",
     "config.example.json",
     "README.md",
     "LICENSE"

@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import TranscriptionQuality from './TranscriptionQuality.svelte';
+  import BarkComparison from './BarkComparison.svelte';
   export let file;
   export let initialAttemptId = '';
   const dispatch = createEventDispatcher();
@@ -11,11 +12,13 @@
     { id: 'noise', name: 'Background noise', description: 'Reduce steady noise and low rumble, then level speech.' },
     { id: 'original', name: 'Unfiltered original', description: 'Transcribe the source again without enhancement.' },
   ];
-  const phases = { preparing: 'Preparing audio preview…', preview: 'Audio preview ready', transcribing: 'Waiting for Whisper or transcribing…', ready: 'New transcript ready to review', applied: 'Improved version saved', reverted: 'Previous version restored', discarded: 'Current version kept', failed: 'This attempt needs attention' };
+  const phases = { preparing: 'Preparing audio preview…', preview: 'Audio preview ready', transcribing: 'Waiting for the transcription engine or transcribing…', ready: 'New transcript ready to review', applied: 'Improved version saved', reverted: 'Previous version restored', discarded: 'Current version kept', failed: 'This attempt needs attention' };
+  const modelLabel = value => value === 'bark-pro' ? 'Bark Pro · experimental' : `Whisper ${value}`;
   let dialog, audio, heading, priorFocus, timer, alive = true, request = 0;
   let loading = true, busy = false, error = '', result = null, attemptId = initialAttemptId, showSetup = false;
   let preset = 'auto', model = 'large-v3', vadFilter = false, variant = 'enhanced', position = 0, resume = false;
   $: job = result?.job;
+  $: comparisonOnly = job?.comparisonOnly;
   $: running = ['preparing', 'transcribing'].includes(job?.phase);
   $: previewAvailable = ['preview', 'transcribing', 'ready', 'applied'].includes(job?.phase) || job?.phase === 'failed' && job?.failedStage === 'transcribing';
   $: audioSource = job && previewAvailable ? `/notes/audio-improvement/audio?file=${encodeURIComponent(file)}&id=${job.id}&variant=${variant}` : '';
@@ -84,25 +87,26 @@
 
 <dialog bind:this={dialog} aria-labelledby="audio-improvement-heading" on:cancel|preventDefault={close}>
   <header>
-    <div><p class="eyebrow">AUDIO & TRANSCRIPTION</p><h2 id="audio-improvement-heading" bind:this={heading} tabindex="-1">{job?.phase === 'ready' && !showSetup ? 'Review new transcript' : 'Improve audio & retranscribe'}</h2></div>
+    <div><p class="eyebrow">AUDIO & TRANSCRIPTION</p><h2 id="audio-improvement-heading" bind:this={heading} tabindex="-1">{job?.phase === 'ready' && !showSetup ? comparisonOnly ? 'Compare Bark Pro' : 'Review new transcript' : 'Improve audio & retranscribe'}</h2></div>
     <button class="dw-btn-secondary" disabled={busy} on:click={close}>Close</button>
   </header>
   <div class="content">
-    <p class="intro">{job?.phase === 'ready' && !showSetup ? 'The entry still uses your saved version. Compare it with the new transcript, then choose which to keep.' : 'Prepare a listening preview, then create a new transcript. Your current version stays in place until you choose the new one.'}</p>
+    {#if !(comparisonOnly && job?.phase === 'ready' && !showSetup)}<p class="intro">{comparisonOnly && !showSetup ? 'Compare Bark Pro with your saved transcript. This experimental result is kept separately for listening and review.' : job?.phase === 'ready' && !showSetup ? 'The entry still uses your saved version. Compare it with the new transcript, then choose which to keep.' : 'Prepare a listening preview, then create a new transcript. Your current version stays in place until you choose the new one.'}</p>{/if}
     {#if loading}<p role="status">Checking saved attempts…</p>{/if}
     {#if error}<div class="error" role="alert"><p>{error}</p><button class="dw-btn-secondary" disabled={busy} on:click={refresh}>Refresh status</button></div>{/if}
     {#if !loading && (showSetup || !job)}
       <fieldset disabled={busy || running}>
         <legend>What needs improving?</legend>
         <div class="preset-grid">{#each presets as choice}<label class:selected={preset === choice.id}><input type="radio" name="audio-preset" value={choice.id} bind:group={preset} /><span><strong>{choice.name}</strong><small>{choice.description}</small></span></label>{/each}</div>
-        <label class="model">Transcription model<select class="dw-input" bind:value={model}><option value="large-v3">Whisper large-v3 · quality first</option><option value="turbo">Whisper turbo · faster</option></select></label>
-        <details><summary>Speech detection</summary><label class="check"><input type="checkbox" bind:checked={vadFilter} />Skip silence during transcription</label><p class="muted">Leave off for very faint speech. Including silence can also produce incorrect words, so review the result.</p></details>
+        <label class="model">Transcription model<select class="dw-input" bind:value={model} on:change={event => { if (event.currentTarget.value === 'bark-pro') vadFilter = false; }}><option value="large-v3">Whisper large-v3 · quality first</option><option value="turbo">Whisper turbo · faster</option><option value="bark-pro">Bark Pro · experimental comparison</option></select></label>
+        {#if model === 'bark-pro'}<p class="muted">English only. Runs locally in a separate runtime. Keeps all audio, including quiet speech. Produces a saved comparison you can listen to and export; replacing your transcript is not enabled for this experiment.</p>{#if !result?.bark?.available}<p role="status">{result?.bark?.reason || 'Bark Pro setup is required.'}</p><button class="dw-btn-secondary" type="button" on:click={refresh}>Check Bark setup</button>{/if}
+        {:else}<details><summary>Speech detection</summary><label class="check"><input type="checkbox" bind:checked={vadFilter} />Skip silence during transcription</label><p class="muted">Leave off for very faint speech. Including silence can also produce incorrect words, so review the result.</p></details>{/if}
       </fieldset>
-      <div class="actions"><button class="dw-btn-primary" disabled={busy || running} on:click={() => act('prepare', { preset, model, vadFilter })}>Prepare audio preview</button>{#if job && !['discarded', 'reverted'].includes(job.phase)}<button class="dw-text-btn" disabled={busy} on:click={() => showSetup = false}>Back to saved attempt</button>{/if}</div>
+      <div class="actions"><button class="dw-btn-primary" disabled={busy || running || model === 'bark-pro' && !result?.bark?.available} on:click={() => act('prepare', { preset, model, vadFilter })}>Prepare audio preview</button>{#if job && !['discarded', 'reverted'].includes(job.phase)}<button class="dw-text-btn" disabled={busy} on:click={() => showSetup = false}>Back to saved attempt</button>{/if}</div>
     {/if}
     {#if job && !showSetup}
-      {#if result.pending?.length > 1 && result.pending.some(candidate => candidate.id === job.id)}<label class="model">Saved candidates<select class="dw-input" disabled={busy || running} value={attemptId} on:change={event => { attemptId = event.target.value; void refresh(); }}>{#each result.pending as candidate}<option value={candidate.id}>Whisper {candidate.model} · started {new Date(candidate.createdAt).toLocaleString()}</option>{/each}</select></label>{/if}
-      <div class="status"><h3 role="status">{phases[job.phase]}</h3><p class="muted">{presets.find(row => row.id === job.preset)?.name} · Whisper {job.model}</p></div>
+      {#if result.pending?.length > 1 && result.pending.some(candidate => candidate.id === job.id)}<label class="model">Saved candidates<select class="dw-input" disabled={busy || running} value={attemptId} on:change={event => { attemptId = event.target.value; void refresh(); }}>{#each result.pending as candidate}<option value={candidate.id}>{modelLabel(candidate.model)} · started {new Date(candidate.createdAt).toLocaleString()}</option>{/each}</select></label>{/if}
+      <div class="status">{#if !(comparisonOnly && job.phase === 'ready')}<h3 role="status">{phases[job.phase]}</h3>{/if}<p class="muted">{presets.find(row => row.id === job.preset)?.name} · {modelLabel(job.model)}</p></div>
       {#if running}<p>You can close this window and keep browsing. Reopen this action on the entry to check progress.</p>{/if}
       {#if job.error}<p class="error" role="alert">{job.error}</p>{/if}
       {#if previewAvailable}
@@ -118,6 +122,11 @@
         {#if !result.transcriptionEnabled}<p role="status">Transcription is disabled in Settings. Enable it to create a transcript.</p>{/if}
         <div class="actions"><button class="dw-btn-primary" disabled={busy || !result.transcriptionEnabled} on:click={() => act('transcribe')}>{job.phase === 'failed' ? 'Retry transcription' : 'Create new transcript'}</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button><button class="dw-text-btn" disabled={busy} on:click={() => act('discard')}>Discard attempt</button></div>
       {:else if job.phase === 'ready'}
+        {#if comparisonOnly}
+          {#key job.id}<BarkComparison {job} {audio}/>{/key}
+          <details><summary>Full transcript comparison</summary><div class="transcript-compare"><section aria-label="Current transcript"><h3>Current transcript</h3><textarea class="transcript" aria-label="Current transcript text" readonly rows="10" value={result.currentText || 'No current transcript.'}></textarea></section><section aria-label="Bark transcript"><h3>Bark Pro · raw output</h3><textarea class="transcript" aria-label="Bark transcript text" readonly rows="10" value={job.text}></textarea></section></div></details>
+          <div class="actions"><button class="dw-btn-primary" disabled={busy} on:click={close}>Done · keep comparison</button><button class="dw-btn-secondary" disabled={busy} on:click={startAnother}>Try another setup</button><button class="dw-text-btn" disabled={busy || loading || attemptId !== job.id} on:click={() => act('discard')}>Discard comparison</button></div>
+        {:else}
         {#if result.currentChanged}<div class="review-warning" role="status"><strong>Your saved version changed after this attempt began.</strong><p>Compare the latest saved text below with this candidate. Accepting replaces that saved transcript and its readable cleanup; a copy is kept for Undo. You do not need to transcribe again.</p></div>{/if}
         <TranscriptionQuality quality={job.quality} segments={job.segments || []} {audio} transcriptLabel="Candidate transcript" improve={busy ? null : startAnother} improveLabel="Try another preset"/>
         <p>Compare the original machine transcripts below. Readable cleanup can be generated after acceptance.</p>
@@ -125,6 +134,7 @@
         {#if result.currentChanged && result.currentReadableText}<details><summary>Current readable cleanup · replaced on acceptance</summary><textarea class="transcript" aria-label="Current readable cleanup text" readonly rows="6" value={result.currentReadableText}></textarea></details>{/if}
         <p class="muted">Your title, stars, tags and MayDo decisions stay saved. Existing MayDo audio links will need refreshing for the new transcript.</p>
         <div class="actions"><button class="dw-btn-primary" disabled={busy || loading || attemptId !== job.id} on:click={() => act('apply', result.reviewToken ? { reviewToken: result.reviewToken } : {})}>{result.currentChanged ? 'Replace reviewed version' : 'Use new audio & transcript'}</button><button class="dw-btn-secondary" disabled={busy || loading || attemptId !== job.id} on:click={() => act('discard')}>Keep current version</button><button class="dw-text-btn" disabled={busy} on:click={startAnother}>Try another preset</button></div>
+        {/if}
       {:else if job.phase === 'applied'}
         <p>The entry now uses the prepared audio and new transcript.{#if !result.currentReadableText}{' '}Create readable text to restore punctuation, join speech fragments, remove filler-only pauses, and refresh suggested MayDos.{/if}</p>
         <div class="actions">{#if !result.currentReadableText}<button class="dw-btn-primary" disabled={busy} on:click={createReadable}>Create readable & return to entry</button>{:else}<button class="dw-btn-primary" on:click={close}>Return to entry</button>{/if}{#if result.canUndo}<button class="dw-btn-secondary" disabled={busy} on:click={() => act('restore')}>Undo · restore previous version</button>{/if}<button class="dw-text-btn" disabled={busy} on:click={startAnother}>Start another attempt</button></div>
@@ -165,7 +175,7 @@
   audio { display: block; width: 100%; margin: 12px 0 0; height: 44px; }
   .transcript-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .transcript-compare section { min-width: 0; } .transcript-compare h3 { margin-bottom: 8px; }
-  .transcript { box-sizing: border-box; width: 100%; resize: vertical; color: var(--dw-text); font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; font-size: 15px; background: #121214; padding: 14px; border: 1px solid var(--dw-border); border-radius: 8px; min-height: 140px; height: clamp(140px, calc(100dvh - 560px), 280px); overflow: auto; }
+  .transcript { box-sizing: border-box; width: 100%; resize: vertical; color: var(--dw-text); font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; font-size: 15px; background: var(--dw-surface-raised); padding: 14px; border: 1px solid var(--dw-border); border-radius: 8px; min-height: 140px; height: clamp(140px, calc(100dvh - 560px), 280px); overflow: auto; }
   .error { color: #fca5a5; } .saved-version { border-top: 1px solid var(--dw-border); padding-top: 12px; }
   .review-warning { padding: 12px 16px; border-left: 3px solid var(--dw-accent); background: rgb(245 158 11 / .07); margin-top: 16px; } .review-warning p { margin: 6px 0 0; }
   :is(button, input, select, summary, .transcript):focus-visible { outline: 2px solid var(--dw-focus); outline-offset: 3px; }
