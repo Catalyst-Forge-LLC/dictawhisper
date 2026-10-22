@@ -371,7 +371,7 @@
       <span class="note-title">
         <span class="name">{presentation.title}</span>
         {#if presentation.dateLabel}<span class="day">{presentation.dateLabel}{disambiguate && presentation.sequence ? ` · recording ${presentation.sequence}` : ''}</span>{/if}
-        {#if pendingVersions.length}<span class="review-badge"><AppIcon name="waveform" size={14}/>{onlyBarkComparisons ? 'Bark comparison ready' : 'New transcript ready'}{pendingVersions.length > 1 ? ` · ${pendingVersions.length}` : ''}</span>{/if}
+        {#if pendingVersions.length}<span class="review-badge"><AppIcon name="waveform" size={14}/>{onlyBarkComparisons ? 'Bark transcript ready' : 'New transcript ready'}{pendingVersions.length > 1 ? ` · ${pendingVersions.length}` : ''}</span>{/if}
         {#if activityItem && !['ready','raw_only'].includes(activityItem.stage)}
           <span class="status">{activityItem.stage.replaceAll('_',' ')}</span>
         {:else if transcription.transcriptionJson?.cleanupSkipped}
@@ -447,8 +447,8 @@
     {#if variant==='detail' && activityItem && !['ready','raw_only'].includes(activityItem.stage)}<p class="dw-muted" role="status">{stageCopy[activityItem.stage]}{#if activityItem.error} · {activityItem.error}{/if}</p>{/if}
     {#if pendingVersions.length}
       <div class="version-notice" role="status">
-        <div><strong>{onlyBarkComparisons ? `Bark comparison ready${pendingVersions.length > 1 ? ` · ${pendingVersions.length}` : ''}` : pendingVersions.length === 1 ? 'New transcript ready' : `${pendingVersions.length} new transcripts ready`}</strong><p>{onlyBarkComparisons ? 'Experimental result saved separately. Listen and compare.' : 'You’re reading the saved version. Listen and compare the new transcript.'}</p></div>
-        <button class="dw-btn-secondary dw-with-icon" on:click={event => openAudioReview(event, pendingVersions[0].id)}><AppIcon name="waveform" size={16}/>{onlyBarkComparisons ? 'Review Bark comparison' : 'Review new transcript'}</button>
+        <div><strong>{onlyBarkComparisons ? `Bark transcript ready${pendingVersions.length > 1 ? ` · ${pendingVersions.length}` : ''}` : pendingVersions.length === 1 ? 'New transcript ready' : `${pendingVersions.length} new transcripts ready`}</strong><p>{onlyBarkComparisons ? 'New Bark transcript saved for review. Listen and compare before using it.' : 'You’re reading the saved version. Listen and compare the new transcript.'}</p></div>
+        <button class="dw-btn-secondary dw-with-icon" on:click={event => openAudioReview(event, pendingVersions[0].id)}><AppIcon name="waveform" size={16}/>{onlyBarkComparisons ? 'Review Bark transcript' : 'Review new transcript'}</button>
       </div>
     {/if}
     {#if variant === 'detail' && review?.error}<p class="version-error" role="status">Version status unavailable{pendingVersions.length ? ' · showing last known status' : ''}. <button class="dw-text-btn" on:click={() => audioReviews.refresh()}>Retry version check</button></p>{/if}
@@ -475,7 +475,7 @@
           <div class="mobile-playback menu-group"><label class="speed">Speed<select value={speed} on:change={event => setSpeed(event.target.value)} aria-label="Playback speed">{#each ['0.75','1','1.25','1.5','2'] as value}<option value={value}>{value}×</option>{/each}</select></label><label class="follow"><input type="checkbox" bind:checked={followAudio} />Follow audio</label></div>
           {#if searchMatches.length}<div class="menu-group"><p>{searchMatches.length} matching passages</p><button class="menu-action" on:click={() => { stepSearch(-1); moreOpen = false; }}><AppIcon name="left"/><span>Previous search match</span></button><button class="menu-action" on:click={() => { stepSearch(1); moreOpen = false; }}><AppIcon name="chevron"/><span>Next search match</span></button></div>{/if}
           <div class="menu-group">
-            <button class="menu-action" disabled={busy} on:click={event => { closeActions(); openAudioReview(event, pendingVersions[0]?.id || ''); reviewTrigger = moreButton; }}><AppIcon name="waveform"/><span>{onlyBarkComparisons ? 'Review Bark comparison…' : pendingVersions.length ? 'Review new transcript…' : 'Improve audio & retranscribe…'}</span></button>
+            <button class="menu-action" disabled={busy} on:click={event => { closeActions(); openAudioReview(event, pendingVersions[0]?.id || ''); reviewTrigger = moreButton; }}><AppIcon name="waveform"/><span>{onlyBarkComparisons ? 'Review Bark transcript…' : pendingVersions.length ? 'Review new transcript…' : 'Improve audio & retranscribe…'}</span></button>
             <button class="menu-action" disabled={busy || cleanupRunning} on:click={() => { closeActions(); createReadable(); }}><AppIcon name="refresh"/><span>{cleaned ? 'Reprocess readable transcript' : 'Create readable transcript'}</span></button>
             <button class="menu-action" disabled={busy} on:click={() => { closeActions(); dispatch('skip', transcription.jsonFile); }}><AppIcon name="skip"/><span>Skip cleanup</span></button>
             <details class="processing-details"><summary class="menu-action"><AppIcon name="info"/><span>Processing details</span><span class="disclosure-chevron"><AppIcon name="chevron" size={14}/></span></summary><div class="processing-content"><p>{presentation.path}</p><p>{presentation.dateLabel}{presentation.precision === 'month' ? ' · Month precision; no recording day is known.' : ''}</p>{#if presentation.sequence}<p>Recording {presentation.sequence}</p>{/if}{#if audioDuration != null}<p>Audio duration {formatTime(audioDuration)}</p>{/if}{#if transcription.transcriptionJson?.elapsed}<p>Processing time {transcription.transcriptionJson.elapsed}</p>{/if}{#if cleanedBy}<p>Cleaned {cleanedBy}</p>{/if}</div></details>

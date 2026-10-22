@@ -3,7 +3,7 @@
   import AudioImprovementDialog from './AudioImprovementDialog.svelte';
   export let connected = false, compact = false;
   let job = null, error = '', busy = false, alive = true, timer, request = 0;
-  let year = '', selection = 'outdated', model = 'large-v3', policy = 'review', cleanup = false;
+  let year = '', selection = 'outdated', model = 'bark-pro', policy = 'review', cleanup = false;
   let offset = 0, filter = 'work', selected = null;
   $: scopeChanged = job?.state === 'preview' && (year !== job.scope.year || selection !== job.scope.selection || model !== job.scope.model);
   const states = {idle:'Choose recordings to revisit',preview:'Preview ready',running:'Retranscribing',stopping:'Stopping after this entry',stopped:'Stopped',interrupted:'Interrupted · ready to resume',completed:'Batch complete'};
@@ -17,7 +17,7 @@
     try {
       const data = await decode(await fetch(`/tools/transcription/batch?offset=${offset}&filter=${filter}`,{cache:'no-store'}));
       if (!alive || sequence !== request) return;
-      if (!job && data.scope) { year = data.scope.year; selection = data.scope.selection; model = data.scope.model; policy = data.policy; cleanup = data.cleanup ?? false; }
+      if (!job && data.scope) { year = data.scope.year; selection = data.scope.selection; model = ['idle','completed'].includes(data.state) ? data.defaultModel : data.scope.model; policy = data.policy; cleanup = data.cleanup ?? false; }
       job = data; offset = data.offset; error = ''; schedule();
     } catch (e) { if (alive && sequence === request) error = e.message; }
   }
@@ -45,14 +45,15 @@
       <details open={['idle','preview'].includes(job.state)}><summary>Choose recordings</summary>
         <fieldset disabled={busy || !connected}>
           <label>Which entries?<select class="dw-input" bind:value={selection}><option value="outdated">Older pipeline, model or changed source</option><option value="flagged">Entries with audio or transcript signals</option><option value="all">All entries · include already updated</option></select></label>
-          <div class="scope-row"><label>Recording year<input class="dw-input" inputmode="numeric" pattern={'[0-9]{4}'} maxlength="4" placeholder="All years" bind:value={year}/></label><label>Model<select class="dw-input" bind:value={model}><option value="large-v3">large-v3 · quality first</option><option value="turbo">turbo · faster</option></select></label></div>
+          <div class="scope-row"><label>Recording year<input class="dw-input" inputmode="numeric" pattern={'[0-9]{4}'} maxlength="4" placeholder="All years" bind:value={year}/></label><label>Model<select class="dw-input" bind:value={model}><option value="bark-pro">Bark Pro · English</option><option value="large-v3">Whisper large-v3</option><option value="turbo">Whisper turbo · faster</option></select></label></div>
           <button class="dw-btn-secondary" disabled={busy || !connected || year && !/^\d{4}$/.test(year)} on:click={() => act('preview',{scope:{year,selection,model}})}>{busy?'Checking…':'Preview eligible entries'}</button>
         </fieldset>
         <p class="muted">Preview reads sidecars and source metadata. It starts no model jobs. Changed files with the same size and timestamp require “All entries”.</p>
       </details>
     {/if}
     {#if job.id}
-      <div class="progress"><strong role="status">{states[job.state]}</strong><p>{job.scope.year || 'All years'} · Whisper {job.scope.model} · {job.total} entries</p><div class="counts"><span>{job.remaining} pending</span><span>{job.applied} replaced</span><span>{job.review} to review</span><span>{job.failed} failed</span><span>{job.skipped} skipped / kept</span></div>{#if job.running}<progress aria-label="Batch progress" max={Math.max(1,job.total)} value={job.total-job.remaining}></progress><p>{job.current || 'Starting the next entry…'}</p>{/if}</div>
+      <div class="progress"><strong role="status">{states[job.state]}</strong><p>{job.scope.year || 'All years'} · {job.scope.model==='bark-pro'?'Bark Pro':`Whisper ${job.scope.model}`} · {job.total} entries</p><div class="counts"><span>{job.remaining} pending</span><span>{job.applied} replaced</span><span>{job.review} to review</span><span>{job.failed} failed</span><span>{job.skipped} skipped / kept</span></div>{#if job.running}<progress aria-label="Batch progress" max={Math.max(1,job.total)} value={job.total-job.remaining}></progress><p>{job.current || 'Starting the next entry…'}</p>{/if}</div>
+      {#if job.modelIssue}<p role="status">{job.modelIssue}</p>{/if}
       {#if job.state==='preview'}
         <fieldset disabled={busy || !connected}>
           <legend>When a transcript is ready</legend>
@@ -61,10 +62,10 @@
           {#if policy==='replace_unflagged'}<label class="choice"><input type="checkbox" bind:checked={cleanup} disabled={!job.cleanupEnabled}/><span>Also generate readable text, tags and MayDos<small>{job.cleanupEnabled?'Queued separately in Activity. Uses your configured cleanup model host.':'Enable the cleanup model and queue to use this option.'}</small></span></label>{/if}
           <p class="muted">Prepared WAVs, source snapshots and previous versions need extra disk space. Replacement changes the original transcript and removes its old readable version from the current view. Undo is available until later transcript processing changes it; history remains saved.</p>
           {#if scopeChanged}<p>Selection changed. Preview eligible entries again before starting.</p>{/if}
-          <button class="dw-btn-primary" disabled={scopeChanged || !connected || busy || !job.enabled || !job.remaining || Boolean(job.persistenceError)} on:click={() => act('start',{policy,cleanup:policy==='replace_unflagged' && cleanup})}>Start {job.remaining} {policy==='review'?'candidates':'retranscriptions'}</button>
+          <button class="dw-btn-primary" disabled={scopeChanged || !connected || busy || !job.enabled || !job.remaining || Boolean(job.persistenceError || job.modelIssue)} on:click={() => act('start',{policy,cleanup:policy==='replace_unflagged' && cleanup})}>Start {job.remaining} {policy==='review'?'candidates':'retranscriptions'}</button>
         </fieldset>
       {:else if job.running}<button class="dw-btn-secondary" disabled={busy || !connected || job.state==='stopping'} on:click={() => act('stop')}>Stop after this entry</button><p class="muted">You can close this panel. Processing continues while the server runs; after a restart, Resume continues saved progress.</p>
-      {:else}<div class="actions">{#if job.remaining}<button class="dw-btn-primary" disabled={busy || !connected || !job.enabled || Boolean(job.persistenceError)} on:click={() => act('resume')}>Resume remaining work</button>{/if}{#if job.failed}<button class="dw-btn-secondary" disabled={busy || !connected || !job.enabled} on:click={() => act('retry_failed')}>Retry failed only</button>{/if}</div>{/if}
+      {:else}<div class="actions">{#if job.remaining}<button class="dw-btn-primary" disabled={busy || !connected || !job.enabled || Boolean(job.persistenceError || job.modelIssue)} on:click={() => act('resume')}>Resume remaining work</button>{/if}{#if job.failed}<button class="dw-btn-secondary" disabled={busy || !connected || !job.enabled || Boolean(job.modelIssue)} on:click={() => act('retry_failed')}>Retry failed only</button>{/if}</div>{/if}
       {#if !job.enabled}<p>Transcription is disabled in Settings. Saved candidates and history remain available.</p>{/if}
       {#if job.cleanup && job.applied}<p class="muted">Readable processing can continue after this batch finishes. Check Activity for cleanup progress or failures.</p>{/if}
       <div class="results-head"><label>Show results<select class="dw-input" bind:value={filter} on:change={() => {offset=0;void refresh();}}><option value="work">Work in this batch</option><option value="all">All entries</option><option value="review">To review</option><option value="failed">Failed</option><option value="applied">Replaced</option><option value="unavailable">Unavailable</option></select></label><button class="dw-text-btn" disabled={busy} on:click={refresh}>Refresh status</button></div>

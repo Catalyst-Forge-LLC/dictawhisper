@@ -20,7 +20,7 @@
     catch { message = 'Copy was blocked. Select the text in Full transcript comparison below.'; }
   }
   function download() {
-    const url = URL.createObjectURL(new Blob([JSON.stringify({text:job.text,segments:job.segments,asrExperiment:experiment},null,2)], {type:'application/json'}));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({text:job.text,segments:job.segments,asr:experiment},null,2)], {type:'application/json'}));
     const link = document.createElement('a'); link.href = url; link.download = `bark-comparison-${job.id}.json`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

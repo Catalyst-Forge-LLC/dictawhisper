@@ -88,7 +88,7 @@
     {#if rows.length>limit}<button class="dw-btn-secondary more-results" on:click={()=>limit+=15}>Show {Math.min(15,rows.length-limit)} more · {rows.length-limit} remaining</button>{/if}
   </section>
   <details class="dw-disclosure diagnostics" on:toggle={event => {if(event.currentTarget.open&&!health)checks();}}><summary><AppIcon name="settings" size={16}/>System status and diagnostics</summary>
-    {#if health}<p>Transcription: {health.whisperWorker || 'See checks'} · {typeof health.whisper==='string'?health.whisper:health.whisper?.model || ''} · {health.device || ''}</p><p>Cleanup: {health.ollanet?.reachable?'Available':health.ollanet?.machine?'Unavailable':'Not configured; original reading works'}</p>{#each health.checks || [] as check}<p class="dw-muted">{check.message}</p>{/each}{/if}
+    {#if health}<p>Transcription: {health.transcription?.model === 'bark-pro' ? 'Bark Pro' : `Whisper ${health.transcription?.model || (typeof health.whisper==='string'?health.whisper:health.whisper?.model) || ''}`} · {health.transcription?.device || health.device || 'See checks'}</p><p>Cleanup: {health.ollanet?.reachable?'Available':health.ollanet?.machine?'Unavailable':'Not configured; original reading works'}</p>{#each health.checks || [] as check}<p class="dw-muted">{check.message}</p>{/each}{/if}
     <button class="dw-btn-secondary" disabled={checking} on:click={() => checks(true)}><AppIcon name="refresh" size={16}/>{checking?'Checking…':'Run checks'}</button>
   </details>
 </dialog>

@@ -60,7 +60,7 @@
     {:else if !review.notes.length}<p class="muted">No automatic flags were found. You can still check the transcript by listening.</p>{/if}
     {#if review.notes.length}<details class="recording-notes"><summary>Recording notes · {review.notes.length}</summary><ul>{#each review.notes as note}<li>{note.message}{#if note.count > 1} ({note.count} occurrences){/if}</li>{/each}</ul></details>{/if}
     <details class="processing"><summary>Processing details</summary>
-      <p>Whisper {quality.model || 'unknown model'} · {quality.preparation?.selectedPreset || 'unfiltered'} audio · pipeline {quality.version ?? 'unknown'}</p>
+      <p>{quality.model === 'bark-pro' ? 'Bark Pro' : `Whisper ${quality.model || 'unknown model'}`} · {quality.preparation?.selectedPreset || 'unfiltered'} audio · pipeline {quality.version ?? 'unknown'}</p>
       {#if quality.preparation?.assessment?.reasons?.length}<p>{quality.preparation.assessment.reasons.join(' ')}</p>{/if}
       <p class="muted">Alternate transcription is only available for some passages. Moving between passages does not mark them as reviewed or change your transcript.</p>
     </details>

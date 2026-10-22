@@ -68,6 +68,7 @@ for (const timed of [false,true]) test(`Bark ${timed ? 'timed' : 'untimed'} comp
     assert.ok(read(file).transcriptionQuality.batchId); assert.ok(read(file).transcriptionQuality.source.sha256);
     assert.equal(read(file).mayDos[0].status,'selected'); assert.equal(read(file).mayDos[0].start,null);
     await restarted.restore(file,id);
+    assert.equal(restarted.status(file,id).job!.comparisonOnly,false,'Undo does not imply a timing failure');
   } else await assert.rejects(restarted.apply(file,id,status.reviewToken),/no usable passage timing/);
   const after = read(file); delete after.entryId;
   assert.deepEqual(after,before);

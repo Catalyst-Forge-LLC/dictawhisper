@@ -1,15 +1,15 @@
 # Audio improvement and retranscription
 
-Date: 2026-10-21
+Date: 2026-10-22
 
-Scope: Shared automatic preparation for new imports, a per-entry recovery flow, and resumable library retranscription using FFmpeg and the existing faster-whisper runtime. Parakeet, Qwen and neural denoiser installation remain deferred. Existing recordings are only retranscribed after an explicit batch Start or per-entry action.
+Scope: Shared automatic preparation for new imports, a per-entry recovery flow, and resumable library retranscription using FFmpeg with Bark Pro or faster-whisper. Bark Pro is now the default; Settings → Transcription saves a model choice without restarting. See [Bark behavior and verification](BARK_EXPERIMENT.md) for its timing/provenance contract. Other model integrations and neural denoisers remain deferred. Existing recordings are only retranscribed after an explicit batch Start or per-entry action.
 
 ## Experience
 
 Open **Reader → More → Improve audio & retranscribe…**. This is separate from **Reprocess readable transcript**, which only reruns text cleanup.
 
 1. Select Automatic (default), Quiet speech, Uneven volume, Background noise, or Unfiltered original.
-2. Choose large-v3 (default for this action) or turbo. This is a per-attempt setting; it does not change the global model preference. Speech detection is an optional disclosure, off by default to include faint speech; the copy explains possible false words during silence.
+2. Choose Bark Pro, Whisper large-v3 or turbo. This starts with the saved default but is a per-attempt setting. Whisper speech detection is an optional disclosure, off by default to include faint speech; Bark includes all audio.
 3. Prepare the audio preview. Original lookup checks every supported `_original` container before using the ordinary working file. If no separate original exists, the UI identifies the available source instead of claiming it is untouched.
 4. Switch original/enhanced at the same playhead. Only one player plays at a time. Recording pauses the preview.
 5. Create a candidate transcript. Closing the dialog or reloading the page does not discard server work. Ready candidates appear on library cards and in a compact reader notice with **Review new transcript**. Mounted cards refresh their metadata every ten seconds while the page is visible. Reopen the original action to check running work. Progress uses actual phases, not invented percentages.
@@ -30,7 +30,7 @@ All presets read a private snapshot of the source and write PCM WAV. They never 
 | Background noise | 80 Hz high-pass, `afftdn=nr=8:nf=-50:tn=1`, then the same leveling | Mild steady-noise/rumble treatment; not source separation, dereverberation, or reconstruction. |
 | Unfiltered original | PCM conversion only | A baseline transcription from the source without enhancement. |
 
-Routine imports and this action share preparation and diagnostics, starting from the best available original rather than repeatedly processing an enhanced version. FFmpeg/ffprobe are required even in unfiltered mode; doctor reports both. No new model family/runtime is installed. Older standalone scripts using the legacy `cleanAudioFile` helper are not the app's normal import path.
+Routine imports and this action share preparation and diagnostics, starting from the best available original rather than repeatedly processing an enhanced version. FFmpeg/ffprobe are required even in unfiltered mode; doctor reports both. Bark uses its separately installed local runtime; selecting a model never installs one. Older standalone scripts using the legacy `cleanAudioFile` helper are not the app's normal import path.
 
 ### Transcription context and prompt leakage
 

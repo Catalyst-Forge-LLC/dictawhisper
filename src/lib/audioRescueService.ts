@@ -161,7 +161,7 @@ export class AudioRescueService {
     return {
       pending: reviewCandidates(rows, current.json.audioEnhancement?.versionId),
       defaultModel: config.transcription.model,
-      job: job ? { ...job, comparisonOnly: job.model === BARK_MODEL && (!candidate || !barkHasUsableTiming(candidate)), ...(candidate ? { text: String(candidate.text || ''), experiment: candidate.asr || candidate.asrExperiment, quality: candidate.transcriptionQuality, segments: Array.isArray(candidate.segments) ? candidate.segments.map(({start, end, text}) => ({start, end, text})) : [] } : {}) } : null,
+      job: job ? { ...job, comparisonOnly: job.model === BARK_MODEL && Boolean(candidate && !barkHasUsableTiming(candidate)), ...(candidate ? { text: String(candidate.text || ''), experiment: candidate.asr || candidate.asrExperiment, quality: candidate.transcriptionQuality, segments: Array.isArray(candidate.segments) ? candidate.segments.map(({start, end, text}) => ({start, end, text})) : [] } : {}) } : null,
       bark: this.deps.barkAvailability(),
       currentText: current.json.text || '', activeVersionId: current.json.audioEnhancement?.versionId || null,
       currentReadableText: current.json.cleanedTranscription || '',

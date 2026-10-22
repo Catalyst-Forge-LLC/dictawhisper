@@ -10,6 +10,8 @@ import { Server } from 'socket.io';
 import { ActivityStore, setActivityStore } from '../src/lib/activityLib.ts';
 import { config } from '../src/config.ts';
 import { apiRoutes } from '../src/apiRoutes.ts';
+import { createTranscriptionSettingsRoutes } from '../src/settingsRoutes.ts';
+import { effectiveSettings } from '../src/lib/settingsLib.ts';
 import { createAudioRescueRoutes } from '../src/audioRescueRoutes.ts';
 import { AudioRescueService } from '../src/lib/audioRescueService.ts';
 import { TranscriptionBatchService } from '../src/lib/transcriptionBatchLib.ts';
@@ -101,6 +103,10 @@ for(const [file,note] of notes)transcriptions[file]=note.transcriptionJson;
 index.ensureVec(2, 'fixture'); for (const row of index.rowsNeedingEmbed()) index.putEmbedding(row.rowid, [1, 0]);
 const app = express();
 app.use(express.json());
+// Persist model choices only inside this fixture, never in the operator's config.
+const fixtureConfig = path.join(root,'fixture-config.json');
+app.get('/settings',(_req,res)=>res.json(effectiveSettings(config,fixtureConfig)));
+for(const route of createTranscriptionSettingsRoutes(config,fixtureConfig))app.post(route.path,route.handler);
 // Response policy can exercise clipboard rejection in browsers enforcing clipboard-write.
 // Some automated browser clipboard bridges do not enforce this policy.
 app.use((req, res, next) => { if (req.query.clipboardDenied === '1') res.setHeader('Permissions-Policy', 'clipboard-write=()'); next(); });

@@ -4,9 +4,9 @@
 
 # DictaWhisper
 
-**A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. Transcribe on your GPU with [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Clean the note with [ollanet](https://ollanet.dev). The `.json` next to each recording is the journal.
+**A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. Transcribe locally with **Bark Pro** (English, default) or [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Clean the note with [ollanet](https://ollanet.dev). The `.json` next to each recording is the journal.
 
-Install from a Git checkout ([below](#from-a-checkout)). Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites.
+Install from a Git checkout ([below](#from-a-checkout)). Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. The selected model and its Python runtime remain separate prerequisites.
 
 **Docs:** [dictawhisper.com/docs](https://dictawhisper.com/docs) · **Site:** [dictawhisper.com](https://dictawhisper.com)
 
@@ -18,7 +18,7 @@ Actual Inbox showing three fictional entries. The transcript, timestamps, and ac
 
 ## Before you clone
 
-Exercised path: Windows, Node 22.13+ (checkout scripts use `--experimental-strip-types`), pnpm, Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and an NVIDIA GPU with CUDA. `ffmpeg` and `ffprobe` are required for audio assessment and preparation, including unfiltered mode. macOS and Linux are unverified. CPU mode works and is slow. Cleanup via [ollanet](https://ollanet.dev) is optional.
+Exercised path: Windows, Node 22.13+ (checkout scripts use `--experimental-strip-types`), pnpm, and an NVIDIA GPU with CUDA. Bark Pro uses an isolated Python 3.11 / CUDA 12.8 / BF16 runtime; Whisper uses Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper). `ffmpeg` and `ffprobe` are required for audio assessment and preparation, including unfiltered mode. macOS and Linux are unverified. Bark CPU mode is available but unverified; Whisper CPU mode is slower. Cleanup via [ollanet](https://ollanet.dev) is optional.
 
 ## From a checkout
 
@@ -27,11 +27,13 @@ git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
 cd dictawhisper
 cp config.example.json config.json
 pnpm install
+# Set up Bark Pro first (PowerShell; use your Python 3.11 path):
+# & ./scripts/setup-bark.ps1 -Python C:/path/to/Python311/python.exe
 pnpm run doctor
 pnpm dev
 ```
 
-Ready signal: `pnpm run doctor` exits 0, or only warnings remain. Then open [http://localhost:7777](http://localhost:7777). Point `whisper.python` at the interpreter that has CUDA Whisper. Cleanup host and model are optional; raw transcripts still work.
+Ready signal: `pnpm run doctor` exits 0, or only warnings remain. Then open [http://localhost:7777](http://localhost:7777). For Whisper instead, set `transcription.model` to `large-v3` or `turbo` and point `whisper.python` at its interpreter. Once running, change the default in **Settings → Transcription**. Cleanup host and model are optional; raw transcripts still work.
 
 LocalSlip is optional. `pnpm dev` and `pnpm serve` read existing `dictawhisper` and `dictawhisper-api` claims when available; they do not create claims. Without LocalSlip, the UI uses 7777 and the API uses `http.port` (8008 by default). Startup names both endpoints and gives the UI proxy the same API port. Claim ports separately if you want named assignments.
 
@@ -46,7 +48,7 @@ Hit Record, or drag an audio file onto the page. Flags, HTTP, MCP, and `retransc
 
 ## What you get
 
-Files are the database. Each note is the recording plus a neighboring `.json`. The Whisper model stays loaded. Audio and transcript files stay on this computer. Cleanup sends transcript text only to the host in `ollanet.machine`, and is skipped when that is empty. Search indexing embeds note text on this computer by default; it goes to another host only if you set `journal.embedHost` (`machine`, a host name, or `any`). With no embedding model on an allowed host, or with `journal.search` set to `lex`, nothing is embedded and search matches words only; doctor says which. The inbox is loopback by default; `http.tailscale` puts the same page on your tailnet. Playback follows cleaned paragraphs using Whisper word times. If cleanup is skipped or fails, the inbox shows **raw only** or **cleanup failed**, and **Retry** is available. Transcription itself still needs faster-whisper.
+Files are the database. Each note is the recording plus a neighboring `.json`. Bark loads per recording; Whisper keeps a worker loaded between its jobs. Audio and transcript files stay on this computer. Cleanup sends transcript text only to the host in `ollanet.machine`, and is skipped when that is empty. Search indexing embeds note text on this computer by default; it goes to another host only if you set `journal.embedHost` (`machine`, a host name, or `any`). With no embedding model on an allowed host, or with `journal.search` set to `lex`, nothing is embedded and search matches words only; doctor says which. The inbox is loopback by default; `http.tailscale` puts the same page on your tailnet. Playback follows cleaned paragraphs using the transcription engine’s word timing estimates. If cleanup is skipped or fails, the inbox shows **raw only** or **cleanup failed**, and **Retry** is available. Transcription requires the selected engine’s local runtime.
 
 ## Capture and Activity
 
@@ -64,21 +66,23 @@ Library and search results load in pages of 50. **Load more** keeps the current 
 
 ## Improve difficult recordings
 
-New imports automatically measure audio levels over time, then keep adequate audio unfiltered, boost quiet speech, or level uneven volume. Preparation preserves pauses and timestamps in a PCM WAV working copy. The configured model is used (default **large-v3**) with speech gating off to include faint speech. Sidecars record preparation, source identity, model and pipeline version. Suspect passages have listening signals and up to three short alternate passes; the reader's **Transcription details** disclosure exposes the evidence. These signals are not an accuracy score. Automatic noise reduction remains off; the manual preset is available below. Set `audio.preprocess` to false for unfiltered preparation.
+New imports automatically measure audio levels over time, then keep adequate audio unfiltered, boost quiet speech, or level uneven volume. Preparation preserves pauses and timestamps in a PCM WAV working copy. The configured model is used (default **Bark Pro**) with speech gating off to include faint speech. Sidecars record preparation, source identity, model and pipeline version. Suspect passages have listening signals; Whisper can also produce up to three short alternate passes. The reader's **Transcription details** disclosure exposes the evidence. These signals are not an accuracy score. Automatic noise reduction remains off; the manual preset is available below. Set `audio.preprocess` to false for unfiltered preparation.
 
-For quiet, uneven, or noisy recordings, use the reader's **More → Improve audio & retranscribe…** action. Prepare an audio preview from the original when available, switch between original and enhanced at the same position, then create a candidate with **Whisper large-v3** (default for this action) or **turbo**. Review and accept the candidate or keep your current version. Preparation uses FFmpeg and a lossless working copy without trimming silence. Your title, stars, tags, MayDo decisions, and original recordings remain saved. Existing MayDo timings are cleared until refreshed against the new transcript. Reopen the action to check progress or undo acceptance before further transcript changes. Readable cleanup is a separate action after acceptance. See [audio improvement behavior and verification](docs/AUDIO_IMPROVEMENT.md).
+For quiet, uneven, or noisy recordings, use the reader's **More → Improve audio & retranscribe…** action. Prepare an audio preview from the original when available, switch between original and enhanced at the same position, then create a candidate with **Bark Pro**, **Whisper large-v3** or **turbo**. The action starts with your saved default. Review and accept the candidate or keep your current version. Preparation uses FFmpeg and a lossless working copy without trimming silence. Your title, stars, tags, MayDo decisions, and original recordings remain saved. Existing MayDo timings are cleared until refreshed against the new transcript. Reopen the action to check progress or undo acceptance before further transcript changes. Readable cleanup is a separate action after acceptance. See [audio improvement behavior and verification](docs/AUDIO_IMPROVEMENT.md).
 
 ## Retranscribe an existing library
 
-Open **Settings → Transcription → Retranscribe library** (also in Data and maintenance). Select a year or all years, large-v3 or turbo, and older-pipeline entries, flagged entries, or all entries. **Preview eligible entries** reads sidecars and source metadata without running models. Already-current entries and missing sources are accounted for. Prepared audio and saved versions require extra disk space.
+Open **Settings → Transcription → Retranscribe library** (also in Data and maintenance). Select a year or all years, Bark Pro, large-v3 or turbo, and older-pipeline entries, flagged entries, or all entries. **Preview eligible entries** reads sidecars and source metadata without running models. Already-current entries and missing sources are accounted for. Prepared audio and saved versions require extra disk space.
 
 Choose **Review before replacing**, or explicitly choose **Replace entries without review signals** to update unflagged entries with saved previous versions while holding flagged candidates for review. Optionally queue readable text, tags and MayDos for replacements. Then Start the previewed batch. Progress and candidate review are available in **Activity**; only 50 result summaries load at a time. Stop finishes the current entry. Restart never automatically starts a saved batch: Resume continues its checkpoints and Retry failed only targets failures. Current titles, stars, tags and MayDo decisions are retained. Undo is conditional on no later transcript/cleanup changes; earlier sidecars remain saved even when automatic Undo is blocked. A first import has no earlier transcript to undo.
 
-## Compare one recording with Bark Pro (experimental)
+## Choose the default model
 
-**More → Improve audio & retranscribe → Bark Pro · experimental comparison** runs an optional local English model on one recording. It retains raw output separately, offers native model-estimated passage timing when valid, and supports listening, copy and JSON export. Done keeps the comparison for later; it cannot replace your saved transcript in this trial. Whisper remains the default and batch engine.
+**Settings → Transcription → Default transcription model → Save default model** chooses Bark Pro (English), Whisper large-v3 (multilingual) or Whisper turbo. Bark Pro is the default when `transcription.model` is absent. Saving persists to the loaded config and takes effect for the next transcription without restarting. Imports, browser captures, Activity retries and the retranscribe CLI use that choice. Improvement attempts and new batches start with it; running jobs and saved batch scopes retain their selected model. `DICTA_TRANSCRIPTION_MODEL` can explicitly override and lock the choice for a process; `WHISPER_MODEL` no longer selects the default engine.
 
-Install once in PowerShell with `& ./scripts/setup-bark.ps1 -Python 'C:/path/to/Python311/python.exe'`, then restart DictaWhisper. The separate `.venv-bark` uses pinned PyTorch/Transformers and model weights; it does not change the Whisper runtime. The exercised setup uses NVIDIA CUDA/BF16. Full setup, limitations and test evidence: [Bark experiment guide](docs/BARK_EXPERIMENT.md).
+Bark has native estimated word and passage timing. Timed candidates—including earlier comparison-only candidates—can be accepted with **Use new audio & transcript**, followed by optional Readable cleanup or Undo. Untimed candidates remain available for listening and export but cannot replace an entry. A normal import without usable timing fails safely and retains the audio for retry; select Whisper in Settings if needed. No automatic fallback or library-wide retranscription happens when you change the default.
+
+Install once in PowerShell with `& ./scripts/setup-bark.ps1 -Python 'C:/path/to/Python311/python.exe'`, then restart DictaWhisper. The separate `.venv-bark` uses pinned PyTorch/Transformers and model weights; it does not change the Whisper runtime. The exercised setup uses NVIDIA CUDA/BF16. Full setup, limitations and test evidence: [Bark setup and behavior guide](docs/BARK_EXPERIMENT.md).
 
 ## Review MayDos and extract older entries
 
@@ -96,7 +100,7 @@ Backfill scope and acknowledged outcomes are saved on disk; extracted actions re
 
 Reader More → Move to Trash waits for a verified whole-entry bundle receipt, then offers eight-second Undo. Settings → Data and maintenance restores later; collisions keep both. Replacement requires a preview and saves the existing bundle in Trash. Assign recording date moves all variants together and records confirmed date provenance. New entries and edits receive stable IDs; explicit legacy backfill is available in maintenance.
 
-Settings shows effective folders, models, processing destinations, search coverage, and MCP configuration. Configuration is read-only here: edit the loaded file and restart. Maintenance includes scoped MayDo extraction, reviewed cleanup retries, tag merge preview/apply, and check-only audio scanning with separate reviewed marking. Help follows search, reading/listening, capture, MayDos, and recovery tasks. On small screens access Help through Settings. No ExoMetaCortex synchronization is active.
+Settings shows effective folders, models, processing destinations, search coverage, and MCP configuration. The default transcription model is editable here and saves immediately. Edit the loaded file and restart for other configuration options. Maintenance includes scoped MayDo extraction, reviewed cleanup retries, tag merge preview/apply, and check-only audio scanning with separate reviewed marking. Help follows search, reading/listening, capture, MayDos, and recovery tasks. On small screens access Help through Settings. No ExoMetaCortex synchronization is active.
 
 For HTTP pagination, sidecar fields, and backfill actions, see the [HTTP reference](https://dictawhisper.com/docs/http).
 
