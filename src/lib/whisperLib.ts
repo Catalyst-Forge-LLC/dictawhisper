@@ -406,6 +406,11 @@ function enqueueJob<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/** Share the GPU slot with opt-in engines; never unload an in-flight Whisper job. */
+export function runAlternateAsr<T>(fn: () => Promise<T>): Promise<T> {
+  return enqueueJob(async () => { await stopWhisperWorker(); return fn(); });
+}
+
 export async function whisperTranscribe(
   audioFile: string,
   transcriptionFile: string,

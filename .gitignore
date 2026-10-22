@@ -17,4 +17,6 @@ config.json
 .env.*
 .wrangler/
 __pycache__/
+.venv-bark/
+data/models/
 *.py[cod]

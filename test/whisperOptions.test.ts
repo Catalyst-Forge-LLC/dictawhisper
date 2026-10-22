@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { config } from '../src/config.ts';
-import { whisperTranscribe, stopWhisperWorker } from '../src/lib/whisperLib.ts';
+import { whisperTranscribe, stopWhisperWorker, runAlternateAsr } from '../src/lib/whisperLib.ts';
 import { buildWhisperInitialPrompt } from '../src/prompts/whisperInitial.ts';
 
 test('Whisper context is empty by default and contains only configured vocabulary', () => {
@@ -51,13 +51,19 @@ class WhisperModel:
   });
   try {
     config.whisper.promptTerms = [];
-    await Promise.all([run(first, 'large-v3', false), run(second, 'turbo', true)]);
+    await Promise.all([run(first, 'large-v3', false), runAlternateAsr(async () => {
+      fs.appendFileSync(log, JSON.stringify(['alternate', 'bark-pro']) + '\n');
+      await new Promise(resolve => setTimeout(resolve, 40));
+    }), run(second, 'turbo', true)]);
     const large = JSON.parse(fs.readFileSync(first, 'utf8')), turbo = JSON.parse(fs.readFileSync(second, 'utf8'));
     assert.equal(large.whisper.model, 'large-v3'); assert.equal(large.whisper.vad_filter, false);
     assert.equal(turbo.whisper.model, 'large-v3-turbo'); assert.equal(turbo.whisper.vad_filter, true);
     assert.equal(large.audioEnhancement.versionId, 'saved-version');
     const events = fs.readFileSync(log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.ok(events.findIndex(row => row[0] === 'end' && row[1] === 'large-v3') < events.findIndex(row => row[0] === 'begin' && row[1] === 'large-v3-turbo'));
+    const alternate = events.findIndex(row => row[0] === 'alternate');
+    assert.ok(events.findIndex(row => row[0] === 'end' && row[1] === 'large-v3') < alternate);
+    assert.ok(alternate < events.findIndex(row => row[0] === 'begin' && row[1] === 'large-v3-turbo'));
     if (fallback) assert.equal(events.filter(row => row[0] === 'end' && row[2] === false).length, 2);
     for (const row of events.filter(row => row[0] === 'begin')) assert.equal(row[3].initial_prompt, null);
 

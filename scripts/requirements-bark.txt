@@ -1,0 +1,8 @@
+# Isolated experiment; never install into the faster-whisper environment.
+# PyTorch 2.8.0 CUDA 12.8 is installed separately by setup-bark.ps1.
+transformers==5.19.0
+huggingface_hub==2.2.0
+numpy==2.4.6
+librosa==0.11.0
+soundfile==0.14.0
+soxr==1.1.0
