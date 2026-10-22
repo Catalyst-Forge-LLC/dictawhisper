@@ -87,6 +87,13 @@ for(const relative of ['_holding/2026-10-01_Conflict.json','2026/10/2026-10-01_C
   fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(json));notes.set(file,{jsonFile:file,transcriptionJson:json});
   for(const suffix of ['.wav','_original.mp3','_clean.ogg'])fs.writeFileSync(file.slice(0,-5)+suffix,'Fixture audio '+relative+suffix);
 }
+// Dense processing states for whole-app UX verification, never real workers.
+if (process.env.DICTA_FIXTURE_UX_PASS === '1') {
+  [...notes.keys()].slice(0, 36).forEach((file, n) => {
+    const stage = n < 18 ? 'failed_maydos' : n < 24 ? 'queued_transcription' : 'ready';
+    activity.update(file.slice(0,-5)+'.wav', stage, {jsonFile:file,originalName:`Review recording ${n+1}`,hasTranscript:true,...(n<18?{error:'Fixture model unavailable. The transcript is still readable.'}:{})});
+  });
+}
 let fixtureTime = Date.now();
 const index = new JournalIndex(path.join(root, 'journal.sqlite'), { now: () => fixtureTime });
 setJournalIndex(index);index.rebuildFromRoots([root]);
