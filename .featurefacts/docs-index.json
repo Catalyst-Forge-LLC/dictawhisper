@@ -1,8 +1,79 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-add",
+  "scan_id": "scan-98444432c64c",
   "kind": "docs",
   "assessments": [
+    {
+      "feature_id": "cmd-doctor",
+      "assessment": {
+        "state": "partial",
+        "result": "linked-evidence",
+        "adapter_ids": [
+          "markdown-document"
+        ],
+        "links": [
+          {
+            "surface_id": "doc-docs-improvement-spec",
+            "association": "static-reference"
+          },
+          {
+            "surface_id": "doc-readme",
+            "association": "static-reference"
+          }
+        ],
+        "reason": "A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate."
+      }
+    },
+    {
+      "feature_id": "cmd-init",
+      "assessment": {
+        "state": "unassessed",
+        "result": "unknown",
+        "adapter_ids": [
+          "markdown-document"
+        ],
+        "links": [],
+        "reason": "No explicit documentation association. Filename resemblance is not an accepted link."
+      }
+    },
+    {
+      "feature_id": "cmd-serve",
+      "assessment": {
+        "state": "partial",
+        "result": "linked-evidence",
+        "adapter_ids": [
+          "markdown-document"
+        ],
+        "links": [
+          {
+            "surface_id": "doc-readme",
+            "association": "static-reference"
+          }
+        ],
+        "reason": "A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate."
+      }
+    },
+    {
+      "feature_id": "cmd-start",
+      "assessment": {
+        "state": "partial",
+        "result": "linked-evidence",
+        "adapter_ids": [
+          "markdown-document"
+        ],
+        "links": [
+          {
+            "surface_id": "doc-docs-audio-improvement",
+            "association": "static-reference"
+          },
+          {
+            "surface_id": "doc-docs-improvement-spec",
+            "association": "static-reference"
+          }
+        ],
+        "reason": "A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate."
+      }
+    },
     {
       "feature_id": "dictawhisper",
       "assessment": {
@@ -11,6 +82,18 @@
         "adapter_ids": [],
         "links": [],
         "reason": "Documentation was not assessed."
+      }
+    },
+    {
+      "feature_id": "file-src-server",
+      "assessment": {
+        "state": "unassessed",
+        "result": "unknown",
+        "adapter_ids": [
+          "markdown-document"
+        ],
+        "links": [],
+        "reason": "No explicit documentation association. Filename resemblance is not an accepted link."
       }
     }
   ]

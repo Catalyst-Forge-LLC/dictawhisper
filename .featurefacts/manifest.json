@@ -1,0 +1,2379 @@
+{
+  "schemaVersion": "0.2.0",
+  "scan_id": "scan-98444432c64c",
+  "tool": "featurefacts",
+  "tool_version": "0.2.6",
+  "generated_at": "2026-10-22T03:16:55.869Z",
+  "root": ".",
+  "status": "complete",
+  "scope": {
+    "include": [
+      "package.json",
+      "README.md",
+      "CHANGELOG.md",
+      "src/**",
+      "app/**",
+      "lib/**",
+      "bin/**",
+      "docs/**",
+      "tests/**",
+      "test/**"
+    ],
+    "exclude": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.git/**",
+      "**/.env",
+      "**/.env.*",
+      "**/*.pem",
+      "**/*.key",
+      ".featurefacts/**",
+      "FEATURE_FACTS.md",
+      "site/**",
+      "examples/**",
+      "skill/**",
+      "tests/fixtures/**",
+      "docs/featurefacts-spec-v0.2.0-with-review/**",
+      "docs/haulout-*.md"
+    ],
+    "supported_ecosystems": [
+      "typescript-node"
+    ],
+    "files": [
+      {
+        "path": "bin/dictawhisper.js",
+        "sha256": "81475e6784f437e7a92e3bccbcb04bf43011ed356a3240b98c3327522ff87c44",
+        "bytes": 567,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "docs/APP_UX_SPEC.md",
+        "sha256": "fddc5b5fe759f2e66cffd5d13c0341167b9b0eec742f821fed5200230caaf7f6",
+        "bytes": 115818,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/AUDIO_IMPROVEMENT.md",
+        "sha256": "bc0acea49e4ed33aa7b66c5a620313aab7ccc80235c328b7931895fd7d2f9eb7",
+        "bytes": 38325,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/IMPROVEMENT_SPEC.md",
+        "sha256": "73ca79f47f47a386d37c869a46740af2e6e1a920a8adc2915ae8a1a78f735b7e",
+        "bytes": 24215,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/INBOX_SEARCH_UX_SPEC.md",
+        "sha256": "f9190c433193f1cdf413ef1a68af7a8fb6d3747f60e81178442ed515c694a61d",
+        "bytes": 11384,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/SCALE_SEARCH_SPEC.md",
+        "sha256": "6d7f33f1d5d85d4cc924dc1f134cc67bcb74e94079e5e1c3edf5ff249e05adc3",
+        "bytes": 9901,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/smellcheck-overlay.md",
+        "sha256": "c2b2086ceebeeefc57458a85a44c8f299113f42b73e76dd34d88ef65a92695b9",
+        "bytes": 2170,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UI_ENGRAM_SPEC.md",
+        "sha256": "88af31dd1a0548b2b34957bf970e0c7f820ebc8ea7cbfe1e79bf5fedd3e151d6",
+        "bytes": 16544,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX01_VERIFICATION.md",
+        "sha256": "c3524e5def42b63239f9b51edefa1e5660d88b0b07a5de097683c1d59838e251",
+        "bytes": 6278,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX02_VERIFICATION.md",
+        "sha256": "595d05ee83bc7557eaa30fe1cb0f4115783fe49542f853e3ca3972e9e7460fc0",
+        "bytes": 5686,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX03_VERIFICATION.md",
+        "sha256": "0b1e5d09703188ed452113c1e737e8da0c976a668610a9d5dd35d3ccc323d77d",
+        "bytes": 9975,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX04_VERIFICATION.md",
+        "sha256": "71ae1ba566e90b641949c042573b88b076ba7278e68a9074cb9d03fdb1a68896",
+        "bytes": 8761,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX05_VERIFICATION.md",
+        "sha256": "b0adf97db4e793d30c2af295f6b478075ee1b580ab96684c9a64ac1006974bcd",
+        "bytes": 11304,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX06_VERIFICATION.md",
+        "sha256": "188ceee970940e5db4e750814f6ded848b90010f1dd00531b4f2157630505dab",
+        "bytes": 6653,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX07_VERIFICATION.md",
+        "sha256": "47fb08a5052076f683982bd6d888f240ef6f560a1fab85d51c083ebae9bb9ff2",
+        "bytes": 5451,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/UX08_VERIFICATION.md",
+        "sha256": "31b62f25d68acf367bf8f7f9bde0cc8b73d76ffd8e3159fcbd41e09b903fc739",
+        "bytes": 5963,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "docs/VOICE_INBOX_SPEC.md",
+        "sha256": "66c63ab59348aeef7da7873a24812c5ae5f05cd0492fae7956d4c34aa127386e",
+        "bytes": 14824,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "package.json",
+        "sha256": "34d8a85477ce7c8270334ee7cd607867a8b18b5f79b707c906b547f617c2e875",
+        "bytes": 3447,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "README.md",
+        "sha256": "5e9c9cc1f265e0ba2465652594f44b8da5c495f557377fbecbcef3e767e870a6",
+        "bytes": 13513,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "markdown-document"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "markdown-document"
+        ]
+      },
+      {
+        "path": "src/apiRoutes.ts",
+        "sha256": "f52bef8e6a97d99513e3c685e51ee5482154c528f3526224c06df72ab0309445",
+        "bytes": 28482,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/audioRescueRoutes.ts",
+        "sha256": "63a52625e6ba6f8f0cb43b90e4051e479b3bcf404a805c675c3ca0954f4aab50",
+        "bytes": 2805,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/classes/Queue.ts",
+        "sha256": "bb9e95b04583cf0e169d6d1b91f6159ea0c4e3dbf7f940b5d03db70da398bb55",
+        "bytes": 2116,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/classes/Watcher.ts",
+        "sha256": "05b4f2a5683816e4b57f5119ab199ed046d34ef35f4496bb11f28b976c8c9a11",
+        "bytes": 4136,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/cli.ts",
+        "sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "bytes": 4566,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/config.ts",
+        "sha256": "b5efd4e624c48abb704f518c369d67f6e16d05a4bb34c84bb572e0f3eca07233",
+        "bytes": 7881,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/dev.ts",
+        "sha256": "7a2b76dbb22492876d1bf660daa57e8fbb09c000431e6d9a49a2416439a8a6ff",
+        "bytes": 1893,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/doctor.ts",
+        "sha256": "38029d67d77ed280f59c4666a92d685d5535bff35437669dced6dd1839f5a8de",
+        "bytes": 434,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/activityLib.ts",
+        "sha256": "f54aae1349a70f83d46d2fa52096872b98dc108d5aff62574fab77fe1bcfd964",
+        "bytes": 5382,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/alignLib.ts",
+        "sha256": "740f47cbf4986983b974d7b612a9eddda42e63959815e80f91803044f1ea9671",
+        "bytes": 4420,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/audioAssessmentLib.ts",
+        "sha256": "204786af2eb8950abbfc9c43f905b1abf0304d9c37c43bd29da91a451cbaf36a",
+        "bytes": 5555,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/audioEnhancementLib.ts",
+        "sha256": "143046f0da407f56dc8ecd5a112d481cc35eab986c1d19c946b64d6e2a33eeb5",
+        "bytes": 4468,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/audioImprovementStorageLib.ts",
+        "sha256": "c55101f11203904c7a23c7356422fc482d21545e70b7f862ca0bb9f571625a85",
+        "bytes": 1993,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/audioLib.ts",
+        "sha256": "0a42a733fc1860c55106f72adc1f232c148c691db254c73fbb37574218105f29",
+        "bytes": 9051,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/audioProbeLib.ts",
+        "sha256": "a9e9b7861d859f523afb0f2d1e4ad43c305180d0baf8d8adc60f3a43d8cd9658",
+        "bytes": 5695,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/audioRescueService.ts",
+        "sha256": "4aae801067736163b4c03254b1f522d585c1be579f07e1cd81272de7299dc175",
+        "bytes": 25809,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/cleanupProvenanceLib.ts",
+        "sha256": "6f6bf46d5fe7ef94fd8ff540fa6bb86ab3a155a80ff8bedb61265dcd77edec30",
+        "bytes": 3329,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/devChild.ts",
+        "sha256": "6f55b2708cb96a77e1c608aab7ae9059c8198f6e2613f84dee8b3c07afef9a78",
+        "bytes": 698,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/devPorts.ts",
+        "sha256": "192be7135bea1052b107d2e2879b958193ebe2c98d83330df237a59d88c3d922",
+        "bytes": 906,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/downloadLib.ts",
+        "sha256": "28c93fa442fc94479d5232d45bd0cff4c3964bd743054dd9dca20c0ed12eb924",
+        "bytes": 458,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/entryBundleLib.ts",
+        "sha256": "f6290aa88c6392ab67b00a72bfcf54ca0f44ec295df336df1e6e1b8cd6eca15d",
+        "bytes": 20660,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/entryIdentityLib.ts",
+        "sha256": "160f4d66b0f3480426317c6aac427d7c3d2b3a13ad07120faf0836bb5aa73a9d",
+        "bytes": 1572,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/entryOperationLib.ts",
+        "sha256": "30551a9c72f0a2ee8e14c9d2486aeffeb7e74bbdda23c7b392feff46800b0d8c",
+        "bytes": 790,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/entryOrganizationLib.ts",
+        "sha256": "313bd6c011267e2ad379879c3af870d27bd1bba335b4542ed1830d20fd6a8021",
+        "bytes": 3853,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/fileSettleLib.ts",
+        "sha256": "7691d26a70dd9c74ae26ba4f2382e3bed6b04c7dea53a4bb34d9b2c8323bdd5b",
+        "bytes": 6176,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/fsLib.ts",
+        "sha256": "22f4c3c8b4972a85ffd202d50d646d960b00efe9a2e75b54eda97f7fb306d96f",
+        "bytes": 1594,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/healthLib.ts",
+        "sha256": "955ded083fbf0a3da7937e99236f1e11d937f26b91c00ca1af0d193a2e7949bb",
+        "bytes": 15372,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/humanEditsLib.ts",
+        "sha256": "60168f43f12b09796c2e5663231215e6cdc6b5070bae67483575b96e4b4ab999",
+        "bytes": 980,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/inboxUrl.ts",
+        "sha256": "7c0967eb9eedfa231d94e7caa8bcf7764c88fd1033f6fbec0bf635aecf9f3432",
+        "bytes": 5819,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/journalEmbedLib.ts",
+        "sha256": "3f81e5769e40a0cd73280469753d570e1da9c8e977945d636693d19bbff4cd1a",
+        "bytes": 8236,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/journalIndexLib.ts",
+        "sha256": "c65041b45f461408709d447af7001c44799afe23b2078d2c18a73a7dd15cf3dd",
+        "bytes": 44184,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/journalQueryLib.ts",
+        "sha256": "fea88011a6259106d5e544ee661cd62182da7a7e1c2825681f4a11a35a9fe4a6",
+        "bytes": 8630,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/journalService.ts",
+        "sha256": "8bfad923c73f2b54d0f28b97b52414184c306a5c24f5bbca232160c281af6955",
+        "bytes": 9947,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/jsonLib.ts",
+        "sha256": "7f9c9ea0716591b4b3deb78697361fc1f38bf213ee47e7f2a88b36b48f9ba87f",
+        "bytes": 1861,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/localslipGet.ts",
+        "sha256": "f403bbafe16b0a2e5a6554d8e88ed197723244bc33d103c5ed398d815665d6dc",
+        "bytes": 533,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/mayDoBackfillLib.ts",
+        "sha256": "e06a6bdaa5ab9605163928f2c940ac703d873a30c40574771fb2893ed7933b58",
+        "bytes": 1654,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/mayDoJobLib.ts",
+        "sha256": "308104e36537a9526c870f339f134648ac371dec946a43f10f3ca81e9eb66d7c",
+        "bytes": 7966,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/mayDoLib.ts",
+        "sha256": "d1362f2c151a139cc146639d146a3acb68c158447f33d184cbd6633a92434309",
+        "bytes": 4453,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/mayDoService.ts",
+        "sha256": "bdbec80a806b0940ba83d9182dcdaca67447a49efa893452ced2e0b872263612",
+        "bytes": 5867,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/ollanetLib.ts",
+        "sha256": "be4c23f1ed31b8c7891876dc5356f26f8adb8f6e036b006f5041b690f8563c50",
+        "bytes": 4434,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/ollanetReadyLib.ts",
+        "sha256": "0cae34e4f0f9ed6684bd19f4246fc5ad29c5fb50f7fade563328dfaadc85e97f",
+        "bytes": 307,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/organizationLib.ts",
+        "sha256": "aba50546ad860e672b586302b5dcccac492af3033a343b422a3bd9919e53a273",
+        "bytes": 8321,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/pathAllowLib.ts",
+        "sha256": "7e3cf94f5a128069ee7326422e7d15721363c53762f78a50ec82b3f6c435bed5",
+        "bytes": 1849,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/queueLib.ts",
+        "sha256": "f13ef41753c565163fd7c105409cb0543660eb0f18b7bc13f7ad8b65c6fc08c3",
+        "bytes": 2523,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/settingsLib.ts",
+        "sha256": "31bbb406b4da8c2a13ae6568d4e053f09f651abb12cb02e2606f5fa259fe8e92",
+        "bytes": 1567,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/speechCleanupLib.ts",
+        "sha256": "93afcd1320f017ecebc7c62c8100f5229b21b4fc6d2c9bff239db8fa3d672a42",
+        "bytes": 564,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/tagConsolidateLib.ts",
+        "sha256": "75b5c0e13f4acc92bf4fbece21d54eba16d593be8c178f14aa06b7ad4438fd75",
+        "bytes": 14779,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/tailscaleLib.ts",
+        "sha256": "e10196235f86bd0c51d01009a14b6d9e4818d3e49e20ef51efe49f7651f8696d",
+        "bytes": 2503,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/transcriptionBatchLib.ts",
+        "sha256": "a401747e82a7ab8b732a5aac637a3b97547bac95e065b86c9e203668e48fab75",
+        "bytes": 16963,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/transcriptionLib.ts",
+        "sha256": "83f878c331cea86c92fbe3cd4023fcbcecf0d1ac3b7f3e27b657bb40367f24b5",
+        "bytes": 24974,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/transcriptionQualityLib.ts",
+        "sha256": "d3960752464b283cb42b7c01c75930b3b0115af75675db0700da21c0bd3b0488",
+        "bytes": 5190,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/whisperLib.ts",
+        "sha256": "b68f8b05fc7e3f6cb811bdc77a2cb85ef9abd9af648cd54c86964f8001626f26",
+        "bytes": 13534,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/mcp.ts",
+        "sha256": "3c9b7375d9d6788a23c8c4b5ebf3df1f5448f47d7595e69366e08bf0097375f5",
+        "bytes": 5324,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/prompts/cleanTranscription.ts",
+        "sha256": "02cb57e3407ce9430c98ab22bf7116a37c7b4a64c7b4c74ccf4562693bc2f2ba",
+        "bytes": 4303,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/prompts/consolidateTags.ts",
+        "sha256": "6e5a62625cd9f959b0460a4ee6980dbcc12ec02f01331851d367e87766cc12fb",
+        "bytes": 1473,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/prompts/mayDos.ts",
+        "sha256": "c777357da0c5401dc5b62773c112f493e59048d7322db4e61a455d1f103e8860",
+        "bytes": 1103,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/prompts/whisperInitial.ts",
+        "sha256": "74496474a1fc42789d942d74203879dd8ee047d1fcf53beae3f7a746f2d4a12a",
+        "bytes": 458,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/server.ts",
+        "sha256": "e8afc2aab64b6cda4295b883ada39e5f045330bb1820da94421b8a790e41535c",
+        "bytes": 8199,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/shared/mayDoState.ts",
+        "sha256": "fcab0ddf5b3560078550ccce25fb765a8eb16ad414d680f2b63a800bf4a866e3",
+        "bytes": 1514,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/shared/readableParagraphs.ts",
+        "sha256": "d49eee72c3bffc8f571d3239ac287cf032a56b801686e9196cf95361352410dd",
+        "bytes": 1691,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/socketEvents.ts",
+        "sha256": "35d93d9374b96537928a7fcb07bd35a16879ea2aababaade738536d76554dede",
+        "bytes": 1762,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/transcriptionBatchRoutes.ts",
+        "sha256": "5a2c2a66b35e188eebc4d1361a9fb35eee1bbe727e01c1d30bf168bd71bf4dd6",
+        "bytes": 1564,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/types/transcription.ts",
+        "sha256": "e7d48c889eb08954aac1c6723e26db68d0cbce6003e992f5d783dbc7488afa6d",
+        "bytes": 2325,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "test/alignLib.test.ts",
+        "sha256": "12b69c699e66c6068192ba52e3b45a877efd332041f4cbea9a089aa995412966",
+        "bytes": 2721,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/audioEnhancement.test.ts",
+        "sha256": "4a0cf72afe74cd1da3bfa53869e231e44a4630dfd604272165946a0ed43f066e",
+        "bytes": 2763,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/audioProbe.test.ts",
+        "sha256": "641c416c7be5ace14e326d48e52aac32ce4e1336f8bbe7243ce4bdfbf8364bc8",
+        "bytes": 955,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/audioRecency.test.ts",
+        "sha256": "ec49aa14ccdd3368835e870a10f917b5590a29cd18992d76f9e537282dc4338b",
+        "bytes": 1395,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/audioRescue.test.ts",
+        "sha256": "c0325fbcf210eaa19d13d1a301b8c5c28ead756cab515be3e93bce89290f1007",
+        "bytes": 15661,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/audioReviewState.test.ts",
+        "sha256": "631af2ac031682cc292437d7a52e8feefc89c0b697787bd8fa8dba49c07f7b77",
+        "bytes": 2431,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/captureActivity.test.ts",
+        "sha256": "6c138ba25f06d40ef10e0769835cfdc73663f0c3105bf0deb9a99109257be925",
+        "bytes": 9577,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/captureApi.test.ts",
+        "sha256": "2c0998147466c424ca87f4b643b852d80656a01b092b50f2bcd94d759f564b3e",
+        "bytes": 4946,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/checkoutProxy.test.ts",
+        "sha256": "109123c9e0213d9a95a99623ae38e54595f42c50e95e95d4d89c10283263e03a",
+        "bytes": 1817,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/cleanupProvenance.test.ts",
+        "sha256": "754aecb3e8d1057d0191906a84fb23198cbf4e4de9723fdab5bdd7314af646a5",
+        "bytes": 2954,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/cli.test.ts",
+        "sha256": "ff9cdf046124b7dc95226a5a26d2b064bb016a2a4ef5736a38220018df6f887a",
+        "bytes": 1428,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/config.test.ts",
+        "sha256": "93782326d4055fec69a96deba42e35cd89ce1bd6996655eb28a42ebee746bc7d",
+        "bytes": 2891,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/dateFromFilename.test.ts",
+        "sha256": "e4ac0e9a03fba647ef15924518e5fb288db0a4d5ca622f8a0de54ad60c0447c6",
+        "bytes": 776,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/devChild.test.ts",
+        "sha256": "573a71cc059b72cdac7e030e8bce6fe53b33f847ed6341d5c3d91c17da19aa81",
+        "bytes": 1363,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/devPorts.test.ts",
+        "sha256": "ee6c9fad712f7dc08643c454548b83f284b5b186a7d5cb3b86e1c4258bcff691",
+        "bytes": 1273,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/downloadLib.test.ts",
+        "sha256": "039e708854ad08ed0116123d4c18cb341be32290e944065cfd4f8148c0c1d5d6",
+        "bytes": 538,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/entryPage.test.ts",
+        "sha256": "19ece8728398f2b23b07fa2283c846cd597184691246ff926a101f335753e45f",
+        "bytes": 10768,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/entryPresentation.test.ts",
+        "sha256": "643e534a201f84172dafbe0e3c83b40b0c0b827e97be22c1e492f63942dca18d",
+        "bytes": 6113,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/entryRecovery.test.ts",
+        "sha256": "7636aa32331987dffb6a99fd1956905b3d6ebd51a3217c830f2c883ccaddf9c6",
+        "bytes": 8777,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/entryTitle.test.ts",
+        "sha256": "a61d834ba2528aad6e4efb85c7253a9d9b908f273dbe91f804a7d177fb57b1c7",
+        "bytes": 2874,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/fileSettle.test.ts",
+        "sha256": "7e87ae03dc47094058bb68747862de04f7253272c73de54a122d33e3eb8bfeef",
+        "bytes": 482,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/inboxOrganize.test.ts",
+        "sha256": "d2da2e6f4d85dbe1b7917c9131f9564c59edacf7d13af4d8007a963d9b401556",
+        "bytes": 5461,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/inboxUrl.test.ts",
+        "sha256": "697873e5bb10d65c4c1a43f319248d212dd149b131ae37694eee02d9ae43acc6",
+        "bytes": 4170,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/journalEmbed.test.ts",
+        "sha256": "6cf138b887367d2a9453b2192e537f96788f01f564f683342c98ffdad9af65a0",
+        "bytes": 9616,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/journalIndex.test.ts",
+        "sha256": "cddc9f5a3cd5dab0b30fddc1acc99960fc97a836caeedf232143e5a0f7f86b29",
+        "bytes": 12934,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/journalLex.test.ts",
+        "sha256": "69433e4a2b117873b3f219ffceaff82dcd75c94c1ded53321c555fcf1f16d8fa",
+        "bytes": 1996,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/journalQuery.test.ts",
+        "sha256": "440ea993b05b92072beb1e0377eaea4c19dec8267fd001b3924485bb932bd273",
+        "bytes": 3141,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/mayDoApi.test.ts",
+        "sha256": "eadba0c25ace107e4450839c0cb936f8ec68592ad3aac5e2ef7283bb7e892385",
+        "bytes": 3369,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/mayDoJobs.test.ts",
+        "sha256": "1426ab52aee70a3fbea2f4cb56aef557c2ea59401f9522f78a11fe08e10c7c28",
+        "bytes": 7718,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/mayDos.test.ts",
+        "sha256": "b582f8eea8f3f97d76e0f2bab6233e19b69444017c3013d524426fc3f2b81967",
+        "bytes": 5567,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/notePatch.test.ts",
+        "sha256": "e891cab2381f90abc467f037aee74914d0b9085a23a03bb9fba3910396f0a26b",
+        "bytes": 930,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/parseJSON.test.ts",
+        "sha256": "8e6e850c80bbb8464665caef622e1dbe96883e79c9e49089518d997e95fb5c91",
+        "bytes": 735,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/pathAllow.test.ts",
+        "sha256": "39cc455d0b4196828df11cd742bee77c3b9d825b6dbe87e43500645c592c2f48",
+        "bytes": 1845,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/publish-gate.test.ts",
+        "sha256": "bddb2a31ca64063473528a3eaf9d8aba51eadeb5107c6be6646ad1d02b351c87",
+        "bytes": 1661,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/queueError.test.ts",
+        "sha256": "df7aa0d7e5e46454575481a6024e0f1d7a2000594cf4e1d171c067769bba59b1",
+        "bytes": 2608,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/readableParagraphs.test.ts",
+        "sha256": "a835d6b86316a3951802e225f4ce803c9ee23d8ea0ad875fa756b89c66f4d456",
+        "bytes": 4769,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/settingsRecoveryApi.test.ts",
+        "sha256": "7962b9c88a1712ca9d0c2eb86847cd871d2f3fbc5422936673a7bf73878f6dd9",
+        "bytes": 6247,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/startupReadiness.test.ts",
+        "sha256": "df9ece6b70c36bda90f4a3400b2ab42515ba7357765e8f1911643bbb5a9fc510",
+        "bytes": 3906,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/tailscale.test.ts",
+        "sha256": "8b72260705b8de8a745666d41b129aef6d5f8a166bfddc8337246b9846770562",
+        "bytes": 1525,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/transcriptionBatch.test.ts",
+        "sha256": "31a9f8fcb8338128910153869e1479e7d63d8b884f496887d9e13dfbce0d3153",
+        "bytes": 9578,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/transcriptionQuality.test.ts",
+        "sha256": "bad80f9b7bcf84903a9fec4e3b574d8395ac0af2d437aa4ade76f4813b2d2d1f",
+        "bytes": 3723,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/transcriptionReview.test.ts",
+        "sha256": "77e92dd0cc30eedac99479105f807a16c9ca8d8935e81e7ff0e5d36cf886ebf6",
+        "bytes": 5272,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/virtualWindow.test.ts",
+        "sha256": "1b49a78818a32f0b25ca6f718237413dd444f1ada7c01a14f9e2cce5ea4bba3b",
+        "bytes": 582,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/watcherNewestFirst.test.ts",
+        "sha256": "e76710583937c453681faf026fdd57313e15ddf5e141d9e4ff1d856e9fcf3b76",
+        "bytes": 2339,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/watcherRestart.test.ts",
+        "sha256": "d5b2f6fcb0eed3798f604e9bedda5465b6fa4e236b9938640baf3ac4d122d592",
+        "bytes": 6304,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/whisperOptions.test.ts",
+        "sha256": "e807eb8cea268c27b0798027560eb3da7691602e9c6e555e0d6c0235afaa1c13",
+        "bytes": 5383,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/workspaceState.test.ts",
+        "sha256": "f37cebe6db1da796d47ed0d3a1376d93410a90591ccf99adb5b9276c7c34a5ae",
+        "bytes": 3485,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      }
+    ],
+    "exclusions": [
+      {
+        "path": ".featurefacts",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": ".git",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": "client/.svelte-kit",
+        "reason": "generated-output"
+      },
+      {
+        "path": "client/node_modules",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": "data/asr-compare/.venv/Lib/site-packages/certifi/cacert.pem",
+        "reason": "secret-or-key"
+      },
+      {
+        "path": "data/asr-compare/.venv/Lib/site-packages/grpc/_cython/_credentials/roots.pem",
+        "reason": "secret-or-key"
+      },
+      {
+        "path": "data/asr-compare/.venv/Lib/site-packages/pip/_internal/operations/build",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": "data/asr-compare/.venv/Lib/site-packages/pip/_vendor/certifi/cacert.pem",
+        "reason": "secret-or-key"
+      },
+      {
+        "path": "dist",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": "node_modules",
+        "reason": "exclude-pattern"
+      },
+      {
+        "path": "site",
+        "reason": "exclude-pattern"
+      }
+    ]
+  },
+  "adapters": [
+    {
+      "id": "typescript-tree",
+      "version": "0.2.0",
+      "kind": "tree",
+      "state": "completed",
+      "eligible_files": [
+        "bin/dictawhisper.js",
+        "docs/APP_UX_SPEC.md",
+        "docs/AUDIO_IMPROVEMENT.md",
+        "docs/IMPROVEMENT_SPEC.md",
+        "docs/INBOX_SEARCH_UX_SPEC.md",
+        "docs/SCALE_SEARCH_SPEC.md",
+        "docs/smellcheck-overlay.md",
+        "docs/UI_ENGRAM_SPEC.md",
+        "docs/UX01_VERIFICATION.md",
+        "docs/UX02_VERIFICATION.md",
+        "docs/UX03_VERIFICATION.md",
+        "docs/UX04_VERIFICATION.md",
+        "docs/UX05_VERIFICATION.md",
+        "docs/UX06_VERIFICATION.md",
+        "docs/UX07_VERIFICATION.md",
+        "docs/UX08_VERIFICATION.md",
+        "docs/VOICE_INBOX_SPEC.md",
+        "package.json",
+        "README.md",
+        "src/apiRoutes.ts",
+        "src/audioRescueRoutes.ts",
+        "src/classes/Queue.ts",
+        "src/classes/Watcher.ts",
+        "src/cli.ts",
+        "src/config.ts",
+        "src/dev.ts",
+        "src/doctor.ts",
+        "src/lib/activityLib.ts",
+        "src/lib/alignLib.ts",
+        "src/lib/audioAssessmentLib.ts",
+        "src/lib/audioEnhancementLib.ts",
+        "src/lib/audioImprovementStorageLib.ts",
+        "src/lib/audioLib.ts",
+        "src/lib/audioProbeLib.ts",
+        "src/lib/audioRescueService.ts",
+        "src/lib/cleanupProvenanceLib.ts",
+        "src/lib/devChild.ts",
+        "src/lib/devPorts.ts",
+        "src/lib/downloadLib.ts",
+        "src/lib/entryBundleLib.ts",
+        "src/lib/entryIdentityLib.ts",
+        "src/lib/entryOperationLib.ts",
+        "src/lib/entryOrganizationLib.ts",
+        "src/lib/fileSettleLib.ts",
+        "src/lib/fsLib.ts",
+        "src/lib/healthLib.ts",
+        "src/lib/humanEditsLib.ts",
+        "src/lib/inboxUrl.ts",
+        "src/lib/journalEmbedLib.ts",
+        "src/lib/journalIndexLib.ts",
+        "src/lib/journalQueryLib.ts",
+        "src/lib/journalService.ts",
+        "src/lib/jsonLib.ts",
+        "src/lib/localslipGet.ts",
+        "src/lib/mayDoBackfillLib.ts",
+        "src/lib/mayDoJobLib.ts",
+        "src/lib/mayDoLib.ts",
+        "src/lib/mayDoService.ts",
+        "src/lib/ollanetLib.ts",
+        "src/lib/ollanetReadyLib.ts",
+        "src/lib/organizationLib.ts",
+        "src/lib/pathAllowLib.ts",
+        "src/lib/queueLib.ts",
+        "src/lib/settingsLib.ts",
+        "src/lib/speechCleanupLib.ts",
+        "src/lib/tagConsolidateLib.ts",
+        "src/lib/tailscaleLib.ts",
+        "src/lib/transcriptionBatchLib.ts",
+        "src/lib/transcriptionLib.ts",
+        "src/lib/transcriptionQualityLib.ts",
+        "src/lib/whisperLib.ts",
+        "src/mcp.ts",
+        "src/prompts/cleanTranscription.ts",
+        "src/prompts/consolidateTags.ts",
+        "src/prompts/mayDos.ts",
+        "src/prompts/whisperInitial.ts",
+        "src/server.ts",
+        "src/shared/mayDoState.ts",
+        "src/shared/readableParagraphs.ts",
+        "src/socketEvents.ts",
+        "src/transcriptionBatchRoutes.ts",
+        "src/types/transcription.ts",
+        "test/alignLib.test.ts",
+        "test/audioEnhancement.test.ts",
+        "test/audioProbe.test.ts",
+        "test/audioRecency.test.ts",
+        "test/audioRescue.test.ts",
+        "test/audioReviewState.test.ts",
+        "test/captureActivity.test.ts",
+        "test/captureApi.test.ts",
+        "test/checkoutProxy.test.ts",
+        "test/cleanupProvenance.test.ts",
+        "test/cli.test.ts",
+        "test/config.test.ts",
+        "test/dateFromFilename.test.ts",
+        "test/devChild.test.ts",
+        "test/devPorts.test.ts",
+        "test/downloadLib.test.ts",
+        "test/entryPage.test.ts",
+        "test/entryPresentation.test.ts",
+        "test/entryRecovery.test.ts",
+        "test/entryTitle.test.ts",
+        "test/fileSettle.test.ts",
+        "test/inboxOrganize.test.ts",
+        "test/inboxUrl.test.ts",
+        "test/journalEmbed.test.ts",
+        "test/journalIndex.test.ts",
+        "test/journalLex.test.ts",
+        "test/journalQuery.test.ts",
+        "test/mayDoApi.test.ts",
+        "test/mayDoJobs.test.ts",
+        "test/mayDos.test.ts",
+        "test/notePatch.test.ts",
+        "test/parseJSON.test.ts",
+        "test/pathAllow.test.ts",
+        "test/publish-gate.test.ts",
+        "test/queueError.test.ts",
+        "test/readableParagraphs.test.ts",
+        "test/settingsRecoveryApi.test.ts",
+        "test/startupReadiness.test.ts",
+        "test/tailscale.test.ts",
+        "test/transcriptionBatch.test.ts",
+        "test/transcriptionQuality.test.ts",
+        "test/transcriptionReview.test.ts",
+        "test/virtualWindow.test.ts",
+        "test/watcherNewestFirst.test.ts",
+        "test/watcherRestart.test.ts",
+        "test/whisperOptions.test.ts",
+        "test/workspaceState.test.ts"
+      ],
+      "inspected_files": [
+        "bin/dictawhisper.js",
+        "docs/APP_UX_SPEC.md",
+        "docs/AUDIO_IMPROVEMENT.md",
+        "docs/IMPROVEMENT_SPEC.md",
+        "docs/INBOX_SEARCH_UX_SPEC.md",
+        "docs/SCALE_SEARCH_SPEC.md",
+        "docs/smellcheck-overlay.md",
+        "docs/UI_ENGRAM_SPEC.md",
+        "docs/UX01_VERIFICATION.md",
+        "docs/UX02_VERIFICATION.md",
+        "docs/UX03_VERIFICATION.md",
+        "docs/UX04_VERIFICATION.md",
+        "docs/UX05_VERIFICATION.md",
+        "docs/UX06_VERIFICATION.md",
+        "docs/UX07_VERIFICATION.md",
+        "docs/UX08_VERIFICATION.md",
+        "docs/VOICE_INBOX_SPEC.md",
+        "package.json",
+        "README.md",
+        "src/apiRoutes.ts",
+        "src/audioRescueRoutes.ts",
+        "src/classes/Queue.ts",
+        "src/classes/Watcher.ts",
+        "src/cli.ts",
+        "src/config.ts",
+        "src/dev.ts",
+        "src/doctor.ts",
+        "src/lib/activityLib.ts",
+        "src/lib/alignLib.ts",
+        "src/lib/audioAssessmentLib.ts",
+        "src/lib/audioEnhancementLib.ts",
+        "src/lib/audioImprovementStorageLib.ts",
+        "src/lib/audioLib.ts",
+        "src/lib/audioProbeLib.ts",
+        "src/lib/audioRescueService.ts",
+        "src/lib/cleanupProvenanceLib.ts",
+        "src/lib/devChild.ts",
+        "src/lib/devPorts.ts",
+        "src/lib/downloadLib.ts",
+        "src/lib/entryBundleLib.ts",
+        "src/lib/entryIdentityLib.ts",
+        "src/lib/entryOperationLib.ts",
+        "src/lib/entryOrganizationLib.ts",
+        "src/lib/fileSettleLib.ts",
+        "src/lib/fsLib.ts",
+        "src/lib/healthLib.ts",
+        "src/lib/humanEditsLib.ts",
+        "src/lib/inboxUrl.ts",
+        "src/lib/journalEmbedLib.ts",
+        "src/lib/journalIndexLib.ts",
+        "src/lib/journalQueryLib.ts",
+        "src/lib/journalService.ts",
+        "src/lib/jsonLib.ts",
+        "src/lib/localslipGet.ts",
+        "src/lib/mayDoBackfillLib.ts",
+        "src/lib/mayDoJobLib.ts",
+        "src/lib/mayDoLib.ts",
+        "src/lib/mayDoService.ts",
+        "src/lib/ollanetLib.ts",
+        "src/lib/ollanetReadyLib.ts",
+        "src/lib/organizationLib.ts",
+        "src/lib/pathAllowLib.ts",
+        "src/lib/queueLib.ts",
+        "src/lib/settingsLib.ts",
+        "src/lib/speechCleanupLib.ts",
+        "src/lib/tagConsolidateLib.ts",
+        "src/lib/tailscaleLib.ts",
+        "src/lib/transcriptionBatchLib.ts",
+        "src/lib/transcriptionLib.ts",
+        "src/lib/transcriptionQualityLib.ts",
+        "src/lib/whisperLib.ts",
+        "src/mcp.ts",
+        "src/prompts/cleanTranscription.ts",
+        "src/prompts/consolidateTags.ts",
+        "src/prompts/mayDos.ts",
+        "src/prompts/whisperInitial.ts",
+        "src/server.ts",
+        "src/shared/mayDoState.ts",
+        "src/shared/readableParagraphs.ts",
+        "src/socketEvents.ts",
+        "src/transcriptionBatchRoutes.ts",
+        "src/types/transcription.ts",
+        "test/alignLib.test.ts",
+        "test/audioEnhancement.test.ts",
+        "test/audioProbe.test.ts",
+        "test/audioRecency.test.ts",
+        "test/audioRescue.test.ts",
+        "test/audioReviewState.test.ts",
+        "test/captureActivity.test.ts",
+        "test/captureApi.test.ts",
+        "test/checkoutProxy.test.ts",
+        "test/cleanupProvenance.test.ts",
+        "test/cli.test.ts",
+        "test/config.test.ts",
+        "test/dateFromFilename.test.ts",
+        "test/devChild.test.ts",
+        "test/devPorts.test.ts",
+        "test/downloadLib.test.ts",
+        "test/entryPage.test.ts",
+        "test/entryPresentation.test.ts",
+        "test/entryRecovery.test.ts",
+        "test/entryTitle.test.ts",
+        "test/fileSettle.test.ts",
+        "test/inboxOrganize.test.ts",
+        "test/inboxUrl.test.ts",
+        "test/journalEmbed.test.ts",
+        "test/journalIndex.test.ts",
+        "test/journalLex.test.ts",
+        "test/journalQuery.test.ts",
+        "test/mayDoApi.test.ts",
+        "test/mayDoJobs.test.ts",
+        "test/mayDos.test.ts",
+        "test/notePatch.test.ts",
+        "test/parseJSON.test.ts",
+        "test/pathAllow.test.ts",
+        "test/publish-gate.test.ts",
+        "test/queueError.test.ts",
+        "test/readableParagraphs.test.ts",
+        "test/settingsRecoveryApi.test.ts",
+        "test/startupReadiness.test.ts",
+        "test/tailscale.test.ts",
+        "test/transcriptionBatch.test.ts",
+        "test/transcriptionQuality.test.ts",
+        "test/transcriptionReview.test.ts",
+        "test/virtualWindow.test.ts",
+        "test/watcherNewestFirst.test.ts",
+        "test/watcherRestart.test.ts",
+        "test/whisperOptions.test.ts",
+        "test/workspaceState.test.ts"
+      ],
+      "diagnostics": []
+    },
+    {
+      "id": "typescript-node-surface",
+      "version": "0.2.2",
+      "kind": "surface",
+      "state": "completed",
+      "eligible_files": [
+        "bin/dictawhisper.js",
+        "package.json",
+        "src/apiRoutes.ts",
+        "src/audioRescueRoutes.ts",
+        "src/classes/Queue.ts",
+        "src/classes/Watcher.ts",
+        "src/cli.ts",
+        "src/config.ts",
+        "src/dev.ts",
+        "src/doctor.ts",
+        "src/lib/activityLib.ts",
+        "src/lib/alignLib.ts",
+        "src/lib/audioAssessmentLib.ts",
+        "src/lib/audioEnhancementLib.ts",
+        "src/lib/audioImprovementStorageLib.ts",
+        "src/lib/audioLib.ts",
+        "src/lib/audioProbeLib.ts",
+        "src/lib/audioRescueService.ts",
+        "src/lib/cleanupProvenanceLib.ts",
+        "src/lib/devChild.ts",
+        "src/lib/devPorts.ts",
+        "src/lib/downloadLib.ts",
+        "src/lib/entryBundleLib.ts",
+        "src/lib/entryIdentityLib.ts",
+        "src/lib/entryOperationLib.ts",
+        "src/lib/entryOrganizationLib.ts",
+        "src/lib/fileSettleLib.ts",
+        "src/lib/fsLib.ts",
+        "src/lib/healthLib.ts",
+        "src/lib/humanEditsLib.ts",
+        "src/lib/inboxUrl.ts",
+        "src/lib/journalEmbedLib.ts",
+        "src/lib/journalIndexLib.ts",
+        "src/lib/journalQueryLib.ts",
+        "src/lib/journalService.ts",
+        "src/lib/jsonLib.ts",
+        "src/lib/localslipGet.ts",
+        "src/lib/mayDoBackfillLib.ts",
+        "src/lib/mayDoJobLib.ts",
+        "src/lib/mayDoLib.ts",
+        "src/lib/mayDoService.ts",
+        "src/lib/ollanetLib.ts",
+        "src/lib/ollanetReadyLib.ts",
+        "src/lib/organizationLib.ts",
+        "src/lib/pathAllowLib.ts",
+        "src/lib/queueLib.ts",
+        "src/lib/settingsLib.ts",
+        "src/lib/speechCleanupLib.ts",
+        "src/lib/tagConsolidateLib.ts",
+        "src/lib/tailscaleLib.ts",
+        "src/lib/transcriptionBatchLib.ts",
+        "src/lib/transcriptionLib.ts",
+        "src/lib/transcriptionQualityLib.ts",
+        "src/lib/whisperLib.ts",
+        "src/mcp.ts",
+        "src/prompts/cleanTranscription.ts",
+        "src/prompts/consolidateTags.ts",
+        "src/prompts/mayDos.ts",
+        "src/prompts/whisperInitial.ts",
+        "src/server.ts",
+        "src/shared/mayDoState.ts",
+        "src/shared/readableParagraphs.ts",
+        "src/socketEvents.ts",
+        "src/transcriptionBatchRoutes.ts",
+        "src/types/transcription.ts"
+      ],
+      "inspected_files": [
+        "bin/dictawhisper.js",
+        "package.json",
+        "src/apiRoutes.ts",
+        "src/audioRescueRoutes.ts",
+        "src/classes/Queue.ts",
+        "src/classes/Watcher.ts",
+        "src/cli.ts",
+        "src/config.ts",
+        "src/dev.ts",
+        "src/doctor.ts",
+        "src/lib/activityLib.ts",
+        "src/lib/alignLib.ts",
+        "src/lib/audioAssessmentLib.ts",
+        "src/lib/audioEnhancementLib.ts",
+        "src/lib/audioImprovementStorageLib.ts",
+        "src/lib/audioLib.ts",
+        "src/lib/audioProbeLib.ts",
+        "src/lib/audioRescueService.ts",
+        "src/lib/cleanupProvenanceLib.ts",
+        "src/lib/devChild.ts",
+        "src/lib/devPorts.ts",
+        "src/lib/downloadLib.ts",
+        "src/lib/entryBundleLib.ts",
+        "src/lib/entryIdentityLib.ts",
+        "src/lib/entryOperationLib.ts",
+        "src/lib/entryOrganizationLib.ts",
+        "src/lib/fileSettleLib.ts",
+        "src/lib/fsLib.ts",
+        "src/lib/healthLib.ts",
+        "src/lib/humanEditsLib.ts",
+        "src/lib/inboxUrl.ts",
+        "src/lib/journalEmbedLib.ts",
+        "src/lib/journalIndexLib.ts",
+        "src/lib/journalQueryLib.ts",
+        "src/lib/journalService.ts",
+        "src/lib/jsonLib.ts",
+        "src/lib/localslipGet.ts",
+        "src/lib/mayDoBackfillLib.ts",
+        "src/lib/mayDoJobLib.ts",
+        "src/lib/mayDoLib.ts",
+        "src/lib/mayDoService.ts",
+        "src/lib/ollanetLib.ts",
+        "src/lib/ollanetReadyLib.ts",
+        "src/lib/organizationLib.ts",
+        "src/lib/pathAllowLib.ts",
+        "src/lib/queueLib.ts",
+        "src/lib/settingsLib.ts",
+        "src/lib/speechCleanupLib.ts",
+        "src/lib/tagConsolidateLib.ts",
+        "src/lib/tailscaleLib.ts",
+        "src/lib/transcriptionBatchLib.ts",
+        "src/lib/transcriptionLib.ts",
+        "src/lib/transcriptionQualityLib.ts",
+        "src/lib/whisperLib.ts",
+        "src/mcp.ts",
+        "src/prompts/cleanTranscription.ts",
+        "src/prompts/consolidateTags.ts",
+        "src/prompts/mayDos.ts",
+        "src/prompts/whisperInitial.ts",
+        "src/server.ts",
+        "src/shared/mayDoState.ts",
+        "src/shared/readableParagraphs.ts",
+        "src/socketEvents.ts",
+        "src/transcriptionBatchRoutes.ts",
+        "src/types/transcription.ts"
+      ],
+      "diagnostics": []
+    },
+    {
+      "id": "markdown-document",
+      "version": "0.2.0",
+      "kind": "document",
+      "state": "completed",
+      "eligible_files": [
+        "docs/APP_UX_SPEC.md",
+        "docs/AUDIO_IMPROVEMENT.md",
+        "docs/IMPROVEMENT_SPEC.md",
+        "docs/INBOX_SEARCH_UX_SPEC.md",
+        "docs/SCALE_SEARCH_SPEC.md",
+        "docs/smellcheck-overlay.md",
+        "docs/UI_ENGRAM_SPEC.md",
+        "docs/UX01_VERIFICATION.md",
+        "docs/UX02_VERIFICATION.md",
+        "docs/UX03_VERIFICATION.md",
+        "docs/UX04_VERIFICATION.md",
+        "docs/UX05_VERIFICATION.md",
+        "docs/UX06_VERIFICATION.md",
+        "docs/UX07_VERIFICATION.md",
+        "docs/UX08_VERIFICATION.md",
+        "docs/VOICE_INBOX_SPEC.md",
+        "README.md"
+      ],
+      "inspected_files": [
+        "docs/APP_UX_SPEC.md",
+        "docs/AUDIO_IMPROVEMENT.md",
+        "docs/IMPROVEMENT_SPEC.md",
+        "docs/INBOX_SEARCH_UX_SPEC.md",
+        "docs/SCALE_SEARCH_SPEC.md",
+        "docs/smellcheck-overlay.md",
+        "docs/UI_ENGRAM_SPEC.md",
+        "docs/UX01_VERIFICATION.md",
+        "docs/UX02_VERIFICATION.md",
+        "docs/UX03_VERIFICATION.md",
+        "docs/UX04_VERIFICATION.md",
+        "docs/UX05_VERIFICATION.md",
+        "docs/UX06_VERIFICATION.md",
+        "docs/UX07_VERIFICATION.md",
+        "docs/UX08_VERIFICATION.md",
+        "docs/VOICE_INBOX_SPEC.md",
+        "README.md"
+      ],
+      "diagnostics": []
+    },
+    {
+      "id": "typescript-test",
+      "version": "0.2.0",
+      "kind": "test",
+      "state": "completed",
+      "eligible_files": [
+        "test/alignLib.test.ts",
+        "test/audioEnhancement.test.ts",
+        "test/audioProbe.test.ts",
+        "test/audioRecency.test.ts",
+        "test/audioRescue.test.ts",
+        "test/audioReviewState.test.ts",
+        "test/captureActivity.test.ts",
+        "test/captureApi.test.ts",
+        "test/checkoutProxy.test.ts",
+        "test/cleanupProvenance.test.ts",
+        "test/cli.test.ts",
+        "test/config.test.ts",
+        "test/dateFromFilename.test.ts",
+        "test/devChild.test.ts",
+        "test/devPorts.test.ts",
+        "test/downloadLib.test.ts",
+        "test/entryPage.test.ts",
+        "test/entryPresentation.test.ts",
+        "test/entryRecovery.test.ts",
+        "test/entryTitle.test.ts",
+        "test/fileSettle.test.ts",
+        "test/inboxOrganize.test.ts",
+        "test/inboxUrl.test.ts",
+        "test/journalEmbed.test.ts",
+        "test/journalIndex.test.ts",
+        "test/journalLex.test.ts",
+        "test/journalQuery.test.ts",
+        "test/mayDoApi.test.ts",
+        "test/mayDoJobs.test.ts",
+        "test/mayDos.test.ts",
+        "test/notePatch.test.ts",
+        "test/parseJSON.test.ts",
+        "test/pathAllow.test.ts",
+        "test/publish-gate.test.ts",
+        "test/queueError.test.ts",
+        "test/readableParagraphs.test.ts",
+        "test/settingsRecoveryApi.test.ts",
+        "test/startupReadiness.test.ts",
+        "test/tailscale.test.ts",
+        "test/transcriptionBatch.test.ts",
+        "test/transcriptionQuality.test.ts",
+        "test/transcriptionReview.test.ts",
+        "test/virtualWindow.test.ts",
+        "test/watcherNewestFirst.test.ts",
+        "test/watcherRestart.test.ts",
+        "test/whisperOptions.test.ts",
+        "test/workspaceState.test.ts"
+      ],
+      "inspected_files": [
+        "test/alignLib.test.ts",
+        "test/audioEnhancement.test.ts",
+        "test/audioProbe.test.ts",
+        "test/audioRecency.test.ts",
+        "test/audioRescue.test.ts",
+        "test/audioReviewState.test.ts",
+        "test/captureActivity.test.ts",
+        "test/captureApi.test.ts",
+        "test/checkoutProxy.test.ts",
+        "test/cleanupProvenance.test.ts",
+        "test/cli.test.ts",
+        "test/config.test.ts",
+        "test/dateFromFilename.test.ts",
+        "test/devChild.test.ts",
+        "test/devPorts.test.ts",
+        "test/downloadLib.test.ts",
+        "test/entryPage.test.ts",
+        "test/entryPresentation.test.ts",
+        "test/entryRecovery.test.ts",
+        "test/entryTitle.test.ts",
+        "test/fileSettle.test.ts",
+        "test/inboxOrganize.test.ts",
+        "test/inboxUrl.test.ts",
+        "test/journalEmbed.test.ts",
+        "test/journalIndex.test.ts",
+        "test/journalLex.test.ts",
+        "test/journalQuery.test.ts",
+        "test/mayDoApi.test.ts",
+        "test/mayDoJobs.test.ts",
+        "test/mayDos.test.ts",
+        "test/notePatch.test.ts",
+        "test/parseJSON.test.ts",
+        "test/pathAllow.test.ts",
+        "test/publish-gate.test.ts",
+        "test/queueError.test.ts",
+        "test/readableParagraphs.test.ts",
+        "test/settingsRecoveryApi.test.ts",
+        "test/startupReadiness.test.ts",
+        "test/tailscale.test.ts",
+        "test/transcriptionBatch.test.ts",
+        "test/transcriptionQuality.test.ts",
+        "test/transcriptionReview.test.ts",
+        "test/virtualWindow.test.ts",
+        "test/watcherNewestFirst.test.ts",
+        "test/watcherRestart.test.ts",
+        "test/whisperOptions.test.ts",
+        "test/workspaceState.test.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "rules_version": "featurefacts-core@0.2.0",
+  "fingerprints": {
+    "source": "cdccc80e430a2c166307c84f4bcb277dfefc9b345ad276b5575f208c118dcc90",
+    "config": "0778aff434cfcbd601f90006830e8eda97bd08acd9ccb215b657aadd1520a3ed",
+    "adapters": "9a62745dc3fd15d7c60f9f44d5f62ca8329b8c59dbe3360efbdd40c289da135e",
+    "rules": "c7f728a22bf07a27d20f2b0ba60c59d2528cf27f6b218a22272fcbbe465f8971",
+    "registry": "41599de8ca1247d65976292ef61ac2c18434f6fc13146f55270237d899b4db56",
+    "projection": "171901605e9398b9a3b1296a1e6e0d43b310509875f49a900e3c1c487bc3bcfd"
+  },
+  "artifacts": [
+    {
+      "path": ".featurefacts/config.yaml",
+      "sha256": "86c5deb3f38d4ffd33a989a2ceebd883ce8594ffaa69e5c59caebffaf1982ff8"
+    },
+    {
+      "path": ".featurefacts/docs-index.json",
+      "sha256": "7a1000f6bde4ccbe73a1c46d59364d7224404af362bcc4aec90633584ae9b7d6"
+    },
+    {
+      "path": ".featurefacts/features.json",
+      "sha256": "791a0c88a0062ecbc3651f9a3afe323710f155a759f2df01fcc257a53e626728"
+    },
+    {
+      "path": ".featurefacts/FEATURES.md",
+      "sha256": "e2aaf16ca3317c7fab167403d61bcee03f1957a302f9754a0bf2903c21e1cb9d"
+    },
+    {
+      "path": ".featurefacts/features.yaml",
+      "sha256": "cba568b808a8cd5c0100110a523caef49f19fc58e3afeb3f2c5b2f37d1d85d63"
+    },
+    {
+      "path": ".featurefacts/gaps.yaml",
+      "sha256": "f6cf6ba9793539ac4edc5510648598761402d4eed9c1c673a4f129ac4a2c15f8"
+    },
+    {
+      "path": ".featurefacts/surfaces.json",
+      "sha256": "1a1efbcdde291ded871181cd7267ceccbb535323a1d73777e1ed1e8186829213"
+    },
+    {
+      "path": ".featurefacts/test-index.json",
+      "sha256": "3abce485f0badf62352bd963c6b99742e51fd705b455fd8f9c914fd90d0d599d"
+    },
+    {
+      "path": "FEATURE_FACTS.md",
+      "sha256": "d98bc41c39e55e7692685cc2b735cc722f150ea68198e6fbdb2c452509981a57"
+    }
+  ],
+  "diagnostics": []
+}

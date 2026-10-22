@@ -42,8 +42,15 @@ adapters:
     enabled: true
 externals: []
 curation:
-  selected_ids: []
+  selected_ids:
+    - cmd-init
+    - cmd-doctor
+    - cmd-start
   overrides: {}
+  approval:
+    actor: acmegeek
+    source: featurefacts review
+    recorded_at: 2026-10-22T03:18:04.626Z
 publication:
   target: internal
   include_counts: true

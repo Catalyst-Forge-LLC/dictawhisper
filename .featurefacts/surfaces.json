@@ -1,5 +1,1209 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-add",
-  "surfaces": []
+  "scan_id": "scan-98444432c64c",
+  "surfaces": [
+    {
+      "id": "cmd-dictawhisper",
+      "kind": "command",
+      "ref": "bin dictawhisper",
+      "title": "dictawhisper",
+      "locator": {
+        "path": "package.json",
+        "content_sha256": "34d8a85477ce7c8270334ee7cd607867a8b18b5f79b707c906b547f617c2e875",
+        "symbol": "bin.dictawhisper"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.2",
+        "origin": "deterministic",
+        "method": "package-json-bin"
+      },
+      "state": "current"
+    },
+    {
+      "id": "cmd-doctor",
+      "kind": "command",
+      "ref": "doctor",
+      "title": "doctor",
+      "locator": {
+        "path": "src/cli.ts",
+        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "start_line": 126,
+        "end_line": 126,
+        "symbol": "doctor"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.2",
+        "origin": "deterministic",
+        "method": "argv-command"
+      },
+      "state": "current"
+    },
+    {
+      "id": "cmd-init",
+      "kind": "command",
+      "ref": "init",
+      "title": "init",
+      "locator": {
+        "path": "src/cli.ts",
+        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "start_line": 122,
+        "end_line": 122,
+        "symbol": "init"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.2",
+        "origin": "deterministic",
+        "method": "argv-command"
+      },
+      "state": "current"
+    },
+    {
+      "id": "cmd-serve",
+      "kind": "command",
+      "ref": "serve",
+      "title": "serve",
+      "locator": {
+        "path": "src/cli.ts",
+        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "start_line": 130,
+        "end_line": 130,
+        "symbol": "serve"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.2",
+        "origin": "deterministic",
+        "method": "argv-command"
+      },
+      "state": "current"
+    },
+    {
+      "id": "cmd-start",
+      "kind": "command",
+      "ref": "start",
+      "title": "start",
+      "locator": {
+        "path": "src/cli.ts",
+        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "start_line": 130,
+        "end_line": 130,
+        "symbol": "start"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.2",
+        "origin": "deterministic",
+        "method": "argv-command"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-app-ux-spec",
+      "kind": "document",
+      "ref": "docs/APP_UX_SPEC.md",
+      "title": "docs/APP_UX_SPEC.md",
+      "locator": {
+        "path": "docs/APP_UX_SPEC.md",
+        "content_sha256": "fddc5b5fe759f2e66cffd5d13c0341167b9b0eec742f821fed5200230caaf7f6"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-audio-improvement",
+      "kind": "document",
+      "ref": "docs/AUDIO_IMPROVEMENT.md",
+      "title": "docs/AUDIO_IMPROVEMENT.md",
+      "locator": {
+        "path": "docs/AUDIO_IMPROVEMENT.md",
+        "content_sha256": "bc0acea49e4ed33aa7b66c5a620313aab7ccc80235c328b7931895fd7d2f9eb7"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-improvement-spec",
+      "kind": "document",
+      "ref": "docs/IMPROVEMENT_SPEC.md",
+      "title": "docs/IMPROVEMENT_SPEC.md",
+      "locator": {
+        "path": "docs/IMPROVEMENT_SPEC.md",
+        "content_sha256": "73ca79f47f47a386d37c869a46740af2e6e1a920a8adc2915ae8a1a78f735b7e"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-inbox-search-ux-spec",
+      "kind": "document",
+      "ref": "docs/INBOX_SEARCH_UX_SPEC.md",
+      "title": "docs/INBOX_SEARCH_UX_SPEC.md",
+      "locator": {
+        "path": "docs/INBOX_SEARCH_UX_SPEC.md",
+        "content_sha256": "f9190c433193f1cdf413ef1a68af7a8fb6d3747f60e81178442ed515c694a61d"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-scale-search-spec",
+      "kind": "document",
+      "ref": "docs/SCALE_SEARCH_SPEC.md",
+      "title": "docs/SCALE_SEARCH_SPEC.md",
+      "locator": {
+        "path": "docs/SCALE_SEARCH_SPEC.md",
+        "content_sha256": "6d7f33f1d5d85d4cc924dc1f134cc67bcb74e94079e5e1c3edf5ff249e05adc3"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-smellcheck-overlay",
+      "kind": "document",
+      "ref": "docs/smellcheck-overlay.md",
+      "title": "docs/smellcheck-overlay.md",
+      "locator": {
+        "path": "docs/smellcheck-overlay.md",
+        "content_sha256": "c2b2086ceebeeefc57458a85a44c8f299113f42b73e76dd34d88ef65a92695b9"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ui-engram-spec",
+      "kind": "document",
+      "ref": "docs/UI_ENGRAM_SPEC.md",
+      "title": "docs/UI_ENGRAM_SPEC.md",
+      "locator": {
+        "path": "docs/UI_ENGRAM_SPEC.md",
+        "content_sha256": "88af31dd1a0548b2b34957bf970e0c7f820ebc8ea7cbfe1e79bf5fedd3e151d6"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux01-verification",
+      "kind": "document",
+      "ref": "docs/UX01_VERIFICATION.md",
+      "title": "docs/UX01_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX01_VERIFICATION.md",
+        "content_sha256": "c3524e5def42b63239f9b51edefa1e5660d88b0b07a5de097683c1d59838e251"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux02-verification",
+      "kind": "document",
+      "ref": "docs/UX02_VERIFICATION.md",
+      "title": "docs/UX02_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX02_VERIFICATION.md",
+        "content_sha256": "595d05ee83bc7557eaa30fe1cb0f4115783fe49542f853e3ca3972e9e7460fc0"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux03-verification",
+      "kind": "document",
+      "ref": "docs/UX03_VERIFICATION.md",
+      "title": "docs/UX03_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX03_VERIFICATION.md",
+        "content_sha256": "0b1e5d09703188ed452113c1e737e8da0c976a668610a9d5dd35d3ccc323d77d"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux04-verification",
+      "kind": "document",
+      "ref": "docs/UX04_VERIFICATION.md",
+      "title": "docs/UX04_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX04_VERIFICATION.md",
+        "content_sha256": "71ae1ba566e90b641949c042573b88b076ba7278e68a9074cb9d03fdb1a68896"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux05-verification",
+      "kind": "document",
+      "ref": "docs/UX05_VERIFICATION.md",
+      "title": "docs/UX05_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX05_VERIFICATION.md",
+        "content_sha256": "b0adf97db4e793d30c2af295f6b478075ee1b580ab96684c9a64ac1006974bcd"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux06-verification",
+      "kind": "document",
+      "ref": "docs/UX06_VERIFICATION.md",
+      "title": "docs/UX06_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX06_VERIFICATION.md",
+        "content_sha256": "188ceee970940e5db4e750814f6ded848b90010f1dd00531b4f2157630505dab"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux07-verification",
+      "kind": "document",
+      "ref": "docs/UX07_VERIFICATION.md",
+      "title": "docs/UX07_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX07_VERIFICATION.md",
+        "content_sha256": "47fb08a5052076f683982bd6d888f240ef6f560a1fab85d51c083ebae9bb9ff2"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-ux08-verification",
+      "kind": "document",
+      "ref": "docs/UX08_VERIFICATION.md",
+      "title": "docs/UX08_VERIFICATION.md",
+      "locator": {
+        "path": "docs/UX08_VERIFICATION.md",
+        "content_sha256": "31b62f25d68acf367bf8f7f9bde0cc8b73d76ffd8e3159fcbd41e09b903fc739"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-docs-voice-inbox-spec",
+      "kind": "document",
+      "ref": "docs/VOICE_INBOX_SPEC.md",
+      "title": "docs/VOICE_INBOX_SPEC.md",
+      "locator": {
+        "path": "docs/VOICE_INBOX_SPEC.md",
+        "content_sha256": "66c63ab59348aeef7da7873a24812c5ae5f05cd0492fae7956d4c34aa127386e"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "doc-readme",
+      "kind": "document",
+      "ref": "README.md",
+      "title": "README.md",
+      "locator": {
+        "path": "README.md",
+        "content_sha256": "5e9c9cc1f265e0ba2465652594f44b8da5c495f557377fbecbcef3e767e870a6"
+      },
+      "provenance": {
+        "adapter_id": "markdown-document",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "file-src-server",
+      "kind": "route",
+      "ref": "src/server.ts",
+      "title": "src/server.ts",
+      "locator": {
+        "path": "src/server.ts",
+        "content_sha256": "e8afc2aab64b6cda4295b883ada39e5f045330bb1820da94421b8a790e41535c"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.2",
+        "origin": "deterministic",
+        "method": "framework-route-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-alignlib-test",
+      "kind": "test",
+      "ref": "test/alignLib.test.ts",
+      "title": "test/alignLib.test.ts",
+      "locator": {
+        "path": "test/alignLib.test.ts",
+        "content_sha256": "12b69c699e66c6068192ba52e3b45a877efd332041f4cbea9a089aa995412966"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-audioenhancement-test",
+      "kind": "test",
+      "ref": "test/audioEnhancement.test.ts",
+      "title": "test/audioEnhancement.test.ts",
+      "locator": {
+        "path": "test/audioEnhancement.test.ts",
+        "content_sha256": "4a0cf72afe74cd1da3bfa53869e231e44a4630dfd604272165946a0ed43f066e"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-audioprobe-test",
+      "kind": "test",
+      "ref": "test/audioProbe.test.ts",
+      "title": "test/audioProbe.test.ts",
+      "locator": {
+        "path": "test/audioProbe.test.ts",
+        "content_sha256": "641c416c7be5ace14e326d48e52aac32ce4e1336f8bbe7243ce4bdfbf8364bc8"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-audiorecency-test",
+      "kind": "test",
+      "ref": "test/audioRecency.test.ts",
+      "title": "test/audioRecency.test.ts",
+      "locator": {
+        "path": "test/audioRecency.test.ts",
+        "content_sha256": "ec49aa14ccdd3368835e870a10f917b5590a29cd18992d76f9e537282dc4338b"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-audiorescue-test",
+      "kind": "test",
+      "ref": "test/audioRescue.test.ts",
+      "title": "test/audioRescue.test.ts",
+      "locator": {
+        "path": "test/audioRescue.test.ts",
+        "content_sha256": "c0325fbcf210eaa19d13d1a301b8c5c28ead756cab515be3e93bce89290f1007"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-audioreviewstate-test",
+      "kind": "test",
+      "ref": "test/audioReviewState.test.ts",
+      "title": "test/audioReviewState.test.ts",
+      "locator": {
+        "path": "test/audioReviewState.test.ts",
+        "content_sha256": "631af2ac031682cc292437d7a52e8feefc89c0b697787bd8fa8dba49c07f7b77"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-captureactivity-test",
+      "kind": "test",
+      "ref": "test/captureActivity.test.ts",
+      "title": "test/captureActivity.test.ts",
+      "locator": {
+        "path": "test/captureActivity.test.ts",
+        "content_sha256": "6c138ba25f06d40ef10e0769835cfdc73663f0c3105bf0deb9a99109257be925"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-captureapi-test",
+      "kind": "test",
+      "ref": "test/captureApi.test.ts",
+      "title": "test/captureApi.test.ts",
+      "locator": {
+        "path": "test/captureApi.test.ts",
+        "content_sha256": "2c0998147466c424ca87f4b643b852d80656a01b092b50f2bcd94d759f564b3e"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-checkoutproxy-test",
+      "kind": "test",
+      "ref": "test/checkoutProxy.test.ts",
+      "title": "test/checkoutProxy.test.ts",
+      "locator": {
+        "path": "test/checkoutProxy.test.ts",
+        "content_sha256": "109123c9e0213d9a95a99623ae38e54595f42c50e95e95d4d89c10283263e03a"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-cleanupprovenance-test",
+      "kind": "test",
+      "ref": "test/cleanupProvenance.test.ts",
+      "title": "test/cleanupProvenance.test.ts",
+      "locator": {
+        "path": "test/cleanupProvenance.test.ts",
+        "content_sha256": "754aecb3e8d1057d0191906a84fb23198cbf4e4de9723fdab5bdd7314af646a5"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-cli-test",
+      "kind": "test",
+      "ref": "test/cli.test.ts",
+      "title": "test/cli.test.ts",
+      "locator": {
+        "path": "test/cli.test.ts",
+        "content_sha256": "ff9cdf046124b7dc95226a5a26d2b064bb016a2a4ef5736a38220018df6f887a"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-config-test",
+      "kind": "test",
+      "ref": "test/config.test.ts",
+      "title": "test/config.test.ts",
+      "locator": {
+        "path": "test/config.test.ts",
+        "content_sha256": "93782326d4055fec69a96deba42e35cd89ce1bd6996655eb28a42ebee746bc7d"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-datefromfilename-test",
+      "kind": "test",
+      "ref": "test/dateFromFilename.test.ts",
+      "title": "test/dateFromFilename.test.ts",
+      "locator": {
+        "path": "test/dateFromFilename.test.ts",
+        "content_sha256": "e4ac0e9a03fba647ef15924518e5fb288db0a4d5ca622f8a0de54ad60c0447c6"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-devchild-test",
+      "kind": "test",
+      "ref": "test/devChild.test.ts",
+      "title": "test/devChild.test.ts",
+      "locator": {
+        "path": "test/devChild.test.ts",
+        "content_sha256": "573a71cc059b72cdac7e030e8bce6fe53b33f847ed6341d5c3d91c17da19aa81"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-devports-test",
+      "kind": "test",
+      "ref": "test/devPorts.test.ts",
+      "title": "test/devPorts.test.ts",
+      "locator": {
+        "path": "test/devPorts.test.ts",
+        "content_sha256": "ee6c9fad712f7dc08643c454548b83f284b5b186a7d5cb3b86e1c4258bcff691"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-downloadlib-test",
+      "kind": "test",
+      "ref": "test/downloadLib.test.ts",
+      "title": "test/downloadLib.test.ts",
+      "locator": {
+        "path": "test/downloadLib.test.ts",
+        "content_sha256": "039e708854ad08ed0116123d4c18cb341be32290e944065cfd4f8148c0c1d5d6"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-entrypage-test",
+      "kind": "test",
+      "ref": "test/entryPage.test.ts",
+      "title": "test/entryPage.test.ts",
+      "locator": {
+        "path": "test/entryPage.test.ts",
+        "content_sha256": "19ece8728398f2b23b07fa2283c846cd597184691246ff926a101f335753e45f"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-entrypresentation-test",
+      "kind": "test",
+      "ref": "test/entryPresentation.test.ts",
+      "title": "test/entryPresentation.test.ts",
+      "locator": {
+        "path": "test/entryPresentation.test.ts",
+        "content_sha256": "643e534a201f84172dafbe0e3c83b40b0c0b827e97be22c1e492f63942dca18d"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-entryrecovery-test",
+      "kind": "test",
+      "ref": "test/entryRecovery.test.ts",
+      "title": "test/entryRecovery.test.ts",
+      "locator": {
+        "path": "test/entryRecovery.test.ts",
+        "content_sha256": "7636aa32331987dffb6a99fd1956905b3d6ebd51a3217c830f2c883ccaddf9c6"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-entrytitle-test",
+      "kind": "test",
+      "ref": "test/entryTitle.test.ts",
+      "title": "test/entryTitle.test.ts",
+      "locator": {
+        "path": "test/entryTitle.test.ts",
+        "content_sha256": "a61d834ba2528aad6e4efb85c7253a9d9b908f273dbe91f804a7d177fb57b1c7"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-filesettle-test",
+      "kind": "test",
+      "ref": "test/fileSettle.test.ts",
+      "title": "test/fileSettle.test.ts",
+      "locator": {
+        "path": "test/fileSettle.test.ts",
+        "content_sha256": "7e87ae03dc47094058bb68747862de04f7253272c73de54a122d33e3eb8bfeef"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-inboxorganize-test",
+      "kind": "test",
+      "ref": "test/inboxOrganize.test.ts",
+      "title": "test/inboxOrganize.test.ts",
+      "locator": {
+        "path": "test/inboxOrganize.test.ts",
+        "content_sha256": "d2da2e6f4d85dbe1b7917c9131f9564c59edacf7d13af4d8007a963d9b401556"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-inboxurl-test",
+      "kind": "test",
+      "ref": "test/inboxUrl.test.ts",
+      "title": "test/inboxUrl.test.ts",
+      "locator": {
+        "path": "test/inboxUrl.test.ts",
+        "content_sha256": "697873e5bb10d65c4c1a43f319248d212dd149b131ae37694eee02d9ae43acc6"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-journalembed-test",
+      "kind": "test",
+      "ref": "test/journalEmbed.test.ts",
+      "title": "test/journalEmbed.test.ts",
+      "locator": {
+        "path": "test/journalEmbed.test.ts",
+        "content_sha256": "6cf138b887367d2a9453b2192e537f96788f01f564f683342c98ffdad9af65a0"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-journalindex-test",
+      "kind": "test",
+      "ref": "test/journalIndex.test.ts",
+      "title": "test/journalIndex.test.ts",
+      "locator": {
+        "path": "test/journalIndex.test.ts",
+        "content_sha256": "cddc9f5a3cd5dab0b30fddc1acc99960fc97a836caeedf232143e5a0f7f86b29"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-journallex-test",
+      "kind": "test",
+      "ref": "test/journalLex.test.ts",
+      "title": "test/journalLex.test.ts",
+      "locator": {
+        "path": "test/journalLex.test.ts",
+        "content_sha256": "69433e4a2b117873b3f219ffceaff82dcd75c94c1ded53321c555fcf1f16d8fa"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-journalquery-test",
+      "kind": "test",
+      "ref": "test/journalQuery.test.ts",
+      "title": "test/journalQuery.test.ts",
+      "locator": {
+        "path": "test/journalQuery.test.ts",
+        "content_sha256": "440ea993b05b92072beb1e0377eaea4c19dec8267fd001b3924485bb932bd273"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-maydoapi-test",
+      "kind": "test",
+      "ref": "test/mayDoApi.test.ts",
+      "title": "test/mayDoApi.test.ts",
+      "locator": {
+        "path": "test/mayDoApi.test.ts",
+        "content_sha256": "eadba0c25ace107e4450839c0cb936f8ec68592ad3aac5e2ef7283bb7e892385"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-maydojobs-test",
+      "kind": "test",
+      "ref": "test/mayDoJobs.test.ts",
+      "title": "test/mayDoJobs.test.ts",
+      "locator": {
+        "path": "test/mayDoJobs.test.ts",
+        "content_sha256": "1426ab52aee70a3fbea2f4cb56aef557c2ea59401f9522f78a11fe08e10c7c28"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-maydos-test",
+      "kind": "test",
+      "ref": "test/mayDos.test.ts",
+      "title": "test/mayDos.test.ts",
+      "locator": {
+        "path": "test/mayDos.test.ts",
+        "content_sha256": "b582f8eea8f3f97d76e0f2bab6233e19b69444017c3013d524426fc3f2b81967"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-notepatch-test",
+      "kind": "test",
+      "ref": "test/notePatch.test.ts",
+      "title": "test/notePatch.test.ts",
+      "locator": {
+        "path": "test/notePatch.test.ts",
+        "content_sha256": "e891cab2381f90abc467f037aee74914d0b9085a23a03bb9fba3910396f0a26b"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-parsejson-test",
+      "kind": "test",
+      "ref": "test/parseJSON.test.ts",
+      "title": "test/parseJSON.test.ts",
+      "locator": {
+        "path": "test/parseJSON.test.ts",
+        "content_sha256": "8e6e850c80bbb8464665caef622e1dbe96883e79c9e49089518d997e95fb5c91"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-pathallow-test",
+      "kind": "test",
+      "ref": "test/pathAllow.test.ts",
+      "title": "test/pathAllow.test.ts",
+      "locator": {
+        "path": "test/pathAllow.test.ts",
+        "content_sha256": "39cc455d0b4196828df11cd742bee77c3b9d825b6dbe87e43500645c592c2f48"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-publish-gate-test",
+      "kind": "test",
+      "ref": "test/publish-gate.test.ts",
+      "title": "test/publish-gate.test.ts",
+      "locator": {
+        "path": "test/publish-gate.test.ts",
+        "content_sha256": "bddb2a31ca64063473528a3eaf9d8aba51eadeb5107c6be6646ad1d02b351c87"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-queueerror-test",
+      "kind": "test",
+      "ref": "test/queueError.test.ts",
+      "title": "test/queueError.test.ts",
+      "locator": {
+        "path": "test/queueError.test.ts",
+        "content_sha256": "df7aa0d7e5e46454575481a6024e0f1d7a2000594cf4e1d171c067769bba59b1"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-readableparagraphs-test",
+      "kind": "test",
+      "ref": "test/readableParagraphs.test.ts",
+      "title": "test/readableParagraphs.test.ts",
+      "locator": {
+        "path": "test/readableParagraphs.test.ts",
+        "content_sha256": "a835d6b86316a3951802e225f4ce803c9ee23d8ea0ad875fa756b89c66f4d456"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-settingsrecoveryapi-test",
+      "kind": "test",
+      "ref": "test/settingsRecoveryApi.test.ts",
+      "title": "test/settingsRecoveryApi.test.ts",
+      "locator": {
+        "path": "test/settingsRecoveryApi.test.ts",
+        "content_sha256": "7962b9c88a1712ca9d0c2eb86847cd871d2f3fbc5422936673a7bf73878f6dd9"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-startupreadiness-test",
+      "kind": "test",
+      "ref": "test/startupReadiness.test.ts",
+      "title": "test/startupReadiness.test.ts",
+      "locator": {
+        "path": "test/startupReadiness.test.ts",
+        "content_sha256": "df9ece6b70c36bda90f4a3400b2ab42515ba7357765e8f1911643bbb5a9fc510"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-tailscale-test",
+      "kind": "test",
+      "ref": "test/tailscale.test.ts",
+      "title": "test/tailscale.test.ts",
+      "locator": {
+        "path": "test/tailscale.test.ts",
+        "content_sha256": "8b72260705b8de8a745666d41b129aef6d5f8a166bfddc8337246b9846770562"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-transcriptionbatch-test",
+      "kind": "test",
+      "ref": "test/transcriptionBatch.test.ts",
+      "title": "test/transcriptionBatch.test.ts",
+      "locator": {
+        "path": "test/transcriptionBatch.test.ts",
+        "content_sha256": "31a9f8fcb8338128910153869e1479e7d63d8b884f496887d9e13dfbce0d3153"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-transcriptionquality-test",
+      "kind": "test",
+      "ref": "test/transcriptionQuality.test.ts",
+      "title": "test/transcriptionQuality.test.ts",
+      "locator": {
+        "path": "test/transcriptionQuality.test.ts",
+        "content_sha256": "bad80f9b7bcf84903a9fec4e3b574d8395ac0af2d437aa4ade76f4813b2d2d1f"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-transcriptionreview-test",
+      "kind": "test",
+      "ref": "test/transcriptionReview.test.ts",
+      "title": "test/transcriptionReview.test.ts",
+      "locator": {
+        "path": "test/transcriptionReview.test.ts",
+        "content_sha256": "77e92dd0cc30eedac99479105f807a16c9ca8d8935e81e7ff0e5d36cf886ebf6"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-virtualwindow-test",
+      "kind": "test",
+      "ref": "test/virtualWindow.test.ts",
+      "title": "test/virtualWindow.test.ts",
+      "locator": {
+        "path": "test/virtualWindow.test.ts",
+        "content_sha256": "1b49a78818a32f0b25ca6f718237413dd444f1ada7c01a14f9e2cce5ea4bba3b"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-watchernewestfirst-test",
+      "kind": "test",
+      "ref": "test/watcherNewestFirst.test.ts",
+      "title": "test/watcherNewestFirst.test.ts",
+      "locator": {
+        "path": "test/watcherNewestFirst.test.ts",
+        "content_sha256": "e76710583937c453681faf026fdd57313e15ddf5e141d9e4ff1d856e9fcf3b76"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-watcherrestart-test",
+      "kind": "test",
+      "ref": "test/watcherRestart.test.ts",
+      "title": "test/watcherRestart.test.ts",
+      "locator": {
+        "path": "test/watcherRestart.test.ts",
+        "content_sha256": "d5b2f6fcb0eed3798f604e9bedda5465b6fa4e236b9938640baf3ac4d122d592"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-whisperoptions-test",
+      "kind": "test",
+      "ref": "test/whisperOptions.test.ts",
+      "title": "test/whisperOptions.test.ts",
+      "locator": {
+        "path": "test/whisperOptions.test.ts",
+        "content_sha256": "e807eb8cea268c27b0798027560eb3da7691602e9c6e555e0d6c0235afaa1c13"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-workspacestate-test",
+      "kind": "test",
+      "ref": "test/workspaceState.test.ts",
+      "title": "test/workspaceState.test.ts",
+      "locator": {
+        "path": "test/workspaceState.test.ts",
+        "content_sha256": "f37cebe6db1da796d47ed0d3a1376d93410a90591ccf99adb5b9276c7c34a5ae"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    }
+  ]
 }
