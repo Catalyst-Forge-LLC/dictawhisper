@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-69640797c546",
+  "scan_id": "scan-81493f37de23",
   "kind": "docs",
   "assessments": [
     {
@@ -55,18 +55,6 @@
           }
         ],
         "reason": "A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate."
-      }
-    },
-    {
-      "feature_id": "file-src-server",
-      "assessment": {
-        "state": "unassessed",
-        "result": "unknown",
-        "adapter_ids": [
-          "markdown-document"
-        ],
-        "links": [],
-        "reason": "No explicit documentation association. Filename resemblance is not an accepted link."
       }
     }
   ]

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-69640797c546",
+  "scan_id": "scan-81493f37de23",
   "surfaces": [
     {
       "id": "cmd-dictawhisper",
@@ -14,7 +14,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.3",
+        "adapter_version": "0.2.4",
         "origin": "deterministic",
         "method": "package-json-bin"
       },
@@ -34,7 +34,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.3",
+        "adapter_version": "0.2.4",
         "origin": "deterministic",
         "method": "argv-command"
       },
@@ -54,7 +54,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.3",
+        "adapter_version": "0.2.4",
         "origin": "deterministic",
         "method": "argv-command"
       },
@@ -74,7 +74,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.3",
+        "adapter_version": "0.2.4",
         "origin": "deterministic",
         "method": "argv-command-alias"
       },
@@ -94,7 +94,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.3",
+        "adapter_version": "0.2.4",
         "origin": "deterministic",
         "method": "argv-command"
       },
