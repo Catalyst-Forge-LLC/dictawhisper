@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-81493f37de23",
+  "scan_id": "scan-26569c8525b8",
   "surfaces": [
     {
       "id": "cmd-dictawhisper",
@@ -386,6 +386,23 @@
         "adapter_version": "0.2.0",
         "origin": "deterministic",
         "method": "document-file"
+      },
+      "state": "current"
+    },
+    {
+      "id": "route-home",
+      "kind": "route",
+      "ref": "/",
+      "title": "Home",
+      "locator": {
+        "path": "client/src/routes/+page.svelte",
+        "content_sha256": "726e0544596bfb858cde9bff30c44b0dc716421d2b2c499d699ebebfa488941a"
+      },
+      "provenance": {
+        "adapter_id": "typescript-node-surface",
+        "adapter_version": "0.2.4",
+        "origin": "deterministic",
+        "method": "framework-route-file"
       },
       "state": "current"
     },

@@ -10,6 +10,7 @@ include:
   - docs/**
   - tests/**
   - test/**
+  - client/**
 exclude:
   - "**/node_modules/**"
   - "**/dist/**"

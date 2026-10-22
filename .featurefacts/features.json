@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-81493f37de23",
+  "scan_id": "scan-26569c8525b8",
   "product": {
     "name": "DictaWhisper",
     "type": "typescript-node",
@@ -67,7 +67,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-81493f37de23",
+        "last_seen_scan_id": "scan-26569c8525b8",
         "reason": "Current source evidence is available."
       },
       "evidence": [
@@ -189,7 +189,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-81493f37de23",
+        "last_seen_scan_id": "scan-26569c8525b8",
         "reason": "Current source evidence is available."
       },
       "evidence": [
@@ -321,7 +321,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-81493f37de23",
+        "last_seen_scan_id": "scan-26569c8525b8",
         "reason": "Current source evidence is available."
       },
       "evidence": [
@@ -393,6 +393,96 @@
       "id": "cmd-start",
       "name": "Start",
       "description": "Observed implementation surfaces: cmd-start. Candidate only until a maintainer confirms the product meaning."
+    },
+    {
+      "type": "surface-cluster",
+      "recognition": "candidate",
+      "lifecycle": "unknown",
+      "availability": {
+        "state": "unknown",
+        "conditions": [],
+        "reason": "Availability is a declaration. Source presence is not a deployment check."
+      },
+      "maturity": "unknown",
+      "audiences": {
+        "state": "unknown",
+        "values": [],
+        "reason": "Audience was not declared."
+      },
+      "discovery": {
+        "state": "unassessed",
+        "surfaces": [],
+        "adapter_ids": [],
+        "reason": "Discovery surfaces were not assessed beyond extracted entry points."
+      },
+      "intent": "unknown",
+      "publication": {
+        "scope": "internal",
+        "reason": "Internal is the conservative default. Public permission requires an attributed declaration."
+      },
+      "entry_points": [
+        "route-home"
+      ],
+      "implements": [],
+      "dependencies": [],
+      "docs": {
+        "state": "unassessed",
+        "result": "unknown",
+        "adapter_ids": [
+          "markdown-document"
+        ],
+        "links": [],
+        "reason": "No explicit documentation association. Filename resemblance is not an accepted link."
+      },
+      "tests": {
+        "state": "unassessed",
+        "result": "unknown",
+        "adapter_ids": [
+          "typescript-test"
+        ],
+        "links": [],
+        "reason": "No explicit test association. A similar test filename is only a proposal."
+      },
+      "observation": {
+        "state": "current",
+        "last_seen_scan_id": "scan-26569c8525b8",
+        "reason": "Current source evidence is available."
+      },
+      "evidence": [
+        {
+          "id": "route-home-capability",
+          "kind": "observed",
+          "state": "current",
+          "assertion": {
+            "field": "capability",
+            "value": "Observed implementation surfaces: route-home. Candidate only until a maintainer confirms the product meaning.",
+            "claim": "Static extraction found implementation surfaces. This is not confirmation."
+          },
+          "locator": {
+            "path": "client/src/routes/+page.svelte",
+            "content_sha256": "726e0544596bfb858cde9bff30c44b0dc716421d2b2c499d699ebebfa488941a"
+          },
+          "provenance": {
+            "adapter_id": "typescript-node-surface",
+            "adapter_version": "0.2.4",
+            "origin": "deterministic",
+            "method": "surface-cluster"
+          }
+        }
+      ],
+      "editorial": {
+        "locked": [],
+        "aliases": [],
+        "notes": ""
+      },
+      "uncertainty_reasons": {
+        "lifecycle": "Source presence does not establish release status.",
+        "maturity": "No attributed maturity declaration.",
+        "intent": "Discovery intent was not declared."
+      },
+      "id": "route-home",
+      "name": "Home",
+      "description": "Observed implementation surfaces: route-home. Candidate only until a maintainer confirms the product meaning."
     }
   ],
   "redirects": []

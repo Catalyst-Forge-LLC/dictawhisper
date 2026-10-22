@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-81493f37de23",
+  "scan_id": "scan-26569c8525b8",
   "kind": "tests",
   "assessments": [
     {
@@ -29,6 +29,18 @@
     },
     {
       "feature_id": "cmd-start",
+      "assessment": {
+        "state": "unassessed",
+        "result": "unknown",
+        "adapter_ids": [
+          "typescript-test"
+        ],
+        "links": [],
+        "reason": "No explicit test association. A similar test filename is only a proposal."
+      }
+    },
+    {
+      "feature_id": "route-home",
       "assessment": {
         "state": "unassessed",
         "result": "unknown",

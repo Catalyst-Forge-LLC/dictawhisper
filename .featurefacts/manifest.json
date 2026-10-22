@@ -1,9 +1,9 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-81493f37de23",
+  "scan_id": "scan-26569c8525b8",
   "tool": "featurefacts",
   "tool_version": "0.2.6",
-  "generated_at": "2026-10-22T08:55:44.337-04:00",
+  "generated_at": "2026-10-22T09:34:54.958-04:00",
   "root": ".",
   "status": "complete",
   "scope": {
@@ -17,7 +17,8 @@
       "bin/**",
       "docs/**",
       "tests/**",
-      "test/**"
+      "test/**",
+      "client/**"
     ],
     "exclude": [
       "**/node_modules/**",
@@ -45,6 +46,584 @@
         "path": "bin/dictawhisper.js",
         "sha256": "81475e6784f437e7a92e3bccbcb04bf43011ed356a3240b98c3327522ff87c44",
         "bytes": 567,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/.gitignore",
+        "sha256": "67d64503d867623110ebe2ee3e6e5130be623a6dfba92c356decd75d7777c2f7",
+        "bytes": 132,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/.npmrc",
+        "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a",
+        "bytes": 19,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/jsconfig.json",
+        "sha256": "15185136925ae7731031970bc1397149493861bd84b6192ddd8ae28939309b61",
+        "bytes": 320,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/package.json",
+        "sha256": "8bde132a40987c02dd6de267c91f99fc54120e86c431561306cd8e0ce807f72a",
+        "bytes": 564,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/app.html",
+        "sha256": "f643411cb22bf9ecd1652a6ddf7c928aa1c473c6aefe8242aa884165451a4f09",
+        "bytes": 484,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/app.scss",
+        "sha256": "e1b19f662cb2f6c95e5b73858b212d14d13da84bcd176bf59f497e31f5982dd1",
+        "bytes": 11777,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/activityState.js",
+        "sha256": "c7bbd08ec156ca8ae87ebdbb51e5852bb2bf4cdf7f44b662bc79f33a0db2c72d",
+        "bytes": 1580,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/audioReviewState.js",
+        "sha256": "a97a39e5dec26fe5717b86e4c3e2be4014625503d4388c2bae777d780a760d4c",
+        "bytes": 2694,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/captureSession.js",
+        "sha256": "2f5238eee2c6a12cd142a5625624e3fa7a71015b1fa543ec244bbba0099c0e9b",
+        "bytes": 6523,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/ActivityDrawer.svelte",
+        "sha256": "3d36d2ad3e3075108fe878f160d187734f1a802b0a1b12c483eacbec22d8558b",
+        "bytes": 10173,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/AppHeader.svelte",
+        "sha256": "5c1c0fbbf1a91bc916a8d0bd0e01340c28607772ba4abb39cd6c2a2905bd3a6b",
+        "bytes": 4748,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/AppIcon.svelte",
+        "sha256": "36599e070cef03343f3765b6c757d4575190a7aafdf7ec958aabed6252d8144e",
+        "bytes": 2979,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/AudioImprovementDialog.svelte",
+        "sha256": "2be6cc06ce88272d11b12c9e497ea7ee6d61807c479702fd25899b00dfc5df20",
+        "bytes": 19350,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/AudioRecorder.svelte",
+        "sha256": "4e59ed1d352188ce13b9a10628a91c678407b0945c690dec2a93d2d4fa60eca3",
+        "bytes": 12565,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/CleanupRetries.svelte",
+        "sha256": "34bb469c602e9f25dfe82ce5f50e984129299bd73070f44848a1ec025f49aef5",
+        "bytes": 2140,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/CollapsibleAside.svelte",
+        "sha256": "6bf23d97464c76f1095d474554a090f03296fd057adc3dc5a09d7f49126c3a0a",
+        "bytes": 209,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/EntryListPane.svelte",
+        "sha256": "7056a5707498d37ad21e16a810e41cc43ccd87bd88f16c6bd8367a986c2d76d2",
+        "bytes": 797,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/EntryReader.svelte",
+        "sha256": "470e15a20142bc51f00d3bf9aa05d563be62548f6830515d422a95786bb8e017",
+        "bytes": 2942,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/HelpDrawer.svelte",
+        "sha256": "7c88505a4546291587bfe5387bdf25ca2273c7300b2139841fe3c60b11bb61bd",
+        "bytes": 7653,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/LibraryRail.svelte",
+        "sha256": "84e182ef9ab3f1f49bc651cf4232f849430858b26eed5cae0b62684af2064361",
+        "bytes": 2366,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/MayDoBackfill.svelte",
+        "sha256": "7a73e06a75965db0a97c422ae6d0cfa47b2853306bbd22a396e9a74ca036b0e4",
+        "bytes": 6142,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/MayDoBackfillDialog.svelte",
+        "sha256": "8c11d679e2c907c3422f76aa78f368ff88929ad6257216d8a679417bdb5f1980",
+        "bytes": 1303,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/MayDoReview.svelte",
+        "sha256": "df53da5bcd31717e64479c404535bbac8f54a73f39aba96be67288b225b3e8b7",
+        "bytes": 11128,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/NoteCard.svelte",
+        "sha256": "57831fa55041de4c622fb9124e9627ad62febff61d5934a21001ab523bf352fc",
+        "bytes": 48296,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/NoteList.svelte",
+        "sha256": "8b356d54e356cdb650a93f3dc350e3fc289afdb26671d4dc7f44da71f1812bc3",
+        "bytes": 4976,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/OrganizationDialog.svelte",
+        "sha256": "46ab4932dd257616269608c18d6fbcfd478d0e67bb2cb75598b66da1eb6474b0",
+        "bytes": 5879,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/PendingEntry.svelte",
+        "sha256": "426df55fa190d445726ed07a1710320969fd762315094dd12ccc19ff1bda4299",
+        "bytes": 1301,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/SettingsDrawer.svelte",
+        "sha256": "d367895417305b14788cc4266506ad4cdc4859aba74f44ec677f36879ba06c1c",
+        "bytes": 16927,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/TagMaintenance.svelte",
+        "sha256": "af50555ae7506e3db4963b240044ded9e5b384728db55737e9742030e40ccdb8",
+        "bytes": 2524,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/ToolsAside.svelte",
+        "sha256": "40643f0bf6ff54a7b624ba9c7b597e04810dc5ce1c823e9d2bf380c1e7cf022f",
+        "bytes": 301,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/TranscriptionBatch.svelte",
+        "sha256": "907e98b067b2571103187d700fa7035a2c32cb7121a96426d3a943d31179d421",
+        "bytes": 11462,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/TranscriptionQuality.svelte",
+        "sha256": "f90122aaed27dcbb13cbd436c10a3406000a397a225966a6986bec2f7c98c992",
+        "bytes": 8435,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/Transcriptions.svelte",
+        "sha256": "360be7ede580798fd5ac9b47a10ed05ca78c2539b6dfd8cfd6329baeeb844853",
+        "bytes": 65207,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/TrashPanel.svelte",
+        "sha256": "8a799c8d6c570f5af980e58bbad6b7d8b0d907c4d1d7186250d84a9325c2bc97",
+        "bytes": 3556,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/components/VirtualList.svelte",
+        "sha256": "318544a795bfd8b7f5e155a8d30267ea549a928a96e93856f1b3fea0739d982a",
+        "bytes": 3760,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/lib/entryPresentation.js",
+        "sha256": "51b5d3e954638b54b6956cc7d6d42bb7771e81f378e1e04fcd7ae01d8ecfbe30",
+        "bytes": 5028,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/inboxUrl.js",
+        "sha256": "1a6b1d669d6e18dfb6d7e66226b7789ace115ec9015f21babf55ced260f3e9ac",
+        "bytes": 4761,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/markPreview.js",
+        "sha256": "9b641c3ab9163da53ab0628955ad68b39a692028226ffb37a45c221db8dfa903",
+        "bytes": 890,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/transcriptionReview.js",
+        "sha256": "99ba428f054ab15c39b04f038ef67cbe8392abb4f7f80188e776d104be9ce42f",
+        "bytes": 4258,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/virtualWindow.js",
+        "sha256": "5afe73f5f1098db4bc054761c0aa8888805fe8183aa9d46859aaaad5f7c4285e",
+        "bytes": 1151,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/lib/workspaceState.js",
+        "sha256": "9cda0888cf63006a94f4b0a54048b9fb82d38d73e69994b080fac8ea3b72ba9f",
+        "bytes": 3173,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/routes/+layout.js",
+        "sha256": "b3b133c7e348484e9e2e1c667a5fe6cb591561ee60e9547a5425bcae9c5a6516",
+        "bytes": 113,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/routes/+layout.svelte",
+        "sha256": "af8cd449ad9f03c1e6d6f6a5415fac1bd588b182a0ddf110c3f37fcda0eb8abc",
+        "bytes": 97,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/src/routes/+page.svelte",
+        "sha256": "726e0544596bfb858cde9bff30c44b0dc716421d2b2c499d699ebebfa488941a",
+        "bytes": 5144,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/src/variables.scss",
+        "sha256": "e1c6ea1434ed1d233cf6cc1109b6a5058ecc593001a1a5340ab7ef93840c0cf9",
+        "bytes": 164,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/static/favicon.png",
+        "sha256": "5025a5c6141c00fa1f3f5eae42e1aa2da47dd524c0a0f82199cf04cc557ffec8",
+        "bytes": 20307,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/static/favicon.svg",
+        "sha256": "cb814b769d588aa3d4073cf5ee90ece65167f1c64a07a5239716f64c2ef0e0ac",
+        "bytes": 27249,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/static/logo.png",
+        "sha256": "d0ff2fb0c3c991d1de310b066d2c32d12486af949c2ce015a03d49ae47855eb2",
+        "bytes": 223011,
+        "eligible_adapter_ids": [
+          "typescript-tree"
+        ],
+        "inspected_by": [
+          "typescript-tree"
+        ]
+      },
+      {
+        "path": "client/svelte.config.js",
+        "sha256": "7249da77c0871ff40e2fd2305c9210fbc0d2df7bd91a58207147702187e90873",
+        "bytes": 420,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "client/vite.config.js",
+        "sha256": "bc9497f004be39a43722f26579209f639b4dda3501cbab1355d7bafb16269842",
+        "bytes": 4473,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1778,6 +2357,56 @@
       "state": "completed",
       "eligible_files": [
         "bin/dictawhisper.js",
+        "client/.gitignore",
+        "client/.npmrc",
+        "client/jsconfig.json",
+        "client/package.json",
+        "client/src/app.html",
+        "client/src/app.scss",
+        "client/src/lib/activityState.js",
+        "client/src/lib/audioReviewState.js",
+        "client/src/lib/captureSession.js",
+        "client/src/lib/components/ActivityDrawer.svelte",
+        "client/src/lib/components/AppHeader.svelte",
+        "client/src/lib/components/AppIcon.svelte",
+        "client/src/lib/components/AudioImprovementDialog.svelte",
+        "client/src/lib/components/AudioRecorder.svelte",
+        "client/src/lib/components/CleanupRetries.svelte",
+        "client/src/lib/components/CollapsibleAside.svelte",
+        "client/src/lib/components/EntryListPane.svelte",
+        "client/src/lib/components/EntryReader.svelte",
+        "client/src/lib/components/HelpDrawer.svelte",
+        "client/src/lib/components/LibraryRail.svelte",
+        "client/src/lib/components/MayDoBackfill.svelte",
+        "client/src/lib/components/MayDoBackfillDialog.svelte",
+        "client/src/lib/components/MayDoReview.svelte",
+        "client/src/lib/components/NoteCard.svelte",
+        "client/src/lib/components/NoteList.svelte",
+        "client/src/lib/components/OrganizationDialog.svelte",
+        "client/src/lib/components/PendingEntry.svelte",
+        "client/src/lib/components/SettingsDrawer.svelte",
+        "client/src/lib/components/TagMaintenance.svelte",
+        "client/src/lib/components/ToolsAside.svelte",
+        "client/src/lib/components/TranscriptionBatch.svelte",
+        "client/src/lib/components/TranscriptionQuality.svelte",
+        "client/src/lib/components/Transcriptions.svelte",
+        "client/src/lib/components/TrashPanel.svelte",
+        "client/src/lib/components/VirtualList.svelte",
+        "client/src/lib/entryPresentation.js",
+        "client/src/lib/inboxUrl.js",
+        "client/src/lib/markPreview.js",
+        "client/src/lib/transcriptionReview.js",
+        "client/src/lib/virtualWindow.js",
+        "client/src/lib/workspaceState.js",
+        "client/src/routes/+layout.js",
+        "client/src/routes/+layout.svelte",
+        "client/src/routes/+page.svelte",
+        "client/src/variables.scss",
+        "client/static/favicon.png",
+        "client/static/favicon.svg",
+        "client/static/logo.png",
+        "client/svelte.config.js",
+        "client/vite.config.js",
         "docs/APP_UX_SPEC.md",
         "docs/AUDIO_IMPROVEMENT.md",
         "docs/IMPROVEMENT_SPEC.md",
@@ -1909,6 +2538,56 @@
       ],
       "inspected_files": [
         "bin/dictawhisper.js",
+        "client/.gitignore",
+        "client/.npmrc",
+        "client/jsconfig.json",
+        "client/package.json",
+        "client/src/app.html",
+        "client/src/app.scss",
+        "client/src/lib/activityState.js",
+        "client/src/lib/audioReviewState.js",
+        "client/src/lib/captureSession.js",
+        "client/src/lib/components/ActivityDrawer.svelte",
+        "client/src/lib/components/AppHeader.svelte",
+        "client/src/lib/components/AppIcon.svelte",
+        "client/src/lib/components/AudioImprovementDialog.svelte",
+        "client/src/lib/components/AudioRecorder.svelte",
+        "client/src/lib/components/CleanupRetries.svelte",
+        "client/src/lib/components/CollapsibleAside.svelte",
+        "client/src/lib/components/EntryListPane.svelte",
+        "client/src/lib/components/EntryReader.svelte",
+        "client/src/lib/components/HelpDrawer.svelte",
+        "client/src/lib/components/LibraryRail.svelte",
+        "client/src/lib/components/MayDoBackfill.svelte",
+        "client/src/lib/components/MayDoBackfillDialog.svelte",
+        "client/src/lib/components/MayDoReview.svelte",
+        "client/src/lib/components/NoteCard.svelte",
+        "client/src/lib/components/NoteList.svelte",
+        "client/src/lib/components/OrganizationDialog.svelte",
+        "client/src/lib/components/PendingEntry.svelte",
+        "client/src/lib/components/SettingsDrawer.svelte",
+        "client/src/lib/components/TagMaintenance.svelte",
+        "client/src/lib/components/ToolsAside.svelte",
+        "client/src/lib/components/TranscriptionBatch.svelte",
+        "client/src/lib/components/TranscriptionQuality.svelte",
+        "client/src/lib/components/Transcriptions.svelte",
+        "client/src/lib/components/TrashPanel.svelte",
+        "client/src/lib/components/VirtualList.svelte",
+        "client/src/lib/entryPresentation.js",
+        "client/src/lib/inboxUrl.js",
+        "client/src/lib/markPreview.js",
+        "client/src/lib/transcriptionReview.js",
+        "client/src/lib/virtualWindow.js",
+        "client/src/lib/workspaceState.js",
+        "client/src/routes/+layout.js",
+        "client/src/routes/+layout.svelte",
+        "client/src/routes/+page.svelte",
+        "client/src/variables.scss",
+        "client/static/favicon.png",
+        "client/static/favicon.svg",
+        "client/static/logo.png",
+        "client/svelte.config.js",
+        "client/vite.config.js",
         "docs/APP_UX_SPEC.md",
         "docs/AUDIO_IMPROVEMENT.md",
         "docs/IMPROVEMENT_SPEC.md",
@@ -2047,6 +2726,20 @@
       "state": "completed",
       "eligible_files": [
         "bin/dictawhisper.js",
+        "client/package.json",
+        "client/src/lib/activityState.js",
+        "client/src/lib/audioReviewState.js",
+        "client/src/lib/captureSession.js",
+        "client/src/lib/entryPresentation.js",
+        "client/src/lib/inboxUrl.js",
+        "client/src/lib/markPreview.js",
+        "client/src/lib/transcriptionReview.js",
+        "client/src/lib/virtualWindow.js",
+        "client/src/lib/workspaceState.js",
+        "client/src/routes/+layout.js",
+        "client/src/routes/+page.svelte",
+        "client/svelte.config.js",
+        "client/vite.config.js",
         "package.json",
         "src/apiRoutes.ts",
         "src/audioRescueRoutes.ts",
@@ -2114,6 +2807,20 @@
       ],
       "inspected_files": [
         "bin/dictawhisper.js",
+        "client/package.json",
+        "client/src/lib/activityState.js",
+        "client/src/lib/audioReviewState.js",
+        "client/src/lib/captureSession.js",
+        "client/src/lib/entryPresentation.js",
+        "client/src/lib/inboxUrl.js",
+        "client/src/lib/markPreview.js",
+        "client/src/lib/transcriptionReview.js",
+        "client/src/lib/virtualWindow.js",
+        "client/src/lib/workspaceState.js",
+        "client/src/routes/+layout.js",
+        "client/src/routes/+page.svelte",
+        "client/svelte.config.js",
+        "client/vite.config.js",
         "package.json",
         "src/apiRoutes.ts",
         "src/audioRescueRoutes.ts",
@@ -2334,45 +3041,45 @@
   ],
   "rules_version": "featurefacts-core@0.2.0",
   "fingerprints": {
-    "source": "f7f20005479a5c590dbfc3dc2080334a3baee6f0fc05032ce6e7abbd83e7dc19",
-    "config": "0778aff434cfcbd601f90006830e8eda97bd08acd9ccb215b657aadd1520a3ed",
+    "source": "082ab488a539896c11b27cd1f511c8bdf8e6285d5ff044dac7d97e097093d899",
+    "config": "8af1f9e51973ca0635870d1d47cc112db2fafd38f0e3101910af6204165c412d",
     "adapters": "04d451e412ce42b8c594b784923933b2dba060dfc0acaafcafd74c212714058d",
     "rules": "c7f728a22bf07a27d20f2b0ba60c59d2528cf27f6b218a22272fcbbe465f8971",
-    "registry": "263e569e889027e161567096bb01f0983b1dec22f50a615834f08bf3f6e25732",
+    "registry": "da4d9659832d7cdf86df5599a11b748e2de5b14c55c92f79cbb4562913363a2d",
     "projection": "171901605e9398b9a3b1296a1e6e0d43b310509875f49a900e3c1c487bc3bcfd"
   },
   "artifacts": [
     {
       "path": ".featurefacts/config.yaml",
-      "sha256": "86c5deb3f38d4ffd33a989a2ceebd883ce8594ffaa69e5c59caebffaf1982ff8"
+      "sha256": "acf6e8c071754e13baa323e88f5937cfe04b5104fbea1e6b6789105335bb8a2d"
     },
     {
       "path": ".featurefacts/docs-index.json",
-      "sha256": "15c6b78cf95a08b6c237ef8c82258b595ca746da7ce42bb6a79e9e069d93abda"
+      "sha256": "afa2e9e5c8b3a0f5349a6325cd3f3ba740d05490360c8d93afdafe9b3e116c1c"
     },
     {
       "path": ".featurefacts/features.json",
-      "sha256": "c06680c7e87c13e1668f3814eb259ba6ffc1cf55b443ec06e99d17349e97d169"
+      "sha256": "cf392b104f8349ddb428671bab7c0011e7807b9810b00af67c2fc60df4f3934d"
     },
     {
       "path": ".featurefacts/FEATURES.md",
-      "sha256": "b70177132d5540e4a84cd67826f1a3c1c4faad85b1bb186e23d25dbe7f10c4ce"
+      "sha256": "1f17036cfb68f6a651b6827710f6703b758492621fc811288a753a57c9a89b26"
     },
     {
       "path": ".featurefacts/features.yaml",
-      "sha256": "7c60e54cc918e25a59fb75799ea231de2072758bd3757b1ac3e03666749c4d5a"
+      "sha256": "1c0fc2b18dbe5eaa31b4af6acbfb69ba4326d71b0b66935b3af671502420c358"
     },
     {
       "path": ".featurefacts/gaps.yaml",
-      "sha256": "7e4fe378348eefd4544ef3ce73661004c6e2a1c4ab702806acb4e5c506679735"
+      "sha256": "f050f90543809b5e09fd094aeedaf35168a4f8f7405410cc3cc4a802b9a8dc69"
     },
     {
       "path": ".featurefacts/surfaces.json",
-      "sha256": "5fa8540c5415aefcf829f2fe6fe2d8da3f69bdbe766d5f5d7a4dc9f0f073a8ff"
+      "sha256": "723880b895e631e66b9e3282bb5c599b75134f37774a9fafb962b05bd3ade116"
     },
     {
       "path": ".featurefacts/test-index.json",
-      "sha256": "1e8d8aa669cc0b40e520b5f70502b3d611c27060534aa398d7b8e06374cf33db"
+      "sha256": "186c7d133cf181ecc314a7792fecc7a47c2dc79d92d66cebef9b6d39a70b34d4"
     },
     {
       "path": "FEATURE_FACTS.md",
