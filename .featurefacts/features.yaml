@@ -1,5 +1,5 @@
 schemaVersion: 0.2.0
-scan_id: scan-98444432c64c
+scan_id: scan-69640797c546
 product:
   name: DictaWhisper
   type: typescript-node
@@ -50,7 +50,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-98444432c64c
+      last_seen_scan_id: scan-69640797c546
       reason: Current source evidence is available.
     evidence:
       - id: cmd-doctor-capability
@@ -68,7 +68,7 @@ features:
           symbol: doctor
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.2
+          adapter_version: 0.2.3
           origin: deterministic
           method: surface-cluster
       - id: cmd-doctor-recognition
@@ -144,7 +144,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-98444432c64c
+      last_seen_scan_id: scan-69640797c546
       reason: Current source evidence is available.
     evidence:
       - id: cmd-init-capability
@@ -162,7 +162,7 @@ features:
           symbol: init
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.2
+          adapter_version: 0.2.3
           origin: deterministic
           method: surface-cluster
       - id: cmd-init-recognition
@@ -197,81 +197,6 @@ features:
     id: cmd-init
     name: Init
     description: "Observed implementation surfaces: cmd-init. Candidate only until a maintainer confirms the product meaning."
-  - type: surface-cluster
-    recognition: candidate
-    lifecycle: unknown
-    availability:
-      state: unknown
-      conditions: []
-      reason: Availability is a declaration. Source presence is not a deployment check.
-    maturity: unknown
-    audiences:
-      state: unknown
-      values: []
-      reason: Audience was not declared.
-    discovery:
-      state: unassessed
-      surfaces: []
-      adapter_ids: []
-      reason: Discovery surfaces were not assessed beyond extracted entry points.
-    intent: unknown
-    publication:
-      scope: internal
-      reason: Internal is the conservative default. Public permission requires an attributed declaration.
-    entry_points:
-      - cmd-serve
-    implements: []
-    dependencies: []
-    docs:
-      state: partial
-      result: linked-evidence
-      adapter_ids:
-        - markdown-document
-      links:
-        - surface_id: doc-readme
-          association: static-reference
-      reason: A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate.
-    tests:
-      state: unassessed
-      result: unknown
-      adapter_ids:
-        - typescript-test
-      links: []
-      reason: No explicit test association. A similar test filename is only a proposal.
-    observation:
-      state: current
-      last_seen_scan_id: scan-98444432c64c
-      reason: Current source evidence is available.
-    evidence:
-      - id: cmd-serve-capability
-        kind: observed
-        state: current
-        assertion:
-          field: capability
-          value: "Observed implementation surfaces: cmd-serve. Candidate only until a maintainer confirms the product meaning."
-          claim: Static extraction found implementation surfaces. This is not confirmation.
-        locator:
-          path: src/cli.ts
-          content_sha256: da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf
-          start_line: 130
-          end_line: 130
-          symbol: serve
-        provenance:
-          adapter_id: typescript-node-surface
-          adapter_version: 0.2.2
-          origin: deterministic
-          method: surface-cluster
-    editorial:
-      locked: []
-      aliases: []
-      notes: ""
-    uncertainty_reasons:
-      lifecycle: Source presence does not establish release status.
-      maturity: No attributed maturity declaration.
-      intent: Discovery intent was not declared.
-    id: cmd-serve
-    name: Serve
-    description: "Observed implementation surfaces: cmd-serve. Candidate only until a maintainer confirms the product meaning."
   - type: feature
     recognition: confirmed
     lifecycle: implemented
@@ -294,6 +219,7 @@ features:
       scope: internal
       reason: Internal is the conservative default. Public permission requires an attributed declaration.
     entry_points:
+      - cmd-serve
       - cmd-start
     implements: []
     dependencies: []
@@ -317,7 +243,7 @@ features:
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
       state: current
-      last_seen_scan_id: scan-98444432c64c
+      last_seen_scan_id: scan-69640797c546
       reason: Current source evidence is available.
     evidence:
       - id: cmd-start-capability
@@ -335,7 +261,7 @@ features:
           symbol: start
         provenance:
           adapter_id: typescript-node-surface
-          adapter_version: 0.2.2
+          adapter_version: 0.2.3
           origin: deterministic
           method: surface-cluster
       - id: cmd-start-recognition
@@ -362,7 +288,8 @@ features:
           recorded_at: 2026-10-22T03:18:04.626Z
     editorial:
       locked: []
-      aliases: []
+      aliases:
+        - cmd-serve
       notes: ""
     uncertainty_reasons:
       maturity: No attributed maturity declaration.
@@ -370,69 +297,6 @@ features:
     id: cmd-start
     name: Start
     description: "Observed implementation surfaces: cmd-start. Candidate only until a maintainer confirms the product meaning."
-  - id: dictawhisper
-    name: dictawhisper
-    description: Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.
-    type: feature
-    recognition: candidate
-    lifecycle: unknown
-    availability:
-      state: unknown
-      conditions: []
-      reason: Availability was not declared.
-    maturity: unknown
-    audiences:
-      state: unknown
-      values: []
-      reason: Audience was not declared.
-    discovery:
-      state: unassessed
-      surfaces: []
-      adapter_ids: []
-      reason: No command surface was extracted.
-    intent: unknown
-    publication:
-      scope: internal
-      reason: A scan candidate stays internal until a maintainer publishes it.
-    entry_points: []
-    implements: []
-    dependencies: []
-    docs:
-      state: unassessed
-      result: unknown
-      adapter_ids: []
-      links: []
-      reason: Documentation was not assessed.
-    tests:
-      state: unassessed
-      result: unknown
-      adapter_ids: []
-      links: []
-      reason: Tests were not assessed.
-    observation:
-      state: stale
-      last_seen_scan_id: scan-add
-      reason: Previous locators were not observed in this scan. The record is retained; it is not retired.
-    evidence:
-      - id: ev-package
-        kind: declared
-        state: stale
-        assertion:
-          field: capability
-          value: Local voice journal. Record or drop audio, transcribe with faster-whisper, keep the .json next to the file.
-          claim: package.json names this package. This is not a confirmed capability list.
-        declaration:
-          actor: xfacts-add-labels
-          source: package.json
-          recorded_at: 2026-09-29T19:41:11.490Z
-    editorial:
-      locked: []
-      aliases: []
-      notes: Candidate only. FeatureFacts scan found no capability to confirm.
-    uncertainty_reasons:
-      lifecycle: package.json does not establish release status.
-      maturity: No maturity was declared.
-      intent: Discovery intent was not declared.
   - type: surface-cluster
     recognition: candidate
     lifecycle: unknown
@@ -473,13 +337,13 @@ features:
       links: []
       reason: No explicit test association. A similar test filename is only a proposal.
     observation:
-      state: current
+      state: stale
       last_seen_scan_id: scan-98444432c64c
-      reason: Current source evidence is available.
+      reason: Previous locators were not observed in this scan. The record is retained; it is not retired.
     evidence:
       - id: file-src-server-capability
         kind: observed
-        state: current
+        state: stale
         assertion:
           field: capability
           value: "Observed implementation surfaces: file-src-server. Candidate only until a maintainer confirms the product meaning."

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-98444432c64c",
+  "scan_id": "scan-69640797c546",
   "kind": "docs",
   "assessments": [
     {
@@ -37,23 +37,6 @@
       }
     },
     {
-      "feature_id": "cmd-serve",
-      "assessment": {
-        "state": "partial",
-        "result": "linked-evidence",
-        "adapter_ids": [
-          "markdown-document"
-        ],
-        "links": [
-          {
-            "surface_id": "doc-readme",
-            "association": "static-reference"
-          }
-        ],
-        "reason": "A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate."
-      }
-    },
-    {
       "feature_id": "cmd-start",
       "assessment": {
         "state": "partial",
@@ -72,16 +55,6 @@
           }
         ],
         "reason": "A document names this capability in a heading or code span. That is a sign. It does not mean the documentation is adequate."
-      }
-    },
-    {
-      "feature_id": "dictawhisper",
-      "assessment": {
-        "state": "unassessed",
-        "result": "unknown",
-        "adapter_ids": [],
-        "links": [],
-        "reason": "Documentation was not assessed."
       }
     },
     {

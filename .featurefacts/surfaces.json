@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-98444432c64c",
+  "scan_id": "scan-69640797c546",
   "surfaces": [
     {
       "id": "cmd-dictawhisper",
@@ -14,7 +14,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.2",
+        "adapter_version": "0.2.3",
         "origin": "deterministic",
         "method": "package-json-bin"
       },
@@ -34,7 +34,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.2",
+        "adapter_version": "0.2.3",
         "origin": "deterministic",
         "method": "argv-command"
       },
@@ -54,7 +54,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.2",
+        "adapter_version": "0.2.3",
         "origin": "deterministic",
         "method": "argv-command"
       },
@@ -70,13 +70,13 @@
         "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
         "start_line": 130,
         "end_line": 130,
-        "symbol": "serve"
+        "symbol": "start"
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.2",
+        "adapter_version": "0.2.3",
         "origin": "deterministic",
-        "method": "argv-command"
+        "method": "argv-command-alias"
       },
       "state": "current"
     },
@@ -94,7 +94,7 @@
       },
       "provenance": {
         "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.2",
+        "adapter_version": "0.2.3",
         "origin": "deterministic",
         "method": "argv-command"
       },
@@ -107,7 +107,7 @@
       "title": "docs/APP_UX_SPEC.md",
       "locator": {
         "path": "docs/APP_UX_SPEC.md",
-        "content_sha256": "fddc5b5fe759f2e66cffd5d13c0341167b9b0eec742f821fed5200230caaf7f6"
+        "content_sha256": "62840be0f5f099aa40d8f57ccea081d07314c53edbb7b226f979ef590f2b0490"
       },
       "provenance": {
         "adapter_id": "markdown-document",
@@ -386,23 +386,6 @@
         "adapter_version": "0.2.0",
         "origin": "deterministic",
         "method": "document-file"
-      },
-      "state": "current"
-    },
-    {
-      "id": "file-src-server",
-      "kind": "route",
-      "ref": "src/server.ts",
-      "title": "src/server.ts",
-      "locator": {
-        "path": "src/server.ts",
-        "content_sha256": "e8afc2aab64b6cda4295b883ada39e5f045330bb1820da94421b8a790e41535c"
-      },
-      "provenance": {
-        "adapter_id": "typescript-node-surface",
-        "adapter_version": "0.2.2",
-        "origin": "deterministic",
-        "method": "framework-route-file"
       },
       "state": "current"
     },
