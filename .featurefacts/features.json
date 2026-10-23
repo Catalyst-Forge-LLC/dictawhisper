@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-6cac876713a7",
+  "scan_id": "scan-11f1d039baf8",
   "product": {
     "name": "DictaWhisper",
     "type": "typescript-node",
@@ -67,7 +67,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-6cac876713a7",
+        "last_seen_scan_id": "scan-11f1d039baf8",
         "reason": "Current source evidence is available."
       },
       "evidence": [
@@ -82,7 +82,7 @@
           },
           "locator": {
             "path": "src/cli.ts",
-            "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+            "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
             "start_line": 126,
             "end_line": 126,
             "symbol": "doctor"
@@ -189,7 +189,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-6cac876713a7",
+        "last_seen_scan_id": "scan-11f1d039baf8",
         "reason": "Current source evidence is available."
       },
       "evidence": [
@@ -204,7 +204,7 @@
           },
           "locator": {
             "path": "src/cli.ts",
-            "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+            "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
             "start_line": 122,
             "end_line": 122,
             "symbol": "init"
@@ -321,7 +321,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-6cac876713a7",
+        "last_seen_scan_id": "scan-11f1d039baf8",
         "reason": "Current source evidence is available."
       },
       "evidence": [
@@ -336,7 +336,7 @@
           },
           "locator": {
             "path": "src/cli.ts",
-            "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+            "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
             "start_line": 130,
             "end_line": 130,
             "symbol": "start"
@@ -445,7 +445,7 @@
       },
       "observation": {
         "state": "current",
-        "last_seen_scan_id": "scan-6cac876713a7",
+        "last_seen_scan_id": "scan-11f1d039baf8",
         "reason": "Current source evidence is available."
       },
       "evidence": [

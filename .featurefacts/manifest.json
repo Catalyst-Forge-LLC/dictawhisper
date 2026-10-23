@@ -1,9 +1,9 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-6cac876713a7",
+  "scan_id": "scan-11f1d039baf8",
   "tool": "featurefacts",
   "tool_version": "0.2.6",
-  "generated_at": "2026-10-22T13:49:18.235-04:00",
+  "generated_at": "2026-10-23T10:41:27.141-04:00",
   "root": ".",
   "status": "complete",
   "scope": {
@@ -164,8 +164,8 @@
       },
       {
         "path": "client/src/lib/components/ActivityDrawer.svelte",
-        "sha256": "3d36d2ad3e3075108fe878f160d187734f1a802b0a1b12c483eacbec22d8558b",
-        "bytes": 10173,
+        "sha256": "f329c4b7b9a52db1e71984106c8edc08c2b474208124a02cee2f8d5d6acc6366",
+        "bytes": 10277,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -197,8 +197,8 @@
       },
       {
         "path": "client/src/lib/components/AudioImprovementDialog.svelte",
-        "sha256": "48df8bc99e7114d5342c3ad635269fe59246363ef7c9720dc699218ca490dd10",
-        "bytes": 21615,
+        "sha256": "bbddbbcc926b2b90651df403a4eea29d70808e2833ed690db1f1e69e6e86aad6",
+        "bytes": 22887,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -219,8 +219,8 @@
       },
       {
         "path": "client/src/lib/components/BarkComparison.svelte",
-        "sha256": "9f4a07ee83a11f00fca4c76b2d6663adf056f6381006f0360cdeeba41fe41406",
-        "bytes": 4809,
+        "sha256": "77a5ff8023bfd46bdaf2e18584bfb358b7e37a752fe8eb122a4cc97af97cea55",
+        "bytes": 4799,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -329,8 +329,8 @@
       },
       {
         "path": "client/src/lib/components/NoteCard.svelte",
-        "sha256": "38b822b5a5fa42ca3b75762cd1f2c276c017e1e12e8e509e95cd70a74d214688",
-        "bytes": 48796,
+        "sha256": "aeffdf4e6fd6940a97387a95bfa860939a71481c3cf164cb1b756a4091d30527",
+        "bytes": 48812,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -373,8 +373,8 @@
       },
       {
         "path": "client/src/lib/components/SettingsDrawer.svelte",
-        "sha256": "d367895417305b14788cc4266506ad4cdc4859aba74f44ec677f36879ba06c1c",
-        "bytes": 16927,
+        "sha256": "1e67cd5b16c859b6c94c512ce138c87e5e9d650d94c920753258f852ca4b08e7",
+        "bytes": 19291,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -406,8 +406,8 @@
       },
       {
         "path": "client/src/lib/components/TranscriptionBatch.svelte",
-        "sha256": "907e98b067b2571103187d700fa7035a2c32cb7121a96426d3a943d31179d421",
-        "bytes": 11462,
+        "sha256": "102743fa66c029879d94bb4fef2247be6ff4a9332837ed1f874d7241943aad98",
+        "bytes": 11755,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -417,8 +417,8 @@
       },
       {
         "path": "client/src/lib/components/TranscriptionQuality.svelte",
-        "sha256": "f90122aaed27dcbb13cbd436c10a3406000a397a225966a6986bec2f7c98c992",
-        "bytes": 8435,
+        "sha256": "b6ff129924058307e9a27881f275fc315c7c9ed008db425a27bd4e516f64c610",
+        "bytes": 8484,
         "eligible_adapter_ids": [
           "typescript-tree"
         ],
@@ -659,8 +659,8 @@
       },
       {
         "path": "docs/AUDIO_IMPROVEMENT.md",
-        "sha256": "1b450f17836b515c687d5f74922bb4eab35766ceb2ed86a7d4bdea15d0fcb8ec",
-        "bytes": 38436,
+        "sha256": "def55e8bbc5ccffb406bd3abd87a10e78351957d831ced463d5cf880c30ef36c",
+        "bytes": 38618,
         "eligible_adapter_ids": [
           "typescript-tree",
           "markdown-document"
@@ -672,8 +672,8 @@
       },
       {
         "path": "docs/BARK_EXPERIMENT.md",
-        "sha256": "7840a7f47a15c481b8dbe2812da7c4288094e85aa1536dd6fc3f2ef07e420e1a",
-        "bytes": 9640,
+        "sha256": "679f9d11ac10861ad713e2e76739542539ab626469e7d92265b647a111c498f0",
+        "bytes": 12401,
         "eligible_adapter_ids": [
           "typescript-tree",
           "markdown-document"
@@ -867,8 +867,8 @@
       },
       {
         "path": "package.json",
-        "sha256": "22b0fd5d423b3ceb61687ff24f57ed7c60d8c15e142b483a38bb3a8711e2480d",
-        "bytes": 3608,
+        "sha256": "919d7aeefa85b017578be3a568a3b7172a3bf7f0990f5f101790a43546442acc",
+        "bytes": 3631,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -880,8 +880,8 @@
       },
       {
         "path": "README.md",
-        "sha256": "b7488f2d356fa57d9164c6a4d2f4a6cc0c88fc6cf82f6a796b7c07f4935182b0",
-        "bytes": 14367,
+        "sha256": "fc5c84af5a91e8a97defe7940e7cc853243851c442f7c21c46da8de8a206d8f8",
+        "bytes": 15775,
         "eligible_adapter_ids": [
           "typescript-tree",
           "markdown-document"
@@ -893,8 +893,8 @@
       },
       {
         "path": "src/apiRoutes.ts",
-        "sha256": "f52bef8e6a97d99513e3c685e51ee5482154c528f3526224c06df72ab0309445",
-        "bytes": 28482,
+        "sha256": "e5ab6997e6869dd5f84827249961aed06ab579bf3af5f27cf58bb9ee1d5073b8",
+        "bytes": 28642,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -945,8 +945,8 @@
       },
       {
         "path": "src/cli.ts",
-        "sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
-        "bytes": 4566,
+        "sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
+        "bytes": 4697,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -958,8 +958,8 @@
       },
       {
         "path": "src/config.ts",
-        "sha256": "b5efd4e624c48abb704f518c369d67f6e16d05a4bb34c84bb572e0f3eca07233",
-        "bytes": 7881,
+        "sha256": "0968aeadf5952688819a27a9ae8a36125c7ee902ca90c964c4d60a4a6eba8906",
+        "bytes": 8255,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1012,6 +1012,19 @@
         "path": "src/lib/alignLib.ts",
         "sha256": "740f47cbf4986983b974d7b612a9eddda42e63959815e80f91803044f1ea9671",
         "bytes": 4420,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/lib/asrModels.ts",
+        "sha256": "05051d0661f883c909aeebaf1182eef56b6058a866db973274b3c4b42dae997e",
+        "bytes": 416,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1088,8 +1101,8 @@
       },
       {
         "path": "src/lib/audioRescueService.ts",
-        "sha256": "9f8dc85c707b529458477aeba7189851e1d203bc62ea2ab05a5bd001c028996e",
-        "bytes": 27045,
+        "sha256": "74150da6c4adb9f1151576a2568554cba71dfafa78c35fec55191377f42aedd8",
+        "bytes": 28052,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1101,8 +1114,8 @@
       },
       {
         "path": "src/lib/barkLib.ts",
-        "sha256": "989dd06d480a27d35dcf81f67fd9167dc9461df84668f75644d749acb4ae57b5",
-        "bytes": 2508,
+        "sha256": "5daac1f81315f95e6031fde10255f908614bf76224cd0ce13db53e89c516b0ae",
+        "bytes": 2518,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1244,8 +1257,8 @@
       },
       {
         "path": "src/lib/healthLib.ts",
-        "sha256": "955ded083fbf0a3da7937e99236f1e11d937f26b91c00ca1af0d193a2e7949bb",
-        "bytes": 15372,
+        "sha256": "bd49a9fda70a4fab379884bbc487fa64148c5e98201f188bf48c368a68a32726",
+        "bytes": 16931,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1478,8 +1491,8 @@
       },
       {
         "path": "src/lib/settingsLib.ts",
-        "sha256": "31bbb406b4da8c2a13ae6568d4e053f09f651abb12cb02e2606f5fa259fe8e92",
-        "bytes": 1567,
+        "sha256": "0376283c8ee9aabe580e0a4ffa91d6a7304ceef37e926eeda56e48ab0987018c",
+        "bytes": 3293,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1530,8 +1543,8 @@
       },
       {
         "path": "src/lib/transcriptionBatchLib.ts",
-        "sha256": "a401747e82a7ab8b732a5aac637a3b97547bac95e065b86c9e203668e48fab75",
-        "bytes": 16963,
+        "sha256": "d3d1d06b94cd78961889926e79f1d2772083d4e85c70e6aa7813b4d1b87b93e9",
+        "bytes": 17531,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1556,8 +1569,8 @@
       },
       {
         "path": "src/lib/transcriptionQualityLib.ts",
-        "sha256": "d3960752464b283cb42b7c01c75930b3b0115af75675db0700da21c0bd3b0488",
-        "bytes": 5190,
+        "sha256": "d31cb8e346ea4ee841e7e69b028a7fdea3e57590155299ffe7516600cfd0bda9",
+        "bytes": 6880,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1647,8 +1660,21 @@
       },
       {
         "path": "src/server.ts",
-        "sha256": "e8afc2aab64b6cda4295b883ada39e5f045330bb1820da94421b8a790e41535c",
-        "bytes": 8199,
+        "sha256": "1a889035f0a0d455a1a5cd131d4fedfbe7c24980ac0f39cc2c55c09f80a8d4dc",
+        "bytes": 8256,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-node-surface"
+        ]
+      },
+      {
+        "path": "src/settingsRoutes.ts",
+        "sha256": "587b3ef0e966437686bb712e09ae9db937a4594ee33996b15763ddc31d0081cd",
+        "bytes": 735,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1712,8 +1738,8 @@
       },
       {
         "path": "src/types/transcription.ts",
-        "sha256": "51b8cdd922e377d184ca444e65f6e927436986b32439ee98d3cb7c7ac9b52080",
-        "bytes": 2770,
+        "sha256": "3d39546816ddfc11b83ba2594d8d4d0758524966ee3eb5bb8b8108e7986206a9",
+        "bytes": 2816,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-node-surface"
@@ -1777,8 +1803,8 @@
       },
       {
         "path": "test/audioRescue.test.ts",
-        "sha256": "beca00fec7690535771b3272c89b64837526ffeba716cd94d2df192a0c44a78e",
-        "bytes": 19636,
+        "sha256": "0f390af6d3dd8ef6042ee57316ebe6160d90ffd7467b13995429923ec269fc98",
+        "bytes": 23020,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -1892,8 +1918,8 @@
       },
       {
         "path": "test/config.test.ts",
-        "sha256": "93782326d4055fec69a96deba42e35cd89ce1bd6996655eb28a42ebee746bc7d",
-        "bytes": 2891,
+        "sha256": "d210df56160c1d9cbcc14ff6704bcabc6305a8cb85872c081bf9824e00789e52",
+        "bytes": 3147,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2217,8 +2243,8 @@
       },
       {
         "path": "test/settingsRecoveryApi.test.ts",
-        "sha256": "7962b9c88a1712ca9d0c2eb86847cd871d2f3fbc5422936673a7bf73878f6dd9",
-        "bytes": 6247,
+        "sha256": "71b7e00c5928f734d71b9f3cadc1a52d2dec8d7edd5dfe0580bae7f0e78eb2f8",
+        "bytes": 6319,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2230,8 +2256,8 @@
       },
       {
         "path": "test/startupReadiness.test.ts",
-        "sha256": "df9ece6b70c36bda90f4a3400b2ab42515ba7357765e8f1911643bbb5a9fc510",
-        "bytes": 3906,
+        "sha256": "b50bb2232f48f19fad5c871f1869ec81b7b52b48d1af35b0d6b96d46fed007c8",
+        "bytes": 4151,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2256,8 +2282,8 @@
       },
       {
         "path": "test/transcriptionBatch.test.ts",
-        "sha256": "31a9f8fcb8338128910153869e1479e7d63d8b884f496887d9e13dfbce0d3153",
-        "bytes": 9578,
+        "sha256": "7b2d40cfd3b869cb0dac32a787b1f9f1402ff407ad716c933f8d0021c687db70",
+        "bytes": 11464,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2284,6 +2310,19 @@
         "path": "test/transcriptionReview.test.ts",
         "sha256": "77e92dd0cc30eedac99479105f807a16c9ca8d8935e81e7ff0e5d36cf886ebf6",
         "bytes": 5272,
+        "eligible_adapter_ids": [
+          "typescript-tree",
+          "typescript-test"
+        ],
+        "inspected_by": [
+          "typescript-tree",
+          "typescript-test"
+        ]
+      },
+      {
+        "path": "test/transcriptionSettings.test.ts",
+        "sha256": "16015cb2d84b579ee5c143955dedf10fbcd188839c984401a8753d980f494962",
+        "bytes": 3857,
         "eligible_adapter_ids": [
           "typescript-tree",
           "typescript-test"
@@ -2510,6 +2549,7 @@
         "src/doctor.ts",
         "src/lib/activityLib.ts",
         "src/lib/alignLib.ts",
+        "src/lib/asrModels.ts",
         "src/lib/audioAssessmentLib.ts",
         "src/lib/audioEnhancementLib.ts",
         "src/lib/audioImprovementStorageLib.ts",
@@ -2559,6 +2599,7 @@
         "src/prompts/mayDos.ts",
         "src/prompts/whisperInitial.ts",
         "src/server.ts",
+        "src/settingsRoutes.ts",
         "src/shared/mayDoState.ts",
         "src/shared/readableParagraphs.ts",
         "src/socketEvents.ts",
@@ -2608,6 +2649,7 @@
         "test/transcriptionBatch.test.ts",
         "test/transcriptionQuality.test.ts",
         "test/transcriptionReview.test.ts",
+        "test/transcriptionSettings.test.ts",
         "test/virtualWindow.test.ts",
         "test/watcherNewestFirst.test.ts",
         "test/watcherRestart.test.ts",
@@ -2696,6 +2738,7 @@
         "src/doctor.ts",
         "src/lib/activityLib.ts",
         "src/lib/alignLib.ts",
+        "src/lib/asrModels.ts",
         "src/lib/audioAssessmentLib.ts",
         "src/lib/audioEnhancementLib.ts",
         "src/lib/audioImprovementStorageLib.ts",
@@ -2745,6 +2788,7 @@
         "src/prompts/mayDos.ts",
         "src/prompts/whisperInitial.ts",
         "src/server.ts",
+        "src/settingsRoutes.ts",
         "src/shared/mayDoState.ts",
         "src/shared/readableParagraphs.ts",
         "src/socketEvents.ts",
@@ -2794,6 +2838,7 @@
         "test/transcriptionBatch.test.ts",
         "test/transcriptionQuality.test.ts",
         "test/transcriptionReview.test.ts",
+        "test/transcriptionSettings.test.ts",
         "test/virtualWindow.test.ts",
         "test/watcherNewestFirst.test.ts",
         "test/watcherRestart.test.ts",
@@ -2834,6 +2879,7 @@
         "src/doctor.ts",
         "src/lib/activityLib.ts",
         "src/lib/alignLib.ts",
+        "src/lib/asrModels.ts",
         "src/lib/audioAssessmentLib.ts",
         "src/lib/audioEnhancementLib.ts",
         "src/lib/audioImprovementStorageLib.ts",
@@ -2883,6 +2929,7 @@
         "src/prompts/mayDos.ts",
         "src/prompts/whisperInitial.ts",
         "src/server.ts",
+        "src/settingsRoutes.ts",
         "src/shared/mayDoState.ts",
         "src/shared/readableParagraphs.ts",
         "src/socketEvents.ts",
@@ -2916,6 +2963,7 @@
         "src/doctor.ts",
         "src/lib/activityLib.ts",
         "src/lib/alignLib.ts",
+        "src/lib/asrModels.ts",
         "src/lib/audioAssessmentLib.ts",
         "src/lib/audioEnhancementLib.ts",
         "src/lib/audioImprovementStorageLib.ts",
@@ -2965,6 +3013,7 @@
         "src/prompts/mayDos.ts",
         "src/prompts/whisperInitial.ts",
         "src/server.ts",
+        "src/settingsRoutes.ts",
         "src/shared/mayDoState.ts",
         "src/shared/readableParagraphs.ts",
         "src/socketEvents.ts",
@@ -3069,6 +3118,7 @@
         "test/transcriptionBatch.test.ts",
         "test/transcriptionQuality.test.ts",
         "test/transcriptionReview.test.ts",
+        "test/transcriptionSettings.test.ts",
         "test/virtualWindow.test.ts",
         "test/watcherNewestFirst.test.ts",
         "test/watcherRestart.test.ts",
@@ -3119,6 +3169,7 @@
         "test/transcriptionBatch.test.ts",
         "test/transcriptionQuality.test.ts",
         "test/transcriptionReview.test.ts",
+        "test/transcriptionSettings.test.ts",
         "test/virtualWindow.test.ts",
         "test/watcherNewestFirst.test.ts",
         "test/watcherRestart.test.ts",
@@ -3130,11 +3181,11 @@
   ],
   "rules_version": "featurefacts-core@0.2.0",
   "fingerprints": {
-    "source": "c945d412ad71aae4c9c899e5f7c53f3af79febdb49cdbfbc2e58e87004457f06",
+    "source": "bed1a3721159d1c7e39f3dbeb6b76882554effd9550ffe310fb8e0e5d19ed697",
     "config": "8af1f9e51973ca0635870d1d47cc112db2fafd38f0e3101910af6204165c412d",
     "adapters": "bfa59a2c62e4f45e5bade6f848e11727f03db8c185a16f19beaa6f857876c223",
     "rules": "c7f728a22bf07a27d20f2b0ba60c59d2528cf27f6b218a22272fcbbe465f8971",
-    "registry": "0fc4a4d46822b6ea901dc74d46e95b4b1e44bcfb39f879f02b5d311663607b32",
+    "registry": "ab18bc73a2e6e0c63cbd722433b7329989e7ce3633b8286b3c0bb51003bf565e",
     "projection": "171901605e9398b9a3b1296a1e6e0d43b310509875f49a900e3c1c487bc3bcfd"
   },
   "artifacts": [
@@ -3144,31 +3195,31 @@
     },
     {
       "path": ".featurefacts/docs-index.json",
-      "sha256": "233782bea053338273483fd90cb033420d33036453152c8f91a0d7df2b8fba4f"
+      "sha256": "f3184536c9623243ed6ab96ec6a1efc7332de9053f77a980af773970e695732d"
     },
     {
       "path": ".featurefacts/features.json",
-      "sha256": "ed4e3ff8fd3edf792386e5899fb8a7926fc2ad6dac54bef02f9fe023f2687929"
+      "sha256": "a7ada473119f245199def504a7686e2a2ee656031207c1a16095945a7c8b58a3"
     },
     {
       "path": ".featurefacts/FEATURES.md",
-      "sha256": "b35c75e309e830b1c676ac9b6e672adeed3f3c654c9a744e8d60ee71228eca2e"
+      "sha256": "070706e73d1ac215e1c23736f033833da54407261537ef8d065b5edb8c8b22a8"
     },
     {
       "path": ".featurefacts/features.yaml",
-      "sha256": "d24b9202231bed0ec8b32fb9fbba2134ebb241ce224662e310c1599e79a770d9"
+      "sha256": "acfa0ebd336e815d2d0b094b0921ffbb1fe6be4b76ecb174986c1de6f96512c6"
     },
     {
       "path": ".featurefacts/gaps.yaml",
-      "sha256": "d8beda3ec7646f48becbcb320383b54773648bbb31a754ef12a27cc5c49db8a2"
+      "sha256": "d72b8ce937570aaa026ef5d61aabc659f500c8d9420b85da79d22d45f41fddf4"
     },
     {
       "path": ".featurefacts/surfaces.json",
-      "sha256": "72df92e24184181a623a1fef8b0fed403db34bf2327a905f3d5d1dc4692ebc0d"
+      "sha256": "1912a823656979513f33b48e36f824e10559567b7bb9aa85550f9b3dc04263ea"
     },
     {
       "path": ".featurefacts/test-index.json",
-      "sha256": "eac88792d91f5e114e4a26ac52e8d4425fc90477a299476a4731718eb1e983c1"
+      "sha256": "b93e6750bffd65b08ea9acaf9b63a9d5f3ff21157ab0f3f63b53861ca6cfd3e3"
     },
     {
       "path": "FEATURE_FACTS.md",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2.0",
-  "scan_id": "scan-6cac876713a7",
+  "scan_id": "scan-11f1d039baf8",
   "surfaces": [
     {
       "id": "cmd-dictawhisper",
@@ -9,7 +9,7 @@
       "title": "dictawhisper",
       "locator": {
         "path": "package.json",
-        "content_sha256": "22b0fd5d423b3ceb61687ff24f57ed7c60d8c15e142b483a38bb3a8711e2480d",
+        "content_sha256": "919d7aeefa85b017578be3a568a3b7172a3bf7f0990f5f101790a43546442acc",
         "symbol": "bin.dictawhisper"
       },
       "provenance": {
@@ -27,7 +27,7 @@
       "title": "doctor",
       "locator": {
         "path": "src/cli.ts",
-        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
         "start_line": 126,
         "end_line": 126,
         "symbol": "doctor"
@@ -47,7 +47,7 @@
       "title": "init",
       "locator": {
         "path": "src/cli.ts",
-        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
         "start_line": 122,
         "end_line": 122,
         "symbol": "init"
@@ -67,7 +67,7 @@
       "title": "serve",
       "locator": {
         "path": "src/cli.ts",
-        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
         "start_line": 130,
         "end_line": 130,
         "symbol": "start"
@@ -87,7 +87,7 @@
       "title": "start",
       "locator": {
         "path": "src/cli.ts",
-        "content_sha256": "da3648a16a7dca9fa07705f4c35fe03ed9a2b5ea3e49ff81b0cd533cfc395dcf",
+        "content_sha256": "37cf58a7c2603652d6d1f6b85f704d27d2d0892e0a717d2d070a4083c2addaef",
         "start_line": 130,
         "end_line": 130,
         "symbol": "start"
@@ -124,7 +124,7 @@
       "title": "docs/AUDIO_IMPROVEMENT.md",
       "locator": {
         "path": "docs/AUDIO_IMPROVEMENT.md",
-        "content_sha256": "1b450f17836b515c687d5f74922bb4eab35766ceb2ed86a7d4bdea15d0fcb8ec"
+        "content_sha256": "def55e8bbc5ccffb406bd3abd87a10e78351957d831ced463d5cf880c30ef36c"
       },
       "provenance": {
         "adapter_id": "markdown-document",
@@ -141,7 +141,7 @@
       "title": "docs/BARK_EXPERIMENT.md",
       "locator": {
         "path": "docs/BARK_EXPERIMENT.md",
-        "content_sha256": "7840a7f47a15c481b8dbe2812da7c4288094e85aa1536dd6fc3f2ef07e420e1a"
+        "content_sha256": "679f9d11ac10861ad713e2e76739542539ab626469e7d92265b647a111c498f0"
       },
       "provenance": {
         "adapter_id": "markdown-document",
@@ -396,7 +396,7 @@
       "title": "README.md",
       "locator": {
         "path": "README.md",
-        "content_sha256": "b7488f2d356fa57d9164c6a4d2f4a6cc0c88fc6cf82f6a796b7c07f4935182b0"
+        "content_sha256": "fc5c84af5a91e8a97defe7940e7cc853243851c442f7c21c46da8de8a206d8f8"
       },
       "provenance": {
         "adapter_id": "markdown-document",
@@ -498,7 +498,7 @@
       "title": "test/audioRescue.test.ts",
       "locator": {
         "path": "test/audioRescue.test.ts",
-        "content_sha256": "beca00fec7690535771b3272c89b64837526ffeba716cd94d2df192a0c44a78e"
+        "content_sha256": "0f390af6d3dd8ef6042ee57316ebe6160d90ffd7467b13995429923ec269fc98"
       },
       "provenance": {
         "adapter_id": "typescript-test",
@@ -634,7 +634,7 @@
       "title": "test/config.test.ts",
       "locator": {
         "path": "test/config.test.ts",
-        "content_sha256": "93782326d4055fec69a96deba42e35cd89ce1bd6996655eb28a42ebee746bc7d"
+        "content_sha256": "d210df56160c1d9cbcc14ff6704bcabc6305a8cb85872c081bf9824e00789e52"
       },
       "provenance": {
         "adapter_id": "typescript-test",
@@ -1059,7 +1059,7 @@
       "title": "test/settingsRecoveryApi.test.ts",
       "locator": {
         "path": "test/settingsRecoveryApi.test.ts",
-        "content_sha256": "7962b9c88a1712ca9d0c2eb86847cd871d2f3fbc5422936673a7bf73878f6dd9"
+        "content_sha256": "71b7e00c5928f734d71b9f3cadc1a52d2dec8d7edd5dfe0580bae7f0e78eb2f8"
       },
       "provenance": {
         "adapter_id": "typescript-test",
@@ -1076,7 +1076,7 @@
       "title": "test/startupReadiness.test.ts",
       "locator": {
         "path": "test/startupReadiness.test.ts",
-        "content_sha256": "df9ece6b70c36bda90f4a3400b2ab42515ba7357765e8f1911643bbb5a9fc510"
+        "content_sha256": "b50bb2232f48f19fad5c871f1869ec81b7b52b48d1af35b0d6b96d46fed007c8"
       },
       "provenance": {
         "adapter_id": "typescript-test",
@@ -1110,7 +1110,7 @@
       "title": "test/transcriptionBatch.test.ts",
       "locator": {
         "path": "test/transcriptionBatch.test.ts",
-        "content_sha256": "31a9f8fcb8338128910153869e1479e7d63d8b884f496887d9e13dfbce0d3153"
+        "content_sha256": "7b2d40cfd3b869cb0dac32a787b1f9f1402ff407ad716c933f8d0021c687db70"
       },
       "provenance": {
         "adapter_id": "typescript-test",
@@ -1145,6 +1145,23 @@
       "locator": {
         "path": "test/transcriptionReview.test.ts",
         "content_sha256": "77e92dd0cc30eedac99479105f807a16c9ca8d8935e81e7ff0e5d36cf886ebf6"
+      },
+      "provenance": {
+        "adapter_id": "typescript-test",
+        "adapter_version": "0.2.0",
+        "origin": "deterministic",
+        "method": "test-filename"
+      },
+      "state": "current"
+    },
+    {
+      "id": "test-test-transcriptionsettings-test",
+      "kind": "test",
+      "ref": "test/transcriptionSettings.test.ts",
+      "title": "test/transcriptionSettings.test.ts",
+      "locator": {
+        "path": "test/transcriptionSettings.test.ts",
+        "content_sha256": "16015cb2d84b579ee5c143955dedf10fbcd188839c984401a8753d980f494962"
       },
       "provenance": {
         "adapter_id": "typescript-test",

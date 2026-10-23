@@ -1,6 +1,6 @@
 # Feature register: DictaWhisper
 
-Scan `scan-6cac876713a7`. Candidates are not confirmed capabilities.
+Scan `scan-11f1d039baf8`. Candidates are not confirmed capabilities.
 
 | ID | Name | Recognition | Lifecycle | Availability | Docs | Tests | Observation |
 |---|---|---|---|---|---|---|---|
