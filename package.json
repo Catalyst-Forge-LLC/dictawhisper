@@ -1,6 +1,6 @@
 {
   "name": "dictawhisper",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "private": false,
   "description": "Local voice journal. Record or drop audio, transcribe with local Bark Pro or Whisper, keep the .json next to the file.",
   "homepage": "https://dictawhisper.com",
