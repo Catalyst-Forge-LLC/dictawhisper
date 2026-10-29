@@ -613,3 +613,11 @@ main.wrap > .home-with-rail:has(.value-hero) { display: block !important; }
   .home-page .worked-example, .home-page .worked-example.example-pair { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .home-page .worked-example .example-step { padding: 1rem .75rem; }
 }
+
+/* Keep the headline's thoughts together; each phrase can still reflow. */
+.home-page .value-hero h1.hero-phrased { max-width: none; }
+.home-page .hero-phrase { display: block; text-wrap: balance; }
+@media (min-width: 901px) {
+  .home-page .value-hero h1.hero-phrased { font-size: clamp(2.25rem, 4vw, 3.25rem); }
+  .home-page .value-intro:has(> .value-headline .hero-phrased) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+}
