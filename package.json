@@ -1,6 +1,6 @@
 {
   "name": "dictawhisper",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "private": false,
   "description": "A searchable local voice journal: record or import audio, transcribe with Bark Pro or Whisper, replay notes, and review suggested actions.",
   "homepage": "https://dictawhisper.com",
