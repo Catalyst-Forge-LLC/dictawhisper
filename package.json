@@ -2,7 +2,7 @@
   "name": "dictawhisper",
   "version": "0.1.16",
   "private": false,
-  "description": "Local voice journal. Record or drop audio, transcribe with local Bark Pro or Whisper, keep the .json next to the file.",
+  "description": "A searchable local voice journal: record or import audio, transcribe with Bark Pro or Whisper, replay notes, and review suggested actions.",
   "homepage": "https://dictawhisper.com",
   "repository": {
     "type": "git",

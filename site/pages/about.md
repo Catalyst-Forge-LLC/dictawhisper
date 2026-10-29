@@ -1,10 +1,10 @@
 ---
-title: "Turn a recording into a note you can reread."
-description: "Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes."
+title: "A searchable voice journal on your computer."
+description: "Record or import voice notes, then find, read, and replay them in a searchable journal. DictaWhisper transcribes on your computer, keeps the recording beside its transcript, and offers optional cleanup and suggested actions you can review."
 order: 1
 ---
 
-<section class="value-hero" aria-label="DictaWhisper overview"><div class="value-intro"><div class="value-headline"><p class="value-kind">Voice journal running on your computer</p><h1>Turn a recording into a note you can reread.</h1></div><div class="value-pitch"><p class="value-lede">Record a thought or drop an audio file into DictaWhisper. It transcribes the speech on your computer and keeps a readable note beside the recording, so the words are useful after the moment passes.</p><div class="cta-row"><a class="cta cta-primary" href="/install">Set up DictaWhisper</a><a class="cta cta-secondary" href="#note-example">See raw speech become a note</a></div><p class="value-limit">Setup needs Node, Python, and faster-whisper. The exercised path uses an NVIDIA GPU. Optional cleanup sends text only to the machine you configure.</p></div></div>
+<section class="value-hero" aria-label="DictaWhisper overview"><div class="value-intro"><div class="value-headline"><p class="value-kind">Local web app for voice notes</p><h1>A searchable voice journal on your computer.</h1></div><div class="value-pitch"><p class="value-lede">Record or import voice notes, then find, read, and replay them in a searchable journal. DictaWhisper transcribes on your computer, keeps the recording beside its transcript, and offers optional cleanup and suggested actions you can review.</p><div class="cta-row"><a class="cta cta-primary" href="/install">Set up DictaWhisper</a><a class="cta cta-secondary" href="#note-example">See raw speech become a note</a></div><p class="value-limit">Requires local setup, including Node and the selected transcription engine’s Python runtime. The exercised path is Windows with an NVIDIA GPU. Cleanup and search may use another host if you configure one.</p></div></div>
 <figure class="value-proof worked-example" id="note-example" tabindex="-1">
 <figcaption>Keep the thought without replaying the whole walk</figcaption>
 <p class="example-context">Fictional recording and cleanup. Both versions belong to the same note; the audio remains available when you need to check what was said.</p>
@@ -67,13 +67,13 @@ data/audio-files/2026-09-10_walk-note.webm
 data/audio-files/2026-09-10_walk-note.webm.json
 ```
 
-The JSON holds raw Whisper text (`text`, `segments`) and, when cleanup ran, `cleanedTranscription` and tags. The inbox **Raw** control shows the transcript. **Sidecar** downloads that file. A search index may also live at `journal.index` (default `./data/journal.sqlite`). That index is not the journal. The pair is.
+The JSON holds raw transcription text (`text`, `segments`) and, when cleanup ran, `cleanedTranscription` and tags. The inbox **Raw** control shows the transcript. **Sidecar** downloads that file. A search index may also live at `journal.index` (default `./data/journal.sqlite`). That index is not the journal. The pair is.
 
 Sample names above are fictional.
 
 ## If cleanup is down
 
-The inbox still lists the recording. Status can read **raw only**, **cleanup skipped**, or **cleanup failed**. **Retry** queues another cleanup pass. `pnpm retranscribe --reclean` does the same from the terminal. Doctor warns when ollanet is unreachable. It does not claim Whisper succeeded if faster-whisper is missing.
+The inbox still lists the recording. Status can read **raw only**, **cleanup skipped**, or **cleanup failed**. **Retry** queues another cleanup pass. `pnpm retranscribe --reclean` does the same from the terminal. Doctor warns when ollanet is unreachable. Transcription still requires the selected engine’s runtime; cleanup availability is a separate check.
 
 ## Quick start
 

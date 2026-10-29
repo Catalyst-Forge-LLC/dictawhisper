@@ -4,17 +4,18 @@ description: Hardware and runtimes first, then a git clone. The npm path require
 order: 1
 ---
 
-You run this on a computer you leave turned on. It is not a website that holds your audio. There is no installer. Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites.
+You run this on a computer you leave turned on. It is not a website that holds your audio. There is no installer. Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. The selected transcription engine and its Python runtime remain separate prerequisites.
 
 ## Before you clone
 
-Exercised path: **Windows**, **Node 22.13+** (the scripts use `--experimental-strip-types`), **pnpm**, a **Python** interpreter with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper), and an **NVIDIA GPU** with CUDA (`whisper.device` = `cuda`). Point `whisper.python` at that interpreter.
+Exercised path: **Windows**, **Node 22.13+**, **pnpm**, and an **NVIDIA GPU with CUDA**. The checkout scripts use Node's TypeScript support. macOS and Linux remain unverified.
 
-Also required for the default denoise path: `ffmpeg` on PATH.
+Choose the transcription engine:
 
-Optional: [ollanet](https://ollanet.dev) plus an Ollama model for text cleanup (this computer or another you already use). Without it you still get the raw transcript.
+- **Bark Pro (English, default):** isolated Python 3.11 / CUDA 12.8 / BF16 runtime. Set it up with the repository's PowerShell script below. CPU mode is available but unverified.
+- **Whisper:** Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Set `transcription.model` to `large-v3` or `turbo` and point `whisper.python` at that interpreter. Whisper CPU mode is slower.
 
-CPU mode (`whisper.device` = `cpu`) is supported and marked slow. macOS and Linux have not been recorded as verified in this project. Treat them as unverified.
+Both paths require **ffmpeg and ffprobe** for audio assessment and preparation, including unfiltered mode. Cleanup through [ollanet](https://ollanet.dev) is optional; without it, raw transcripts remain available.
 
 ## Get it running
 
@@ -22,13 +23,15 @@ CPU mode (`whisper.device` = `cpu`) is supported and marked slow. macOS and Linu
 git clone https://github.com/Catalyst-Forge-LLC/dictawhisper.git
 cd dictawhisper
 cp config.example.json config.json
-# set whisper.python, whisper.device, and (optionally) ollanet.machine / cleanModel
 pnpm install
+# Set up the default Bark Pro engine in PowerShell, using your Python 3.11 path:
+# & ./scripts/setup-bark.ps1 -Python C:/path/to/Python311/python.exe
+# For Whisper instead, configure transcription.model and whisper.python.
 pnpm run doctor
 pnpm dev
 ```
 
-Ready signal: `pnpm run doctor` exits 0, or prints only warnings (CPU mode, ollanet unreachable, port already in use). Then open [http://localhost:7777](http://localhost:7777). Record, or drag a file onto the page.
+Ready signal: `pnpm run doctor` exits 0, or prints only warnings (CPU mode, ollanet unreachable, port already in use). Then open [http://localhost:7777](http://localhost:7777). Record, or drag a file onto the page. Once the engines are configured, change the default in **Settings → Transcription**.
 
 `pnpm run doctor` is the checkup. `pnpm doctor` without `run` is pnpm's own command and will not check this app.
 

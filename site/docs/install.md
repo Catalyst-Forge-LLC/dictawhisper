@@ -2,17 +2,18 @@
 title: Install
 ---
 
-Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. Python and faster-whisper remain separate prerequisites. There is no desktop installer.
+Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. The selected transcription engine and its Python runtime remain separate prerequisites. There is no desktop installer.
 
 ## Before you clone
 
 | Need | Status |
 | --- | --- |
 | Node 22.13+ (scripts use `--experimental-strip-types`) and [pnpm](https://pnpm.io) | Required |
-| Python with [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) | Required. Set `whisper.python` |
-| NVIDIA GPU + CUDA, `whisper.device` = `cuda` | Exercised path |
-| `whisper.device` = `cpu` | Supported, slow, doctor warning |
-| `ffmpeg` on PATH | Required when denoise (`audio.preprocess`) is on |
+| Bark Pro (English, default): isolated Python 3.11 / CUDA 12.8 / BF16 runtime | Required for Bark; run `scripts/setup-bark.ps1` |
+| Whisper: Python with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Alternative. Set `transcription.model` to `large-v3` or `turbo`, and set `whisper.python` |
+| NVIDIA GPU + CUDA | Exercised path on Windows |
+| CPU transcription | Bark available but unverified; Whisper slower |
+| `ffmpeg` and `ffprobe` on PATH | Required for audio assessment and preparation, including unfiltered mode |
 | [ollanet](https://ollanet.dev) + Ollama model | Optional. Raw transcripts still work |
 | Windows | Exercised (paths and doctor probes use it) |
 | macOS, Linux | Unverified |
@@ -37,10 +38,18 @@ cd dictawhisper
 Copy-Item config.example.json config.json
 ```
 
+For the default Bark Pro engine, set up its isolated runtime in PowerShell:
+
+```powershell
+& ./scripts/setup-bark.ps1 -Python C:/path/to/Python311/python.exe
+```
+
+For Whisper instead, set `transcription.model` to `large-v3` or `turbo` and point `whisper.python` at its interpreter. Once running, select the default in **Settings → Transcription**.
+
 Then, in either shell:
 
 ```bash
-# edit whisper.python, whisper.promptTerms, ollanet.machine / cleanModel
+# configure the selected engine; optionally set ollanet.machine / cleanModel
 # watch.roots is optional: record or drop files in the UI without Syncthing
 pnpm install
 pnpm run doctor
@@ -50,7 +59,7 @@ Ready signal: doctor exits 0, or only warnings remain. Then `pnpm dev` and open 
 
 The UI can record and accept dropped files with no Syncthing. Add `watch.roots` only if you already have a phone folder or dump directory.
 
-`pnpm run doctor` and startup `/health` run the same probes: Node, config, watch roots, ffmpeg, `faster-whisper` import, CUDA vs CPU, ollanet reachability, and port availability. A fail is loud. The inbox still serves notes already on disk. Warnings (CPU mode, ollanet unreachable, port already in use) are reported without blocking. `pnpm doctor` without `run` is pnpm's own command and will not check this app.
+`pnpm run doctor` and startup `/health` run the same probes: Node, config, watch roots, audio tools, the selected transcription engine, ollanet reachability, and port availability. A fail is loud. The inbox still serves notes already on disk. Warnings (CPU mode, ollanet unreachable, port already in use) are reported without blocking. `pnpm doctor` without `run` is pnpm's own command and will not check this app.
 
 Optional sanity check (machine can be this computer or another name ollanet already sees):
 

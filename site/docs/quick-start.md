@@ -9,8 +9,8 @@ pnpm dev
 Open [http://localhost:7777](http://localhost:7777).
 
 1. Talk. Hit Record, or drag an audio file onto the page.
-2. Browser files start immediately. Optional ffmpeg denoise, then Whisper (model loaded once) writes a sidecar `.json`.
-3. ollanet cleans the text and adds tags onto the same JSON. Raw speech is kept.
+2. Browser files begin processing immediately. Audio assessment/preparation runs before the selected transcription engine writes a sidecar `.json`. Bark Pro is the English default; Whisper is an alternative.
+3. If cleanup is configured, ollanet cleans the text and adds tags to the same JSON. The raw transcript is kept.
 4. Notes are grouped by month. Cleaned text is the default; raw speech is one click away. Playback follows the cleaned paragraphs.
 
 If [LocalSlip](https://localslip.dev) is installed, 7777 is the `dictawhisper` slip and 8008 is `dictawhisper-api` (loopback, not `--lan`).
@@ -21,10 +21,10 @@ If [LocalSlip](https://localslip.dev) is installed, 7777 is the `dictawhisper` s
 | --- | --- | --- |
 | ollanet unreachable or not configured | Recording plus raw `text` / `segments` | Inbox **Retry**, or `pnpm retranscribe --reclean` when the host is up |
 | Cleanup error on a note | Same files. Status **cleanup failed** | **Retry** on that note |
-| faster-whisper missing | Existing notes on disk. New transcription will not start | Fix `whisper.python`, then `pnpm run doctor` |
-| ffmpeg missing and denoise on | Doctor fails. Transcription is not claimed | Install ffmpeg or turn `audio.preprocess` off |
+| Selected engine runtime missing | Existing recordings and notes on disk. New transcription cannot finish | Complete Bark setup, or fix `whisper.python` for a selected Whisper model, then run `pnpm run doctor` |
+| ffmpeg or ffprobe missing | Recordings and existing notes remain; audio preparation is unavailable | Install both tools. Unfiltered mode still requires them |
 
-Doctor warnings do not mean Whisper wrote a transcript. A fail on `faster-whisper` means new recordings stay untranscribed. Phone-folder sync stays optional and external.
+A healthy cleanup connection does not establish successful transcription. Check the selected engine’s result in Activity and use its recovery action when needed. Phone-folder sync stays optional and external.
 
 ## Optional phone folder
 
@@ -32,7 +32,7 @@ If you also watch a phone folder ([Syncthing](https://syncthing.net) or any fold
 
 ```
 Browser record/drop →  drop folder →  immediately ─────────────┐
-Optional phone folder →  watch roots  →  settle 30m  →  YYYY/MM/ ┼─→ whisper → sidecar.json → ollanet → UI
+Optional phone folder →  watch roots  →  settle 30m  →  YYYY/MM/ ┼─→ local transcription → sidecar.json → optional cleanup → UI
 Force / retranscribe ─────────────────────────────────────────┘
 ```
 

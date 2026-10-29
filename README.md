@@ -4,7 +4,9 @@
 
 # DictaWhisper
 
-**A local voice journal.** Record in the browser, drop a file, or (optionally) sync a phone folder. Transcribe locally with **Bark Pro** (English, default) or [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Clean the note with [ollanet](https://ollanet.dev). The `.json` next to each recording is the journal.
+**A searchable voice journal on your computer.** This local web app lets you record or import voice notes, find them later, read the transcript, and replay the recording. Optional cleanup and MayDos help you turn a note into readable text and suggested actions to review.
+
+Transcribe locally with **Bark Pro** (English, default) or [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Cleanup uses [ollanet](https://ollanet.dev) with the host you configure. Each recording and its neighboring `.json` form a journal entry; a synced phone folder is optional.
 
 Install from a Git checkout ([below](#from-a-checkout)). Starting with 0.1.11, the npm package ships compiled JavaScript and the inbox UI. Earlier releases through 0.1.10 do not start from npm installations. The selected model and its Python runtime remain separate prerequisites.
 

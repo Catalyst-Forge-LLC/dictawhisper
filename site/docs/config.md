@@ -10,7 +10,8 @@ Copy `config.example.json` to `config.json` (gitignored).
 |---|---|
 | `HOST` / `PORT` | API bind (default `127.0.0.1:8008`; Tailscale mode does not change this) |
 | `DICTA_TAILSCALE` | `1` / `true`: also bind the inbox to this machine's Tailscale address |
-| `WHISPER_MODEL` | `large-v3` or `turbo` |
+| `DICTA_TRANSCRIPTION_MODEL` | Select `bark-pro` (default), `large-v3`, or `turbo` |
+| `WHISPER_MODEL` | Whisper-specific model setting; use `transcription.model` or `DICTA_TRANSCRIPTION_MODEL` to select the engine |
 | `WHISPER_PYTHON` | Interpreter with faster-whisper |
 | `WHISPER_DEVICE` | `cuda` or `cpu` |
 | `VOICE_SETTLE_MINUTES` | Phone/watch settle; default 30 |
@@ -24,6 +25,7 @@ Copy `config.example.json` to `config.json` (gitignored).
 
 Useful knobs (see `config.example.json`):
 
+- `transcription.model`: `bark-pro` (English default), `large-v3`, or `turbo`. Each engine needs its own runtime; see [Install](/docs/install).
 - `watch.createMissingRoots`: create empty watch roots instead of failing doctor
 - `whisper.promptTerms`: names and terms Whisper should prefer
 - `whisper.computeType`: `float16`, or `int8_float16` if VRAM is tight
